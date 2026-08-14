@@ -1,0 +1,6 @@
+{
+  "name": "Electro World",
+  "description": "Electro World Store App - Seamless OTP Authentication and interactive Dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -117,6 +117,8 @@ data class StoreInvoice(
 
 @Composable
 fun DashboardScreen(
+  userName: String,
+  userPhone: String,
   onSignOut: () -> Unit,
   onOpenWishlist: () -> Unit,
   modifier: Modifier = Modifier
@@ -220,13 +222,13 @@ fun DashboardScreen(
                 fontSize = 13.sp
               )
               Text(
-                text = "+1 (555) 019-2834",
+                text = userName.ifBlank { "Guest" },
                 color = OnSlateText,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
               )
               Text(
-                text = "Premium Club Elite Member",
+                text = "+91 $userPhone",
                 color = GoldSecondary,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
@@ -263,7 +265,7 @@ fun DashboardScreen(
           columns = GridCells.Fixed(2),
           modifier = Modifier
             .fillMaxWidth()
-            .height(328.dp)
+            .height(370.dp)
             .padding(horizontal = 12.dp),
           userScrollEnabled = false,
           verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -272,7 +274,7 @@ fun DashboardScreen(
           items(modules) { item ->
             Card(
               modifier = Modifier
-                .fillMaxHeight()
+                .height(118.dp)
                 .clickable { item.onClick?.invoke() ?: run { activeOverlay = item.actionType } }
                 .testTag("module_${item.title.lowercase().replace(" ", "_")}"),
               colors = CardDefaults.cardColors(containerColor = SlateSurface),

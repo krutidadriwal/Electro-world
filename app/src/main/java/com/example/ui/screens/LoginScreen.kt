@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -61,6 +62,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.network.CreateUserRequest
+import com.example.data.network.NetworkModule
 import com.example.ui.components.ElectroWorldLogo
 import com.example.ui.theme.AlertRed
 import com.example.ui.theme.GoldDark
@@ -79,18 +82,11 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun LoginScreen(
-  onLoginSuccess: () -> Unit,
+  onLoginSuccess: (name: String, phone: String) -> Unit,
   modifier: Modifier = Modifier
 ) {
-  val isDevBypassEnabled = remember {
-    try {
-      com.example.BuildConfig.DEVELOPER_MODE_BYPASS.toString().lowercase() == "true"
-    } catch (e: Exception) {
-      false
-    }
-  }
-
   var isOtpState by remember { mutableStateOf(false) }
+  var fullName by remember { mutableStateOf("") }
   var phoneNumber by remember { mutableStateOf("") }
   var otpCode by remember { mutableStateOf("") }
   var isVerifying by remember { mutableStateOf(false) }
@@ -106,6 +102,53 @@ fun LoginScreen(
     if (isOtpState && countdownTimer > 0) {
       delay(1000)
       countdownTimer -= 1
+    }
+  }
+
+  fun submitNameAndPhone() {
+    focusManager.clearFocus()
+    if (fullName.isBlank()) {
+      errorMessage = "Please enter your full name."
+      return
+    }
+    if (phoneNumber.length < 10) {
+      errorMessage = "Please enter a valid 10-digit mobile number."
+      return
+    }
+    isVerifying = true
+    coroutineScope.launch {
+      try {
+        NetworkModule.userApi.createOrUpdateUser(
+          CreateUserRequest(name = fullName.trim(), phone = phoneNumber)
+        )
+        isVerifying = false
+        isOtpState = true
+        countdownTimer = 30
+        otpCode = ""
+      } catch (e: Exception) {
+        isVerifying = false
+        errorMessage = "Unable to reach the server. Please check your connection and try again."
+      }
+    }
+  }
+
+  fun submitOtp() {
+    focusManager.clearFocus()
+    if (otpCode.length < 6) {
+      errorMessage = "OTP must be exactly 6 digits."
+      return
+    }
+    isVerifying = true
+    coroutineScope.launch {
+      delay(600)
+      isVerifying = false
+      if (otpCode == "123456") {
+        verificationSuccess = true
+        delay(500)
+        onLoginSuccess(fullName.trim(), phoneNumber)
+      } else {
+        errorMessage = "Invalid verification code. Please enter 123456."
+      }
     }
   }
 
@@ -186,6 +229,37 @@ fun LoginScreen(
               lineHeight = 18.sp
             )
 
+            // Full Name field
+            OutlinedTextField(
+              value = fullName,
+              onValueChange = { input ->
+                fullName = input
+                errorMessage = null
+              },
+              placeholder = { Text("Full Name", color = OnSlateTextSecondary) },
+              leadingIcon = {
+                Icon(
+                  imageVector = Icons.Default.Person,
+                  contentDescription = "Name Icon",
+                  tint = GoldPrimary
+                )
+              },
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+                .testTag("full_name_input"),
+              singleLine = true,
+              colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = GoldPrimary,
+                unfocusedBorderColor = SlateSurfaceVariant,
+                focusedContainerColor = SlateSurface,
+                unfocusedContainerColor = SlateSurface,
+                focusedTextColor = OnSlateText,
+                unfocusedTextColor = OnSlateText
+              ),
+              shape = RoundedCornerShape(12.dp)
+            )
+
             // Country Code + Phone field row
             Row(
               modifier = Modifier
@@ -203,7 +277,7 @@ fun LoginScreen(
                 contentAlignment = Alignment.Center
               ) {
                 Text(
-                  text = "🇺🇸 +1",
+                  text = "🇮🇳 +91",
                   color = OnSlateText,
                   fontWeight = FontWeight.Bold,
                   fontSize = 16.sp
@@ -270,25 +344,7 @@ fun LoginScreen(
 
             // Big CTA Button to send OTP
             Button(
-              onClick = {
-                focusManager.clearFocus()
-                if (phoneNumber.length < 10) {
-                  errorMessage = "Please enter a valid 10-digit mobile number."
-                } else {
-                  isVerifying = true
-                  coroutineScope.launch {
-                    delay(1200) // Realistic server-side trigger delay
-                    isVerifying = false
-                    if (isDevBypassEnabled) {
-                      onLoginSuccess()
-                    } else {
-                      isOtpState = true
-                      countdownTimer = 30
-                      otpCode = ""
-                    }
-                  }
-                }
-              },
+              onClick = { submitNameAndPhone() },
               enabled = !isVerifying,
               modifier = Modifier
                 .fillMaxWidth()
@@ -317,84 +373,32 @@ fun LoginScreen(
               }
             }
 
-            if (isDevBypassEnabled) {
-              Card(
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .padding(top = 32.dp)
-                  .testTag("developer_bypass_card"),
-                colors = CardDefaults.cardColors(
-                  containerColor = GoldPrimary.copy(alpha = 0.12f)
-                ),
-                shape = RoundedCornerShape(12.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.6f))
-              ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                  Text(
-                    text = "🛠️ DEVELOPER BYPASS ACTIVE",
-                    color = GoldSecondary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                  )
-                  Text(
-                    text = "Bypass verification is active via environment configuration. You can login instantly using the bypass trigger below or by submitting any 10-digit phone number.",
-                    color = OnSlateTextSecondary,
-                    fontSize = 11.sp,
-                    lineHeight = 15.sp,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                  )
-                  Button(
-                    onClick = {
-                      onLoginSuccess()
-                    },
-                    modifier = Modifier
-                      .fillMaxWidth()
-                      .height(38.dp)
-                      .testTag("dev_bypass_button"),
-                    colors = ButtonDefaults.buttonColors(
-                      containerColor = GoldPrimary
-                    ),
-                    shape = RoundedCornerShape(8.dp)
-                  ) {
-                    Text(
-                      text = "INSTANT BYPASS LOG IN",
-                      fontSize = 11.sp,
-                      fontWeight = FontWeight.Bold,
-                      color = SlateBackground
-                    )
-                  }
-                }
-              }
-            } else {
-              // Trust Credentials Floating Info Card
-              Card(
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .padding(top = 32.dp),
-                colors = CardDefaults.cardColors(
-                  containerColor = SlateSurface.copy(alpha = 0.5f)
-                ),
-                shape = RoundedCornerShape(12.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.15f))
-              ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                  Text(
-                    text = "⚡ QUICK DEMO MODE ACTIVE",
-                    color = GoldSecondary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                  )
-                  Text(
-                    text = "Input any 10-digit mobile phone number. Our sandbox system will generate a verified OTP session instantly. Use OTP code '123456' to log in.",
-                    color = OnSlateTextSecondary,
-                    fontSize = 11.sp,
-                    lineHeight = 15.sp
-                  )
-                }
+            // Trust Credentials Floating Info Card
+            Card(
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 32.dp),
+              colors = CardDefaults.cardColors(
+                containerColor = SlateSurface.copy(alpha = 0.5f)
+              ),
+              shape = RoundedCornerShape(12.dp),
+              border = androidx.compose.foundation.BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.15f))
+            ) {
+              Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                  text = "⚡ QUICK DEMO MODE ACTIVE",
+                  color = GoldSecondary,
+                  fontSize = 11.sp,
+                  fontWeight = FontWeight.Bold,
+                  letterSpacing = 1.sp,
+                  modifier = Modifier.padding(bottom = 4.dp)
+                )
+                Text(
+                  text = "Your name and number are saved to our system. SMS delivery isn't wired up yet -- use OTP code '123456' to continue.",
+                  color = OnSlateTextSecondary,
+                  fontSize = 11.sp,
+                  lineHeight = 15.sp
+                )
               }
             }
           }
@@ -434,7 +438,7 @@ fun LoginScreen(
             )
 
             Text(
-              text = "We have dispatched a 6-digit verification code to +1 $phoneNumber. Check your messages.",
+              text = "We have dispatched a 6-digit verification code to +91 $phoneNumber. Check your messages.",
               color = OnSlateTextSecondary,
               fontSize = 13.sp,
               textAlign = TextAlign.Center,
@@ -451,21 +455,7 @@ fun LoginScreen(
                   errorMessage = null
                   // Auto verify if they typed 6 digits
                   if (input.length == 6) {
-                    focusManager.clearFocus()
-                    verifyOTP(input, onLoginSuccess = {
-                      isVerifying = true
-                      coroutineScope.launch {
-                        delay(1500) // Verification processing
-                        isVerifying = false
-                        if (input == "123456") {
-                          verificationSuccess = true
-                          delay(800)
-                          onLoginSuccess()
-                        } else {
-                          errorMessage = "Invalid verification code. Please enter 123456."
-                        }
-                      }
-                    })
+                    submitOtp()
                   }
                 }
               },
@@ -565,25 +555,7 @@ fun LoginScreen(
               }
             } else {
               Button(
-                onClick = {
-                  focusManager.clearFocus()
-                  if (otpCode.length < 6) {
-                    errorMessage = "OTP must be exactly 6 digits."
-                  } else {
-                    isVerifying = true
-                    coroutineScope.launch {
-                      delay(1500)
-                      isVerifying = false
-                      if (otpCode == "123456") {
-                        verificationSuccess = true
-                        delay(800)
-                        onLoginSuccess()
-                      } else {
-                        errorMessage = "Invalid verification code. Please enter 123456."
-                      }
-                    }
-                  }
-                },
+                onClick = { submitOtp() },
                 modifier = Modifier
                   .fillMaxWidth()
                   .height(54.dp)
@@ -629,11 +601,6 @@ fun LoginScreen(
                     countdownTimer = 30
                     otpCode = ""
                     errorMessage = null
-                    // Quick simulated trigger notice
-                    coroutineScope.launch {
-                      delay(200)
-                      // Just reset timer and clear fields
-                    }
                   }
                 ) {
                   Text(
@@ -672,8 +639,4 @@ fun LoginScreen(
       )
     }
   }
-}
-
-private fun verifyOTP(code: String, onLoginSuccess: () -> Unit) {
-  // Trigger auto verify delegate
 }

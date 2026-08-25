@@ -1,5 +1,5 @@
 const { getPool } = require('../lib/db');
-
+// trial one for deployment
 const PHONE_REGEX = /^\d{10}$/;
 
 module.exports = async function handler(req, res) {

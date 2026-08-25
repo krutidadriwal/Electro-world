@@ -34,11 +34,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -49,7 +49,6 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -64,10 +63,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -94,8 +91,6 @@ import com.example.ui.theme.SlateBackground
 import com.example.ui.theme.SlateSurface
 import com.example.ui.theme.SlateSurfaceVariant
 import com.example.ui.theme.SuccessGreen
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 // Screen Enumeration for dialog overlays
 enum class ActiveModule {
@@ -106,15 +101,6 @@ enum class ActiveModule {
   INSTALLATION_REQUEST
 }
 
-// Data Classes for State Management
-data class StoreInvoice(
-  val id: String,
-  val itemNames: List<String>,
-  val purchaseDate: String,
-  val totalAmount: Double,
-  val serialNumber: String
-)
-
 @Composable
 fun DashboardScreen(
   userName: String,
@@ -124,14 +110,6 @@ fun DashboardScreen(
   modifier: Modifier = Modifier
 ) {
   var activeOverlay by remember { mutableStateOf(ActiveModule.NONE) }
-
-  // Shared application states (Simulated Room DB tables)
-  val invoicesList = remember {
-    mutableStateListOf(
-      StoreInvoice("INV-2026-004", listOf("OLED Smart Cinema 65\"", "Wall Mount Bracket"), "June 12, 2026", 949.98, "SN-59A83KD7"),
-      StoreInvoice("INV-2026-001", listOf("Inverter AC Dual-Cool"), "April 24, 2026", 499.99, "SN-AC29471X")
-    )
-  }
 
   // Dashboard Grid definition: left/right pairs per row
   val modules = listOf(
@@ -413,7 +391,7 @@ fun DashboardScreen(
                 // Render respective interactive placeholder layouts dynamically
                 Box(modifier = Modifier.weight(1f)) {
                   when (activeOverlay) {
-                    ActiveModule.MY_INVOICES -> MyInvoicesSubScreen(invoices = invoicesList)
+                    ActiveModule.MY_INVOICES -> MyInvoicesSubScreen(userPhone = userPhone)
                     ActiveModule.VISIT_STORE -> VisitStoreSubScreen()
                     ActiveModule.REGISTER_COMPLAINT -> RegisterComplaintSubScreen()
                     ActiveModule.INSTALLATION_REQUEST -> InstallationRequestSubScreen()
@@ -465,155 +443,93 @@ private fun getModuleTitle(module: ActiveModule): String {
 
 // 1. MY INVOICES SUB-SCREEN
 @Composable
-fun MyInvoicesSubScreen(invoices: List<StoreInvoice>) {
-  var selectedInvoice by remember { mutableStateOf<StoreInvoice?>(null) }
-  var downloadProgress by remember { mutableStateOf<Float?>(null) }
-  val scope = rememberCoroutineScope()
+fun MyInvoicesSubScreen(userPhone: String) {
+  var invoices by remember { mutableStateOf<List<com.example.data.network.InvoiceFile>>(emptyList()) }
+  var isLoading by remember { mutableStateOf(true) }
+  var errorMessage by remember { mutableStateOf<String?>(null) }
+  val context = LocalContext.current
 
-  if (selectedInvoice == null) {
-    LazyColumn(
-      verticalArrangement = Arrangement.spacedBy(10.dp),
-      modifier = Modifier.fillMaxSize()
-    ) {
-      items(invoices) { inv ->
-        Card(
-          colors = CardDefaults.cardColors(containerColor = SlateSurfaceVariant),
-          modifier = Modifier
-            .fillMaxWidth()
-            .clickable { selectedInvoice = inv },
-          shape = RoundedCornerShape(12.dp)
-        ) {
-          Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-          ) {
-            Column {
-              Text(text = inv.id, color = GoldSecondary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-              Text(
-                text = inv.itemNames.joinToString(", "),
-                color = OnSlateText,
-                fontSize = 12.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.width(180.dp)
-              )
-              Text(text = inv.purchaseDate, color = OnSlateTextSecondary, fontSize = 11.sp)
-            }
-            Text(
-              text = "$${String.format("%.2f", inv.totalAmount)}",
-              color = GoldLight,
-              fontSize = 15.sp,
-              fontWeight = FontWeight.ExtraBold
-            )
-          }
-        }
+  LaunchedEffect(userPhone) {
+    isLoading = true
+    errorMessage = null
+    try {
+      invoices = com.example.data.network.NetworkModule.userApi.getInvoices(userPhone).invoices
+    } catch (e: Exception) {
+      errorMessage = "Unable to load invoices. Please check your connection and try again."
+    } finally {
+      isLoading = false
+    }
+  }
+
+  when {
+    isLoading -> {
+      Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+      ) {
+        androidx.compose.material3.CircularProgressIndicator(color = GoldPrimary)
       }
     }
-  } else {
-    // Detailed Invoice Breakdown Sheet View
-    val inv = selectedInvoice!!
-    Column(
-      modifier = Modifier
-        .fillMaxSize()
-        .verticalScroll(rememberScrollState())
-    ) {
-      IconButton(
-        onClick = { selectedInvoice = null },
-        modifier = Modifier.background(SlateSurfaceVariant, CircleShape)
+    errorMessage != null -> {
+      Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
       ) {
-        Icon(Icons.Default.ArrowBack, "Back", tint = GoldSecondary)
+        Icon(Icons.Default.Warning, "Error", tint = GoldSecondary, modifier = Modifier.size(40.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(errorMessage ?: "", color = OnSlateTextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center)
       }
-
-      Spacer(modifier = Modifier.height(12.dp))
-
-      Card(
-        colors = CardDefaults.cardColors(containerColor = SlateSurfaceVariant),
-        modifier = Modifier.fillMaxWidth()
+    }
+    invoices.isEmpty() -> {
+      Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
       ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-          Text(text = "OFFICIAL RETAIL RECEIPT", color = GoldSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-          Text(text = "Electro World Store HQ #12", color = OnSlateText, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp))
-          Text(text = "Customer Mobile: +1 (555) 019-2834", color = OnSlateTextSecondary, fontSize = 11.sp)
-          Text(text = "Invoice ID: ${inv.id}", color = OnSlateTextSecondary, fontSize = 11.sp)
-          Text(text = "Warranty Serial: ${inv.serialNumber}", color = OnSlateTextSecondary, fontSize = 11.sp)
-
-          Divider(color = SlateSurface, modifier = Modifier.padding(vertical = 12.dp))
-
-          // Purchase items break
-          inv.itemNames.forEach { item ->
-            Row(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-              horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-              Text(text = "1x $item", color = OnSlateText, fontSize = 13.sp)
-              Text(text = "$${String.format("%.2f", inv.totalAmount / inv.itemNames.size)}", color = OnSlateTextSecondary, fontSize = 13.sp)
-            }
-          }
-
-          Divider(color = SlateSurface, modifier = Modifier.padding(vertical = 12.dp))
-
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-          ) {
-            Text(text = "Sales Tax (6.5%)", color = OnSlateTextSecondary, fontSize = 11.sp)
-            Text(text = "$${String.format("%.2f", inv.totalAmount * 0.065)}", color = OnSlateTextSecondary, fontSize = 11.sp)
-          }
-
-          Row(
+        Icon(Icons.Default.Info, "No invoices", tint = GoldSecondary, modifier = Modifier.size(40.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("No invoices found for your account yet.", color = OnSlateTextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center)
+      }
+    }
+    else -> {
+      LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxSize()
+      ) {
+        items(invoices) { inv ->
+          Card(
+            colors = CardDefaults.cardColors(containerColor = SlateSurfaceVariant),
             modifier = Modifier
               .fillMaxWidth()
-              .padding(top = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+              .clickable {
+                val url = "${com.example.BuildConfig.SERVER_BASE_URL}/api/invoice-file?id=${inv.id}&phone=$userPhone"
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+              },
+            shape = RoundedCornerShape(12.dp)
           ) {
-            Text(text = "NET TOTAL", color = OnSlateText, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-            Text(text = "$${String.format("%.2f", inv.totalAmount)}", color = GoldPrimary, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
-          }
-        }
-      }
-
-      Spacer(modifier = Modifier.height(16.dp))
-
-      if (downloadProgress != null) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-          LinearProgressIndicator(
-            progress = downloadProgress!!,
-            color = GoldPrimary,
-            trackColor = SlateSurfaceVariant,
-            modifier = Modifier.fillMaxWidth()
-          )
-          Spacer(modifier = Modifier.height(6.dp))
-          Text(
-            text = "Downloading invoice PDF... ${(downloadProgress!! * 100).toInt()}%",
-            color = GoldSecondary,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium
-          )
-        }
-      } else {
-        Button(
-          onClick = {
-            scope.launch {
-              downloadProgress = 0.0f
-              while (downloadProgress!! < 1.0f) {
-                delay(150)
-                downloadProgress = downloadProgress!! + 0.15f
+            Row(
+              modifier = Modifier.padding(14.dp),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+              Column(modifier = Modifier.weight(1f)) {
+                Text(
+                  text = inv.name,
+                  color = OnSlateText,
+                  fontSize = 13.sp,
+                  fontWeight = FontWeight.Bold,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis
+                )
+                inv.createdAt?.let {
+                  Text(text = it, color = OnSlateTextSecondary, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                }
               }
-              downloadProgress = 1.0f
-              delay(300)
-              downloadProgress = null
+              Icon(Icons.Default.Description, "Open PDF", tint = GoldPrimary, modifier = Modifier.size(20.dp))
             }
-          },
-          colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
-          modifier = Modifier.fillMaxWidth(),
-          shape = RoundedCornerShape(10.dp)
-        ) {
-          Icon(Icons.Default.Refresh, "Download Icon", tint = SlateBackground, modifier = Modifier.size(16.dp))
-          Spacer(modifier = Modifier.width(6.dp))
-          Text("DOWNLOAD RECEIPT PDF", color = SlateBackground, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+          }
         }
       }
     }

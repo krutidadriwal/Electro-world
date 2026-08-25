@@ -2,9 +2,13 @@ const http = require('http');
 const url = require('url');
 
 const user = require('../api/user');
+const invoices = require('../api/invoices');
+const invoiceFile = require('../api/invoice-file');
 
 const routes = {
-  '/api/user': user
+  '/api/user': user,
+  '/api/invoices': invoices,
+  '/api/invoice-file': invoiceFile
 };
 
 const server = http.createServer((req, res) => {

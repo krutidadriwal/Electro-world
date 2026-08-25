@@ -7,7 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.with
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,8 +37,13 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -52,8 +57,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
@@ -78,34 +81,100 @@ import com.example.ui.theme.SlateSurfaceVariant
 import com.example.ui.theme.SuccessGreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
-@OptIn(ExperimentalAnimationApi::class)
+private enum class AuthMode { LOGIN, SIGNUP }
+private enum class AuthStep { ENTRY, OTP }
+
+private val HOW_HEARD_OPTIONS = listOf(
+  "Instagram",
+  "Facebook",
+  "Google Search",
+  "Friend or Family Referral",
+  "Store Visit",
+  "Other"
+)
+
+@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
   onLoginSuccess: (name: String, phone: String) -> Unit,
   modifier: Modifier = Modifier
 ) {
-  var isOtpState by remember { mutableStateOf(false) }
+  var mode by remember { mutableStateOf(AuthMode.LOGIN) }
+  var step by remember { mutableStateOf(AuthStep.ENTRY) }
+
   var fullName by remember { mutableStateOf("") }
   var phoneNumber by remember { mutableStateOf("") }
+  var howHeard by remember { mutableStateOf<String?>(null) }
+  var howHeardMenuExpanded by remember { mutableStateOf(false) }
+  var resolvedName by remember { mutableStateOf("") }
+
   var otpCode by remember { mutableStateOf("") }
+  var isSubmitting by remember { mutableStateOf(false) }
   var isVerifying by remember { mutableStateOf(false) }
   var verificationSuccess by remember { mutableStateOf(false) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
+  var showSignupSuggestion by remember { mutableStateOf(false) }
   var countdownTimer by remember { mutableStateOf(30) }
 
   val coroutineScope = rememberCoroutineScope()
   val focusManager = LocalFocusManager.current
 
   // Countdown timer logic for Resend OTP
-  LaunchedEffect(isOtpState, countdownTimer) {
-    if (isOtpState && countdownTimer > 0) {
+  LaunchedEffect(step, countdownTimer) {
+    if (step == AuthStep.OTP && countdownTimer > 0) {
       delay(1000)
       countdownTimer -= 1
     }
   }
 
-  fun submitNameAndPhone() {
+  fun switchToSignup(prefillPhone: String) {
+    mode = AuthMode.SIGNUP
+    step = AuthStep.ENTRY
+    phoneNumber = prefillPhone
+    errorMessage = null
+    showSignupSuggestion = false
+  }
+
+  fun switchToLogin() {
+    mode = AuthMode.LOGIN
+    step = AuthStep.ENTRY
+    errorMessage = null
+    showSignupSuggestion = false
+  }
+
+  fun submitLoginPhone() {
+    focusManager.clearFocus()
+    if (phoneNumber.length < 10) {
+      errorMessage = "Please enter a valid 10-digit mobile number."
+      return
+    }
+    isSubmitting = true
+    coroutineScope.launch {
+      try {
+        val user = NetworkModule.userApi.getUser(phoneNumber)
+        resolvedName = user.name
+        isSubmitting = false
+        step = AuthStep.OTP
+        countdownTimer = 30
+        otpCode = ""
+      } catch (e: HttpException) {
+        isSubmitting = false
+        if (e.code() == 404) {
+          errorMessage = "No account found with this number."
+          showSignupSuggestion = true
+        } else {
+          errorMessage = "Unable to reach the server. Please check your connection and try again."
+        }
+      } catch (e: Exception) {
+        isSubmitting = false
+        errorMessage = "Unable to reach the server. Please check your connection and try again."
+      }
+    }
+  }
+
+  fun submitSignup() {
     focusManager.clearFocus()
     if (fullName.isBlank()) {
       errorMessage = "Please enter your full name."
@@ -115,18 +184,23 @@ fun LoginScreen(
       errorMessage = "Please enter a valid 10-digit mobile number."
       return
     }
-    isVerifying = true
+    if (howHeard == null) {
+      errorMessage = "Please tell us how you heard about us."
+      return
+    }
+    isSubmitting = true
     coroutineScope.launch {
       try {
         NetworkModule.userApi.createOrUpdateUser(
-          CreateUserRequest(name = fullName.trim(), phone = phoneNumber)
+          CreateUserRequest(name = fullName.trim(), phone = phoneNumber, howHeardAboutUs = howHeard)
         )
-        isVerifying = false
-        isOtpState = true
+        resolvedName = fullName.trim()
+        isSubmitting = false
+        step = AuthStep.OTP
         countdownTimer = 30
         otpCode = ""
       } catch (e: Exception) {
-        isVerifying = false
+        isSubmitting = false
         errorMessage = "Unable to reach the server. Please check your connection and try again."
       }
     }
@@ -145,7 +219,7 @@ fun LoginScreen(
       if (otpCode == "123456") {
         verificationSuccess = true
         delay(500)
-        onLoginSuccess(fullName.trim(), phoneNumber)
+        onLoginSuccess(resolvedName, phoneNumber)
       } else {
         errorMessage = "Invalid verification code. Please enter 123456."
       }
@@ -190,22 +264,22 @@ fun LoginScreen(
         modifier = Modifier.padding(bottom = 32.dp)
       )
 
-      // 2. Animated Switching Panel (Phone Entry vs OTP Verification)
+      // 2. Animated Switching Panel (Entry vs OTP Verification)
       AnimatedContent(
-        targetState = isOtpState,
+        targetState = step,
         transitionSpec = {
-          if (targetState) {
-            slideInHorizontally(initialOffsetX = { it }) + fadeIn() with
+          if (targetState == AuthStep.OTP) {
+            slideInHorizontally(initialOffsetX = { it }) + fadeIn() togetherWith
                 slideOutHorizontally(targetOffsetX = { -it }) + fadeOut()
           } else {
-            slideInHorizontally(initialOffsetX = { -it }) + fadeIn() with
+            slideInHorizontally(initialOffsetX = { -it }) + fadeIn() togetherWith
                 slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
           }
         },
         label = "LoginScreensTransition"
-      ) { showOtp ->
-        if (!showOtp) {
-          // --- PHONE INPUT VIEW ---
+      ) { currentStep ->
+        if (currentStep == AuthStep.ENTRY) {
+          // --- PHONE / SIGNUP ENTRY VIEW ---
           Column(
             modifier = Modifier
               .fillMaxWidth()
@@ -213,7 +287,7 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally
           ) {
             Text(
-              text = "Sign In / Sign Up",
+              text = if (mode == AuthMode.LOGIN) "Sign In" else "Create Account",
               color = OnSlateText,
               fontSize = 24.sp,
               fontWeight = FontWeight.Bold,
@@ -221,7 +295,11 @@ fun LoginScreen(
             )
 
             Text(
-              text = "Enter your mobile phone number to connect with your appliances and track store invoices.",
+              text = if (mode == AuthMode.LOGIN) {
+                "Enter your mobile phone number to connect with your appliances and track store invoices."
+              } else {
+                "Tell us a bit about yourself to create your Electro World account."
+              },
               color = OnSlateTextSecondary,
               fontSize = 13.sp,
               textAlign = TextAlign.Center,
@@ -229,36 +307,38 @@ fun LoginScreen(
               lineHeight = 18.sp
             )
 
-            // Full Name field
-            OutlinedTextField(
-              value = fullName,
-              onValueChange = { input ->
-                fullName = input
-                errorMessage = null
-              },
-              placeholder = { Text("Full Name", color = OnSlateTextSecondary) },
-              leadingIcon = {
-                Icon(
-                  imageVector = Icons.Default.Person,
-                  contentDescription = "Name Icon",
-                  tint = GoldPrimary
-                )
-              },
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-                .testTag("full_name_input"),
-              singleLine = true,
-              colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = GoldPrimary,
-                unfocusedBorderColor = SlateSurfaceVariant,
-                focusedContainerColor = SlateSurface,
-                unfocusedContainerColor = SlateSurface,
-                focusedTextColor = OnSlateText,
-                unfocusedTextColor = OnSlateText
-              ),
-              shape = RoundedCornerShape(12.dp)
-            )
+            if (mode == AuthMode.SIGNUP) {
+              // Full Name field
+              OutlinedTextField(
+                value = fullName,
+                onValueChange = { input ->
+                  fullName = input
+                  errorMessage = null
+                },
+                placeholder = { Text("Full Name", color = OnSlateTextSecondary) },
+                leadingIcon = {
+                  Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Name Icon",
+                    tint = GoldPrimary
+                  )
+                },
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(bottom = 16.dp)
+                  .testTag("full_name_input"),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                  focusedBorderColor = GoldPrimary,
+                  unfocusedBorderColor = SlateSurfaceVariant,
+                  focusedContainerColor = SlateSurface,
+                  unfocusedContainerColor = SlateSurface,
+                  focusedTextColor = OnSlateText,
+                  unfocusedTextColor = OnSlateText
+                ),
+                shape = RoundedCornerShape(12.dp)
+              )
+            }
 
             // Country Code + Phone field row
             Row(
@@ -294,6 +374,7 @@ fun LoginScreen(
                   if (input.all { it.isDigit() } && input.length <= 10) {
                     phoneNumber = input
                     errorMessage = null
+                    showSignupSuggestion = false
                   }
                 },
                 placeholder = { Text("Mobile Phone Number", color = OnSlateTextSecondary) },
@@ -321,6 +402,81 @@ fun LoginScreen(
               )
             }
 
+            if (mode == AuthMode.LOGIN) {
+              // "Sign up instead?" link
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Text(
+                  text = "New here? ",
+                  color = OnSlateTextSecondary,
+                  fontSize = 13.sp
+                )
+                Text(
+                  text = "Sign up instead",
+                  color = GoldSecondary,
+                  fontSize = 13.sp,
+                  fontWeight = FontWeight.Bold,
+                  modifier = Modifier
+                    .clickable { switchToSignup(phoneNumber) }
+                    .testTag("signup_instead_link")
+                )
+              }
+            }
+
+            if (mode == AuthMode.SIGNUP) {
+              // How did you hear about us dropdown
+              ExposedDropdownMenuBox(
+                expanded = howHeardMenuExpanded,
+                onExpandedChange = { howHeardMenuExpanded = it },
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(bottom = 16.dp)
+              ) {
+                OutlinedTextField(
+                  value = howHeard ?: "",
+                  onValueChange = {},
+                  readOnly = true,
+                  placeholder = { Text("How did you hear about us?", color = OnSlateTextSecondary) },
+                  trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = howHeardMenuExpanded) },
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+                    .testTag("how_heard_input"),
+                  singleLine = true,
+                  colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = GoldPrimary,
+                    unfocusedBorderColor = SlateSurfaceVariant,
+                    focusedContainerColor = SlateSurface,
+                    unfocusedContainerColor = SlateSurface,
+                    focusedTextColor = OnSlateText,
+                    unfocusedTextColor = OnSlateText
+                  ),
+                  shape = RoundedCornerShape(12.dp)
+                )
+                ExposedDropdownMenu(
+                  expanded = howHeardMenuExpanded,
+                  onDismissRequest = { howHeardMenuExpanded = false },
+                  modifier = Modifier.background(SlateSurface)
+                ) {
+                  HOW_HEARD_OPTIONS.forEach { option ->
+                    DropdownMenuItem(
+                      text = { Text(option, color = OnSlateText) },
+                      onClick = {
+                        howHeard = option
+                        howHeardMenuExpanded = false
+                        errorMessage = null
+                      }
+                    )
+                  }
+                }
+              }
+            }
+
             AnimatedVisibility(visible = errorMessage != null) {
               Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -342,10 +498,28 @@ fun LoginScreen(
               }
             }
 
+            if (mode == AuthMode.LOGIN && showSignupSuggestion) {
+              TextButton(
+                onClick = { switchToSignup(phoneNumber) },
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(bottom = 12.dp)
+                  .testTag("create_account_button")
+              ) {
+                Text(
+                  text = "CREATE AN ACCOUNT",
+                  color = GoldSecondary,
+                  fontSize = 13.sp,
+                  fontWeight = FontWeight.Bold,
+                  letterSpacing = 1.sp
+                )
+              }
+            }
+
             // Big CTA Button to send OTP
             Button(
-              onClick = { submitNameAndPhone() },
-              enabled = !isVerifying,
+              onClick = { if (mode == AuthMode.LOGIN) submitLoginPhone() else submitSignup() },
+              enabled = !isSubmitting,
               modifier = Modifier
                 .fillMaxWidth()
                 .height(54.dp)
@@ -356,7 +530,7 @@ fun LoginScreen(
               ),
               shape = RoundedCornerShape(12.dp)
             ) {
-              if (isVerifying) {
+              if (isSubmitting) {
                 CircularProgressIndicator(
                   modifier = Modifier.size(24.dp),
                   color = SlateBackground,
@@ -369,6 +543,31 @@ fun LoginScreen(
                   fontWeight = FontWeight.Bold,
                   color = SlateBackground,
                   letterSpacing = 1.sp
+                )
+              }
+            }
+
+            if (mode == AuthMode.SIGNUP) {
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(top = 16.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Text(
+                  text = "Already have an account? ",
+                  color = OnSlateTextSecondary,
+                  fontSize = 13.sp
+                )
+                Text(
+                  text = "Sign in instead",
+                  color = GoldSecondary,
+                  fontSize = 13.sp,
+                  fontWeight = FontWeight.Bold,
+                  modifier = Modifier
+                    .clickable { switchToLogin() }
+                    .testTag("signin_instead_link")
                 )
               }
             }
@@ -394,7 +593,7 @@ fun LoginScreen(
                   modifier = Modifier.padding(bottom = 4.dp)
                 )
                 Text(
-                  text = "Your name and number are saved to our system. SMS delivery isn't wired up yet -- use OTP code '123456' to continue.",
+                  text = "SMS delivery isn't wired up yet -- use OTP code '123456' to continue.",
                   color = OnSlateTextSecondary,
                   fontSize = 11.sp,
                   lineHeight = 15.sp
@@ -415,7 +614,7 @@ fun LoginScreen(
               verticalAlignment = Alignment.CenterVertically
             ) {
               IconButton(
-                onClick = { isOtpState = false },
+                onClick = { step = AuthStep.ENTRY },
                 modifier = Modifier.background(SlateSurface, CircleShape)
               ) {
                 Icon(

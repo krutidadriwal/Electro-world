@@ -11,4 +11,7 @@ interface UserApi {
 
   @GET("api/user")
   suspend fun getUser(@Query("phone") phone: String): UserResponse
+
+  @GET("api/invoices")
+  suspend fun getInvoices(@Query("phone") phone: String): InvoicesResponse
 }

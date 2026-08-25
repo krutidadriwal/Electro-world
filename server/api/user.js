@@ -38,7 +38,7 @@ async function handleGet(req, res) {
 }
 
 async function handlePost(req, res) {
-  const { name, phone, countryCode } = req.body ?? {};
+  const { name, phone, countryCode, howHeardAboutUs } = req.body ?? {};
 
   if (typeof name !== 'string' || name.trim().length === 0) {
     return res.status(400).json({ error: 'name is required' });
@@ -48,16 +48,19 @@ async function handlePost(req, res) {
   }
 
   const normalizedPhone = `${typeof countryCode === 'string' ? countryCode : '+91'}${phone}`;
+  const normalizedHowHeard = typeof howHeardAboutUs === 'string' && howHeardAboutUs.trim().length > 0
+    ? howHeardAboutUs.trim()
+    : null;
 
   try {
     const pool = getPool();
     const result = await pool.query(
-      `insert into public.users (phone, name, last_login_at)
-       values ($1, $2, now())
+      `insert into public.users (phone, name, how_heard_about_us, last_login_at)
+       values ($1, $2, $3, now())
        on conflict (phone)
        do update set name = excluded.name, last_login_at = now()
        returning phone, name, created_at, last_login_at`,
-      [normalizedPhone, name.trim()]
+      [normalizedPhone, name.trim(), normalizedHowHeard]
     );
     return res.status(200).json(result.rows[0]);
   } catch (err) {

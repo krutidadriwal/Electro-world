@@ -19,13 +19,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.example.data.SessionManager
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.LoginScreen
+import com.example.ui.screens.RegisterComplaintScreen
 import com.example.ui.screens.WishlistScreen
 import com.example.ui.theme.MyApplicationTheme
 
 enum class Screen {
   LOGIN,
   DASHBOARD,
-  WISHLIST
+  WISHLIST,
+  REGISTER_COMPLAINT
 }
 
 class MainActivity : ComponentActivity() {
@@ -67,11 +69,19 @@ class MainActivity : ComponentActivity() {
                   currentScreen = Screen.LOGIN
                 },
                 onOpenWishlist = { currentScreen = Screen.WISHLIST },
+                onOpenRegisterComplaint = { currentScreen = Screen.REGISTER_COMPLAINT },
                 modifier = Modifier.padding(innerPadding)
               )
             }
             Screen.WISHLIST -> {
               WishlistScreen(
+                onBack = { currentScreen = Screen.DASHBOARD },
+                modifier = Modifier.padding(innerPadding)
+              )
+            }
+            Screen.REGISTER_COMPLAINT -> {
+              RegisterComplaintScreen(
+                userPhone = userPhone,
                 onBack = { currentScreen = Screen.DASHBOARD },
                 modifier = Modifier.padding(innerPadding)
               )

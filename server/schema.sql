@@ -93,8 +93,8 @@ create table if not exists public.complaints (
   category_name text not null,      -- denormalized so history still reads correctly if the category is later renamed
   subcategory_id uuid references public.subcategories(id),
   subcategory_name text,
-  issue_type text not null,
   description text not null,
+  address text not null,
   contact_phone text,
   status public.complaint_status not null default 'open',
   created_at timestamptz not null default now(),
@@ -104,5 +104,12 @@ create table if not exists public.complaints (
 
 alter table public.complaints add column if not exists subcategory_id uuid references public.subcategories(id);
 alter table public.complaints add column if not exists subcategory_name text;
+
+-- Issue type was dropped from the complaint form; address (where the
+-- complaint/service is needed) was added. address has no default, so it's
+-- added nullable for databases with existing rows -- the API still requires
+-- it on every new complaint.
+alter table public.complaints drop column if exists issue_type;
+alter table public.complaints add column if not exists address text;
 
 create index if not exists complaints_phone_idx on public.complaints (phone, created_at desc);

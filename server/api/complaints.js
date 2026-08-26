@@ -1,8 +1,6 @@
 const { getPool } = require('../lib/db');
 const { normalizePhone } = require('../lib/phone');
 
-const ISSUE_TYPES = ['Not working', 'Damaged on delivery', 'Installation issue', 'Missing parts', 'Wrong item', 'Other'];
-
 module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     return handleGet(req, res);
@@ -25,7 +23,7 @@ async function handleGet(req, res) {
     const pool = getPool();
     const result = await pool.query(
       `select id, invoice_file_id, invoice_file_name, category_icon_key, category_name,
-              subcategory_id, subcategory_name, issue_type, description,
+              subcategory_id, subcategory_name, description, address,
               contact_phone, status, created_at, updated_at, resolved_at
        from public.complaints
        where phone = $1
@@ -47,8 +45,8 @@ async function handlePost(req, res) {
     invoiceFileName,
     categoryIconKey,
     subcategoryId,
-    issueType,
     description,
+    address,
     contactPhone
   } = req.body ?? {};
 
@@ -59,11 +57,11 @@ async function handlePost(req, res) {
   if (typeof categoryIconKey !== 'string' || categoryIconKey.trim().length === 0) {
     return res.status(400).json({ error: 'categoryIconKey is required' });
   }
-  if (typeof issueType !== 'string' || !ISSUE_TYPES.includes(issueType)) {
-    return res.status(400).json({ error: `issueType must be one of: ${ISSUE_TYPES.join(', ')}` });
-  }
   if (typeof description !== 'string' || description.trim().length === 0) {
     return res.status(400).json({ error: 'description is required' });
+  }
+  if (typeof address !== 'string' || address.trim().length === 0) {
+    return res.status(400).json({ error: 'address is required' });
   }
 
   try {
@@ -97,10 +95,10 @@ async function handlePost(req, res) {
     const result = await pool.query(
       `insert into public.complaints
          (phone, invoice_file_id, invoice_file_name, category_icon_key, category_name,
-          subcategory_id, subcategory_name, issue_type, description, contact_phone)
+          subcategory_id, subcategory_name, description, address, contact_phone)
        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        returning id, invoice_file_id, invoice_file_name, category_icon_key, category_name,
-                 subcategory_id, subcategory_name, issue_type, description,
+                 subcategory_id, subcategory_name, description, address,
                  contact_phone, status, created_at, updated_at, resolved_at`,
       [
         normalizedPhone,
@@ -110,8 +108,8 @@ async function handlePost(req, res) {
         category.name,
         subcategory ? subcategory.id : null,
         subcategory ? subcategory.name : null,
-        issueType,
         description.trim(),
+        address.trim(),
         typeof contactPhone === 'string' && contactPhone.trim().length > 0 ? contactPhone.trim() : null
       ]
     );

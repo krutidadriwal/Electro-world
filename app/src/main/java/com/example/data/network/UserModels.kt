@@ -38,8 +38,8 @@ data class CreateComplaintRequest(
   val invoiceFileName: String? = null,
   val categoryIconKey: String,
   val subcategoryId: String? = null,
-  val issueType: String,
   val description: String,
+  val address: String,
   val contactPhone: String? = null
 )
 
@@ -52,8 +52,8 @@ data class Complaint(
   @Json(name = "category_name") val categoryName: String,
   @Json(name = "subcategory_id") val subcategoryId: String?,
   @Json(name = "subcategory_name") val subcategoryName: String?,
-  @Json(name = "issue_type") val issueType: String,
   val description: String,
+  val address: String,
   @Json(name = "contact_phone") val contactPhone: String?,
   val status: String,
   @Json(name = "created_at") val createdAt: String,

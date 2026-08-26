@@ -14,4 +14,13 @@ interface UserApi {
 
   @GET("api/invoices")
   suspend fun getInvoices(@Query("phone") phone: String): InvoicesResponse
+
+  @GET("api/complaints")
+  suspend fun getComplaints(@Query("phone") phone: String): ComplaintsResponse
+
+  @POST("api/complaints")
+  suspend fun createComplaint(@Body request: CreateComplaintRequest): Complaint
+
+  @GET("api/categories")
+  suspend fun getCategories(): CategoriesResponse
 }

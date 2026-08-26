@@ -33,6 +33,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Favorite
@@ -46,10 +48,14 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -65,7 +71,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -393,7 +401,7 @@ fun DashboardScreen(
                   when (activeOverlay) {
                     ActiveModule.MY_INVOICES -> MyInvoicesSubScreen(userPhone = userPhone)
                     ActiveModule.VISIT_STORE -> VisitStoreSubScreen()
-                    ActiveModule.REGISTER_COMPLAINT -> RegisterComplaintSubScreen()
+                    ActiveModule.REGISTER_COMPLAINT -> RegisterComplaintSubScreen(userPhone = userPhone)
                     ActiveModule.INSTALLATION_REQUEST -> InstallationRequestSubScreen()
                     else -> Unit
                   }
@@ -599,23 +607,299 @@ fun VisitStoreSubScreen() {
 }
 
 // 3. REGISTER COMPLAINT SUB-SCREEN
+private val COMPLAINT_ISSUE_TYPES = listOf("Not working", "Damaged on delivery", "Installation issue", "Missing parts", "Wrong item", "Other")
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegisterComplaintSubScreen() {
+fun RegisterComplaintSubScreen(userPhone: String) {
+  val coroutineScope = rememberCoroutineScope()
+
+  var invoices by remember { mutableStateOf<List<com.example.data.network.InvoiceFile>>(emptyList()) }
+  var selectedInvoice by remember { mutableStateOf<com.example.data.network.InvoiceFile?>(null) }
+  var invoiceMenuExpanded by remember { mutableStateOf(false) }
+
+  var categories by remember { mutableStateOf<List<com.example.data.network.Category>>(emptyList()) }
+  var selectedCategory by remember { mutableStateOf<com.example.data.network.Category?>(null) }
+  var categoryMenuExpanded by remember { mutableStateOf(false) }
+
+  var selectedSubcategory by remember { mutableStateOf<com.example.data.network.Subcategory?>(null) }
+  var subcategoryMenuExpanded by remember { mutableStateOf(false) }
+
+  var issueType by remember { mutableStateOf("") }
+  var issueTypeMenuExpanded by remember { mutableStateOf(false) }
+
+  var description by remember { mutableStateOf("") }
+  var contactPhone by remember { mutableStateOf("") }
+
+  var isSubmitting by remember { mutableStateOf(false) }
+  var submitError by remember { mutableStateOf<String?>(null) }
+  var submitSuccess by remember { mutableStateOf(false) }
+
+  LaunchedEffect(userPhone) {
+    try {
+      invoices = com.example.data.network.NetworkModule.userApi.getInvoices(userPhone).invoices
+    } catch (e: Exception) {
+      // Invoice list is optional context for a complaint; silently allow filing without it.
+    }
+    try {
+      categories = com.example.data.network.NetworkModule.userApi.getCategories().categories
+    } catch (e: Exception) {
+      submitError = "Unable to load product categories. Please check your connection and try again."
+    }
+  }
+
+  if (submitSuccess) {
+    Column(
+      modifier = Modifier.fillMaxSize(),
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.Center
+    ) {
+      Icon(Icons.Default.CheckCircle, "Submitted", tint = GoldSecondary, modifier = Modifier.size(48.dp))
+      Spacer(modifier = Modifier.height(12.dp))
+      Text("Complaint Registered", color = OnSlateText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+      Text(
+        text = "Our team will get in touch with you shortly.",
+        color = OnSlateTextSecondary,
+        fontSize = 12.sp,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(top = 6.dp)
+      )
+      Spacer(modifier = Modifier.height(16.dp))
+      Button(
+        onClick = {
+          selectedInvoice = null
+          selectedCategory = null
+          selectedSubcategory = null
+          issueType = ""
+          description = ""
+          contactPhone = ""
+          submitSuccess = false
+        },
+        colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
+        shape = RoundedCornerShape(10.dp)
+      ) {
+        Text("FILE ANOTHER COMPLAINT", color = SlateBackground, fontWeight = FontWeight.Bold)
+      }
+    }
+    return
+  }
+
   Column(
-    modifier = Modifier.fillMaxSize(),
-    horizontalAlignment = Alignment.CenterHorizontally,
-    verticalArrangement = Arrangement.Center
+    modifier = Modifier
+      .fillMaxSize()
+      .verticalScroll(rememberScrollState())
   ) {
-    Icon(Icons.Default.Warning, "Register complaint", tint = GoldSecondary, modifier = Modifier.size(48.dp))
-    Spacer(modifier = Modifier.height(12.dp))
-    Text("Register Complaint", color = OnSlateText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-    Text(
-      text = "This feature is coming soon.",
-      color = OnSlateTextSecondary,
-      fontSize = 12.sp,
-      textAlign = TextAlign.Center,
-      modifier = Modifier.padding(top = 6.dp)
+    Text("Related Invoice (optional)", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+    ExposedDropdownMenuBox(
+      expanded = invoiceMenuExpanded,
+      onExpandedChange = { invoiceMenuExpanded = it }
+    ) {
+      OutlinedTextField(
+        value = selectedInvoice?.name ?: "No specific invoice",
+        onValueChange = {},
+        readOnly = true,
+        trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = OnSlateTextSecondary) },
+        colors = OutlinedTextFieldDefaults.colors(
+          focusedTextColor = OnSlateText,
+          unfocusedTextColor = OnSlateText,
+          focusedBorderColor = GoldPrimary,
+          unfocusedBorderColor = SlateSurfaceVariant
+        ),
+        modifier = Modifier
+          .fillMaxWidth()
+          .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+      )
+      ExposedDropdownMenu(expanded = invoiceMenuExpanded, onDismissRequest = { invoiceMenuExpanded = false }) {
+        DropdownMenuItem(text = { Text("No specific invoice") }, onClick = {
+          selectedInvoice = null
+          invoiceMenuExpanded = false
+        })
+        invoices.forEach { inv ->
+          DropdownMenuItem(text = { Text(inv.name) }, onClick = {
+            selectedInvoice = inv
+            invoiceMenuExpanded = false
+          })
+        }
+      }
+    }
+
+    Spacer(modifier = Modifier.height(14.dp))
+
+    Text("Product Category", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+    ExposedDropdownMenuBox(
+      expanded = categoryMenuExpanded,
+      onExpandedChange = { categoryMenuExpanded = it }
+    ) {
+      OutlinedTextField(
+        value = selectedCategory?.name ?: "Select a category",
+        onValueChange = {},
+        readOnly = true,
+        trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = OnSlateTextSecondary) },
+        colors = OutlinedTextFieldDefaults.colors(
+          focusedTextColor = OnSlateText,
+          unfocusedTextColor = OnSlateText,
+          focusedBorderColor = GoldPrimary,
+          unfocusedBorderColor = SlateSurfaceVariant
+        ),
+        modifier = Modifier
+          .fillMaxWidth()
+          .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+      )
+      ExposedDropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
+        categories.forEach { option ->
+          DropdownMenuItem(text = { Text(option.name) }, onClick = {
+            selectedCategory = option
+            selectedSubcategory = null
+            categoryMenuExpanded = false
+          })
+        }
+      }
+    }
+
+    if (selectedCategory != null && selectedCategory!!.subcategories.isNotEmpty()) {
+      Spacer(modifier = Modifier.height(14.dp))
+
+      Text("Product Type (optional)", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+      ExposedDropdownMenuBox(
+        expanded = subcategoryMenuExpanded,
+        onExpandedChange = { subcategoryMenuExpanded = it }
+      ) {
+        OutlinedTextField(
+          value = selectedSubcategory?.name ?: "Select a product type",
+          onValueChange = {},
+          readOnly = true,
+          trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = OnSlateTextSecondary) },
+          colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = OnSlateText,
+            unfocusedTextColor = OnSlateText,
+            focusedBorderColor = GoldPrimary,
+            unfocusedBorderColor = SlateSurfaceVariant
+          ),
+          modifier = Modifier
+            .fillMaxWidth()
+            .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+        )
+        ExposedDropdownMenu(expanded = subcategoryMenuExpanded, onDismissRequest = { subcategoryMenuExpanded = false }) {
+          selectedCategory!!.subcategories.forEach { option ->
+            DropdownMenuItem(text = { Text(option.name) }, onClick = {
+              selectedSubcategory = option
+              subcategoryMenuExpanded = false
+            })
+          }
+        }
+      }
+    }
+
+    Spacer(modifier = Modifier.height(14.dp))
+
+    Text("Issue Type", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+    ExposedDropdownMenuBox(
+      expanded = issueTypeMenuExpanded,
+      onExpandedChange = { issueTypeMenuExpanded = it }
+    ) {
+      OutlinedTextField(
+        value = issueType.ifEmpty { "Select an issue type" },
+        onValueChange = {},
+        readOnly = true,
+        trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = OnSlateTextSecondary) },
+        colors = OutlinedTextFieldDefaults.colors(
+          focusedTextColor = OnSlateText,
+          unfocusedTextColor = OnSlateText,
+          focusedBorderColor = GoldPrimary,
+          unfocusedBorderColor = SlateSurfaceVariant
+        ),
+        modifier = Modifier
+          .fillMaxWidth()
+          .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+      )
+      ExposedDropdownMenu(expanded = issueTypeMenuExpanded, onDismissRequest = { issueTypeMenuExpanded = false }) {
+        COMPLAINT_ISSUE_TYPES.forEach { option ->
+          DropdownMenuItem(text = { Text(option) }, onClick = {
+            issueType = option
+            issueTypeMenuExpanded = false
+          })
+        }
+      }
+    }
+
+    Spacer(modifier = Modifier.height(14.dp))
+
+    Text("Description", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+    OutlinedTextField(
+      value = description,
+      onValueChange = { description = it },
+      placeholder = { Text("Describe the issue in detail...") },
+      minLines = 3,
+      colors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = OnSlateText,
+        unfocusedTextColor = OnSlateText,
+        focusedBorderColor = GoldPrimary,
+        unfocusedBorderColor = SlateSurfaceVariant
+      ),
+      modifier = Modifier.fillMaxWidth()
     )
+
+    Spacer(modifier = Modifier.height(14.dp))
+
+    Text("Alternate Contact Number (optional)", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+    OutlinedTextField(
+      value = contactPhone,
+      onValueChange = { if (it.length <= 10) contactPhone = it.filter { c -> c.isDigit() } },
+      placeholder = { Text("10-digit mobile number") },
+      colors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = OnSlateText,
+        unfocusedTextColor = OnSlateText,
+        focusedBorderColor = GoldPrimary,
+        unfocusedBorderColor = SlateSurfaceVariant
+      ),
+      modifier = Modifier.fillMaxWidth()
+    )
+
+    submitError?.let {
+      Spacer(modifier = Modifier.height(10.dp))
+      Text(it, color = GoldSecondary, fontSize = 12.sp)
+    }
+
+    Spacer(modifier = Modifier.height(20.dp))
+
+    Button(
+      onClick = {
+        val category = selectedCategory
+        if (category == null || issueType.isEmpty() || description.trim().isEmpty()) {
+          submitError = "Please fill in category, issue type and description."
+          return@Button
+        }
+        submitError = null
+        isSubmitting = true
+        coroutineScope.launch {
+          try {
+            com.example.data.network.NetworkModule.userApi.createComplaint(
+              com.example.data.network.CreateComplaintRequest(
+                phone = userPhone,
+                invoiceFileId = selectedInvoice?.id,
+                invoiceFileName = selectedInvoice?.name,
+                categoryIconKey = category.iconKey,
+                subcategoryId = selectedSubcategory?.id,
+                issueType = issueType,
+                description = description.trim(),
+                contactPhone = contactPhone.ifEmpty { null }
+              )
+            )
+            submitSuccess = true
+          } catch (e: Exception) {
+            submitError = "Unable to submit complaint. Please check your connection and try again."
+          } finally {
+            isSubmitting = false
+          }
+        }
+      },
+      enabled = !isSubmitting,
+      colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
+      modifier = Modifier.fillMaxWidth(),
+      shape = RoundedCornerShape(10.dp)
+    ) {
+      Text(if (isSubmitting) "SUBMITTING..." else "SUBMIT COMPLAINT", color = SlateBackground, fontWeight = FontWeight.Bold)
+    }
   }
 }
 

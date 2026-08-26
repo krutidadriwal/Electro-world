@@ -21,27 +21,37 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Checkroom
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DeviceThermostat
+import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Kitchen
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.mock.WishlistCategory
 import com.example.data.mock.WishlistItem
 import com.example.data.mock.WishlistMockData
-import com.example.data.mock.WishlistSubcategory
+import com.example.data.network.Category
+import com.example.data.network.NetworkModule
+import com.example.data.network.Subcategory
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.GoldSecondary
 import com.example.ui.theme.OnSlateText
@@ -52,16 +62,43 @@ import com.example.ui.theme.SlateSurfaceVariant
 
 /**
  * Wishlist page: Categories -> Subcategories -> Features.
- * Data currently comes from [WishlistMockData]; swap for a real
- * repository/database read once that layer exists.
+ * Category/subcategory browse structure comes from Supabase (shared with
+ * Register Complaint, see GET /api/categories). Item-level detail (price,
+ * features) still comes from [WishlistMockData] until a real product
+ * catalog backend exists.
  */
+private fun iconForKey(iconKey: String): ImageVector = when (iconKey.uppercase()) {
+  "TV" -> Icons.Default.Tv
+  "AC", "CLH" -> Icons.Default.DeviceThermostat
+  "REF", "MWO", "OKA", "KHK", "LCK", "ROUV", "WCD", "DFV", "AFK", "WHH" -> Icons.Default.Kitchen
+  "SSH" -> Icons.Default.Headphones
+  "WMC" -> Icons.Default.Checkroom
+  else -> Icons.Default.Info
+}
+
 @Composable
 fun WishlistScreen(
   onBack: () -> Unit,
   modifier: Modifier = Modifier
 ) {
-  var selectedCategory by remember { mutableStateOf<WishlistCategory?>(null) }
-  var selectedSubcategory by remember { mutableStateOf<WishlistSubcategory?>(null) }
+  var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
+  var isLoading by remember { mutableStateOf(true) }
+  var errorMessage by remember { mutableStateOf<String?>(null) }
+
+  var selectedCategory by remember { mutableStateOf<Category?>(null) }
+  var selectedSubcategory by remember { mutableStateOf<Subcategory?>(null) }
+
+  LaunchedEffect(Unit) {
+    isLoading = true
+    errorMessage = null
+    try {
+      categories = NetworkModule.userApi.getCategories().categories
+    } catch (e: Exception) {
+      errorMessage = "Unable to load categories. Please check your connection and try again."
+    } finally {
+      isLoading = false
+    }
+  }
 
   fun navigateBack() {
     when {
@@ -105,15 +142,27 @@ fun WishlistScreen(
         .padding(paddingValues)
     ) {
       when {
+        isLoading -> {
+          Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+          ) {
+            CircularProgressIndicator(color = GoldPrimary)
+          }
+        }
+        errorMessage != null -> WishlistEmptyState(message = errorMessage ?: "")
         selectedCategory == null -> WishlistCategoryList(
-          categories = WishlistMockData.categories,
+          categories = categories,
           onSelect = { selectedCategory = it }
         )
+        selectedCategory!!.subcategories.isEmpty() ->
+          WishlistFeatureList(items = WishlistMockData.itemsForCategory(selectedCategory!!.iconKey))
         selectedSubcategory == null -> WishlistSubcategoryList(
           subcategories = selectedCategory!!.subcategories,
           onSelect = { selectedSubcategory = it }
         )
-        else -> WishlistFeatureList(items = selectedSubcategory!!.items)
+        else -> WishlistFeatureList(items = WishlistMockData.itemsForSubcategory(selectedSubcategory!!.name))
       }
     }
   }
@@ -121,8 +170,8 @@ fun WishlistScreen(
 
 @Composable
 private fun WishlistCategoryList(
-  categories: List<WishlistCategory>,
-  onSelect: (WishlistCategory) -> Unit
+  categories: List<Category>,
+  onSelect: (Category) -> Unit
 ) {
   if (categories.isEmpty()) {
     WishlistEmptyState(message = "Your wishlist is empty.")
@@ -152,7 +201,7 @@ private fun WishlistCategoryList(
               .background(GoldPrimary.copy(alpha = 0.1f), CircleShape),
             contentAlignment = Alignment.Center
           ) {
-            Icon(category.icon, contentDescription = category.name, tint = GoldSecondary, modifier = Modifier.size(22.dp))
+            Icon(iconForKey(category.iconKey), contentDescription = category.name, tint = GoldSecondary, modifier = Modifier.size(22.dp))
           }
           Spacer(modifier = Modifier.width(12.dp))
           Column(modifier = Modifier.weight(1f)) {
@@ -172,8 +221,8 @@ private fun WishlistCategoryList(
 
 @Composable
 private fun WishlistSubcategoryList(
-  subcategories: List<WishlistSubcategory>,
-  onSelect: (WishlistSubcategory) -> Unit
+  subcategories: List<Subcategory>,
+  onSelect: (Subcategory) -> Unit
 ) {
   if (subcategories.isEmpty()) {
     WishlistEmptyState(message = "No subcategories yet.")
@@ -200,14 +249,7 @@ private fun WishlistSubcategoryList(
           horizontalArrangement = Arrangement.SpaceBetween,
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Column(modifier = Modifier.weight(1f)) {
-            Text(text = subcategory.name, color = OnSlateText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Text(
-              text = "${subcategory.items.size} items",
-              color = OnSlateTextSecondary,
-              fontSize = 11.sp
-            )
-          }
+          Text(text = subcategory.name, color = OnSlateText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
           Icon(Icons.Default.ChevronRight, contentDescription = null, tint = OnSlateTextSecondary)
         }
       }

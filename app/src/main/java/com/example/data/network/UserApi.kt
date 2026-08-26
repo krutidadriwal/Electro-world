@@ -23,4 +23,10 @@ interface UserApi {
 
   @GET("api/categories")
   suspend fun getCategories(): CategoriesResponse
+
+  @GET("api/wishlist")
+  suspend fun getWishlist(@Query("phone") phone: String): WishlistResponse
+
+  @POST("api/wishlist")
+  suspend fun confirmWishlist(@Body request: ConfirmWishlistRequest): WishlistResponse
 }

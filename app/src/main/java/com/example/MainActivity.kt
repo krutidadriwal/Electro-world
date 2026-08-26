@@ -75,6 +75,7 @@ class MainActivity : ComponentActivity() {
             }
             Screen.WISHLIST -> {
               WishlistScreen(
+                userPhone = userPhone,
                 onBack = { currentScreen = Screen.DASHBOARD },
                 modifier = Modifier.padding(innerPadding)
               )

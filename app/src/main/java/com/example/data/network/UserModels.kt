@@ -89,3 +89,28 @@ data class Category(
 data class CategoriesResponse(
   val categories: List<Category>
 )
+
+// A saved wishlist entry: either a whole category (subcategoryId null) or a
+// specific subcategory within one.
+@JsonClass(generateAdapter = true)
+data class WishlistItemDto(
+  val id: String,
+  @Json(name = "category_icon_key") val categoryIconKey: String,
+  @Json(name = "category_name") val categoryName: String,
+  @Json(name = "subcategory_id") val subcategoryId: String?,
+  @Json(name = "subcategory_name") val subcategoryName: String?,
+  @Json(name = "created_at") val createdAt: String
+)
+
+@JsonClass(generateAdapter = true)
+data class WishlistResponse(
+  val items: List<WishlistItemDto>
+)
+
+@JsonClass(generateAdapter = true)
+data class ConfirmWishlistRequest(
+  val phone: String,
+  val categoryIconKey: String,
+  val categoryStarred: Boolean,
+  val subcategoryIds: List<String>
+)

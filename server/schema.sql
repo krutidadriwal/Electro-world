@@ -113,3 +113,24 @@ alter table public.complaints drop column if exists issue_type;
 alter table public.complaints add column if not exists address text;
 
 create index if not exists complaints_phone_idx on public.complaints (phone, created_at desc);
+
+-- A wishlisted entry is either a whole category (subcategory_id null) or a
+-- specific subcategory within a category -- never both for the same
+-- category at once (the app enforces that: starring any subcategory drops
+-- the bare-category entry). The two partial unique indexes below make each
+-- shape unique per user without a sentinel value standing in for null.
+create table if not exists public.wishlist_items (
+  id uuid primary key default gen_random_uuid(),
+  phone text not null references public.users(phone),
+  category_icon_key text not null references public.categories(icon_key),
+  category_name text not null,      -- denormalized so history still reads correctly if the category is later renamed
+  subcategory_id uuid references public.subcategories(id),
+  subcategory_name text,
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists wishlist_items_category_only_key
+  on public.wishlist_items (phone, category_icon_key) where subcategory_id is null;
+create unique index if not exists wishlist_items_category_subcategory_key
+  on public.wishlist_items (phone, category_icon_key, subcategory_id) where subcategory_id is not null;
+create index if not exists wishlist_items_phone_idx on public.wishlist_items (phone, created_at desc);

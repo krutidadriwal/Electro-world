@@ -53,12 +53,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.mock.WishlistItem
-import com.example.data.mock.WishlistMockData
 import com.example.data.network.Category
 import com.example.data.network.ConfirmWishlistRequest
 import com.example.data.network.NetworkModule
-import com.example.data.network.Subcategory
 import com.example.data.network.WishlistItemDto
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.GoldSecondary
@@ -70,12 +67,12 @@ import com.example.ui.theme.SlateSurfaceVariant
 import kotlinx.coroutines.launch
 
 /**
- * Wishlist page: Categories -> Subcategories -> Features.
+ * Wishlist page: Categories -> Subcategories. That's the full depth -- a
+ * subcategory is a leaf you star, not something you drill further into.
  * Category/subcategory browse structure comes from Supabase (shared with
- * Register Complaint, see GET /api/categories). Item-level detail (price,
- * features) still comes from [WishlistMockData] until a real product
- * catalog backend exists. Which categories/subcategories the user has
- * actually wishlisted is stored in Supabase (see GET/POST /api/wishlist).
+ * Register Complaint, see GET /api/categories). Which categories/
+ * subcategories the user has actually wishlisted is stored in Supabase too
+ * (see GET/POST /api/wishlist).
  */
 private fun iconForKey(iconKey: String): ImageVector = when (iconKey.uppercase()) {
   "TV" -> Icons.Default.Tv
@@ -101,7 +98,6 @@ fun WishlistScreen(
   var wishlistItems by remember { mutableStateOf<List<WishlistItemDto>>(emptyList()) }
 
   var selectedCategory by remember { mutableStateOf<Category?>(null) }
-  var selectedSubcategory by remember { mutableStateOf<Subcategory?>(null) }
   var viewingMyWishlist by remember { mutableStateOf(false) }
 
   LaunchedEffect(userPhone) {
@@ -120,7 +116,6 @@ fun WishlistScreen(
   fun navigateBack() {
     when {
       viewingMyWishlist -> viewingMyWishlist = false
-      selectedSubcategory != null -> selectedSubcategory = null
       selectedCategory != null -> selectedCategory = null
       else -> onBack()
     }
@@ -130,7 +125,7 @@ fun WishlistScreen(
 
   val screenTitle = when {
     viewingMyWishlist -> "My Wishlist"
-    else -> selectedSubcategory?.name ?: selectedCategory?.name ?: "Wishlist"
+    else -> selectedCategory?.name ?: "Wishlist"
   }
 
   Scaffold(
@@ -184,14 +179,11 @@ fun WishlistScreen(
           categories = categories,
           onSelect = { selectedCategory = it }
         )
-        selectedCategory!!.subcategories.isEmpty() ->
-          WishlistFeatureList(items = WishlistMockData.itemsForCategory(selectedCategory!!.iconKey))
-        selectedSubcategory == null -> {
+        else -> {
           val category = selectedCategory!!
           WishlistSubcategoryPicker(
             category = category,
             wishlistItems = wishlistItems,
-            onOpenSubcategory = { selectedSubcategory = it },
             onConfirm = { categoryStarred, starredSubcategoryIds ->
               coroutineScope.launch {
                 try {
@@ -212,7 +204,6 @@ fun WishlistScreen(
             }
           )
         }
-        else -> WishlistFeatureList(items = WishlistMockData.itemsForSubcategory(selectedSubcategory!!.name))
       }
     }
   }
@@ -275,7 +266,6 @@ private fun WishlistCategoryList(
 private fun WishlistSubcategoryPicker(
   category: Category,
   wishlistItems: List<WishlistItemDto>,
-  onOpenSubcategory: (Subcategory) -> Unit,
   onConfirm: (categoryStarred: Boolean, starredSubcategoryIds: Set<String>) -> Unit
 ) {
   val existingForCategory = wishlistItems.filter { it.categoryIconKey == category.iconKey }
@@ -314,9 +304,7 @@ private fun WishlistSubcategoryPicker(
         Card(
           colors = CardDefaults.cardColors(containerColor = SlateSurfaceVariant),
           shape = RoundedCornerShape(12.dp),
-          modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onOpenSubcategory(subcategory) }
+          modifier = Modifier.fillMaxWidth()
         ) {
           Row(
             modifier = Modifier
@@ -326,21 +314,18 @@ private fun WishlistSubcategoryPicker(
             verticalAlignment = Alignment.CenterVertically
           ) {
             Text(text = subcategory.name, color = OnSlateText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              IconButton(onClick = {
-                starredSubcategoryIds = if (starred) {
-                  starredSubcategoryIds - subcategory.id
-                } else {
-                  starredSubcategoryIds + subcategory.id
-                }
-              }) {
-                Icon(
-                  imageVector = if (starred) Icons.Default.Star else Icons.Default.StarBorder,
-                  contentDescription = if (starred) "Unstar subcategory" else "Star subcategory",
-                  tint = GoldSecondary
-                )
+            IconButton(onClick = {
+              starredSubcategoryIds = if (starred) {
+                starredSubcategoryIds - subcategory.id
+              } else {
+                starredSubcategoryIds + subcategory.id
               }
-              Icon(Icons.Default.ChevronRight, contentDescription = null, tint = OnSlateTextSecondary)
+            }) {
+              Icon(
+                imageVector = if (starred) Icons.Default.Star else Icons.Default.StarBorder,
+                contentDescription = if (starred) "Unstar subcategory" else "Star subcategory",
+                tint = GoldSecondary
+              )
             }
           }
         }
@@ -390,61 +375,6 @@ private fun WishlistSavedList(items: List<WishlistItemDto>) {
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold
           )
-        }
-      }
-    }
-  }
-}
-
-@Composable
-private fun WishlistFeatureList(items: List<WishlistItem>) {
-  if (items.isEmpty()) {
-    WishlistEmptyState(message = "No items in this subcategory yet.")
-    return
-  }
-
-  LazyColumn(
-    contentPadding = PaddingValues(16.dp),
-    verticalArrangement = Arrangement.spacedBy(10.dp),
-    modifier = Modifier.fillMaxSize()
-  ) {
-    items(items) { item ->
-      Card(
-        colors = CardDefaults.cardColors(containerColor = SlateSurfaceVariant),
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth()
-      ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Text(text = item.name, color = OnSlateText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Text(
-              text = "$${String.format("%.2f", item.price)}",
-              color = GoldPrimary,
-              fontSize = 15.sp,
-              fontWeight = FontWeight.ExtraBold
-            )
-          }
-          Spacer(modifier = Modifier.height(8.dp))
-          Text(
-            text = "FEATURES",
-            color = GoldSecondary,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
-          )
-          Spacer(modifier = Modifier.height(4.dp))
-          item.features.forEach { feature ->
-            Text(
-              text = "• $feature",
-              color = OnSlateTextSecondary,
-              fontSize = 12.sp,
-              modifier = Modifier.padding(vertical = 1.dp)
-            )
-          }
         }
       }
     }

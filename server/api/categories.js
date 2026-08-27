@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
   try {
     const pool = getPool();
     const result = await pool.query(
-      `select c.icon_key, c.name as category_name,
+      `select c.icon_key, c.name as category_name, c.can_install, c.can_demo,
               s.id as subcategory_id, s.name as subcategory_name
        from public.categories c
        left join public.subcategories s on s.category_icon_key = c.icon_key
@@ -23,6 +23,8 @@ module.exports = async function handler(req, res) {
         category = {
           iconKey: row.icon_key,
           name: row.category_name,
+          canInstall: row.can_install,
+          canDemo: row.can_demo,
           subcategories: []
         };
         categoriesByIconKey.set(row.icon_key, category);

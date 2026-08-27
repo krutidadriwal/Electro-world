@@ -17,7 +17,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.data.SessionManager
+import com.example.ui.screens.ComplaintStatusScreen
 import com.example.ui.screens.DashboardScreen
+import com.example.ui.screens.InstallationRequestScreen
+import com.example.ui.screens.InstallationStatusScreen
 import com.example.ui.screens.LoginScreen
 import com.example.ui.screens.RegisterComplaintScreen
 import com.example.ui.screens.WishlistScreen
@@ -27,7 +30,10 @@ enum class Screen {
   LOGIN,
   DASHBOARD,
   WISHLIST,
-  REGISTER_COMPLAINT
+  REGISTER_COMPLAINT,
+  COMPLAINT_STATUS,
+  INSTALLATION_REQUEST,
+  INSTALLATION_STATUS
 }
 
 class MainActivity : ComponentActivity() {
@@ -70,6 +76,7 @@ class MainActivity : ComponentActivity() {
                 },
                 onOpenWishlist = { currentScreen = Screen.WISHLIST },
                 onOpenRegisterComplaint = { currentScreen = Screen.REGISTER_COMPLAINT },
+                onOpenInstallation = { currentScreen = Screen.INSTALLATION_REQUEST },
                 modifier = Modifier.padding(innerPadding)
               )
             }
@@ -84,6 +91,29 @@ class MainActivity : ComponentActivity() {
               RegisterComplaintScreen(
                 userPhone = userPhone,
                 onBack = { currentScreen = Screen.DASHBOARD },
+                onOpenHistory = { currentScreen = Screen.COMPLAINT_STATUS },
+                modifier = Modifier.padding(innerPadding)
+              )
+            }
+            Screen.COMPLAINT_STATUS -> {
+              ComplaintStatusScreen(
+                userPhone = userPhone,
+                onBack = { currentScreen = Screen.REGISTER_COMPLAINT },
+                modifier = Modifier.padding(innerPadding)
+              )
+            }
+            Screen.INSTALLATION_REQUEST -> {
+              InstallationRequestScreen(
+                userPhone = userPhone,
+                onBack = { currentScreen = Screen.DASHBOARD },
+                onOpenHistory = { currentScreen = Screen.INSTALLATION_STATUS },
+                modifier = Modifier.padding(innerPadding)
+              )
+            }
+            Screen.INSTALLATION_STATUS -> {
+              InstallationStatusScreen(
+                userPhone = userPhone,
+                onBack = { currentScreen = Screen.INSTALLATION_REQUEST },
                 modifier = Modifier.padding(innerPadding)
               )
             }

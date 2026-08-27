@@ -39,6 +39,40 @@ create table if not exists public.categories (
   sort_order integer not null default 0
 );
 
+-- Whether this category can be requested for an in-home demo and/or a paid
+-- installation via the Installation Request form. A category with neither
+-- flag set is not shown on that form at all.
+alter table public.categories add column if not exists can_install boolean not null default false;
+alter table public.categories add column if not exists can_demo boolean not null default false;
+
+-- One-time seed of the current install/demo capability per category. Safe to
+-- re-run: existing rows are matched by icon_key and only these columns are
+-- refreshed, so any other admin edits made directly in Supabase since (e.g.
+-- renames, new categories) are left alone.
+insert into public.categories (icon_key, name, sort_order, can_install, can_demo) values
+  ('AC', 'Air Conditioners', 1, true, true),
+  ('AFK', 'Air Fryer', 20, false, false),
+  ('CLH', 'Cooler', 25, false, false),
+  ('DFV', 'Deep Freezer/Visicooler', 25, false, false),
+  ('IAB', 'Inverter & Battery', 30, true, false),
+  ('KHK', 'Kitchen Hood (Chimney)', 21, true, false),
+  ('LCK', 'LPG Cooktop (Stove)', 21, false, false),
+  ('MWO', 'Microwave', 0, false, true),
+  ('OHA', 'Other Home Appliances', 100, false, false),
+  ('OKA', 'Other Kitchen Appliances', 100, false, false),
+  ('REF', 'Refrigerator', 2, false, true),
+  ('ROUV', 'Water Purifiers', 0, true, false),
+  ('SSH', 'Sound System', 20, false, false),
+  ('TV', 'Televisions', 10, true, true),
+  ('VCH', 'Vacuum Cleaner', 23, false, false),
+  ('WCD', 'Water Cooler/ Dispenser', 25, false, false),
+  ('WHH', 'Water Heater', 24, true, false),
+  ('WMC', 'Washing Machine', 0, true, true)
+on conflict (icon_key) do update set
+  sort_order = excluded.sort_order,
+  can_install = excluded.can_install,
+  can_demo = excluded.can_demo;
+
 create table if not exists public.subcategories (
   id uuid primary key default gen_random_uuid(),
   category_icon_key text not null references public.categories(icon_key) on delete cascade,
@@ -134,3 +168,34 @@ create unique index if not exists wishlist_items_category_only_key
 create unique index if not exists wishlist_items_category_subcategory_key
   on public.wishlist_items (phone, category_icon_key, subcategory_id) where subcategory_id is not null;
 create index if not exists wishlist_items_phone_idx on public.wishlist_items (phone, created_at desc);
+
+do $$ begin
+  create type public.installation_status as enum ('open', 'in_progress', 'resolved', 'closed');
+exception
+  when duplicate_object then null;
+end $$;
+
+-- A request for a product demo and/or paid installation. At least one of
+-- wants_demo / wants_installation is always true (enforced below and by the
+-- API); which options are even offered for a given category comes from
+-- categories.can_demo / can_install.
+create table if not exists public.installations (
+  id uuid primary key default gen_random_uuid(),
+  phone text not null references public.users(phone),
+  invoice_file_id text,          -- Drive file id of the invoice the item was bought with, if any
+  invoice_file_name text,        -- denormalized so it still displays if the Drive file is renamed/removed
+  category_icon_key text not null references public.categories(icon_key),
+  category_name text not null,      -- denormalized so history still reads correctly if the category is later renamed
+  item_name text not null,
+  wants_demo boolean not null default false,
+  wants_installation boolean not null default false,
+  address text not null,
+  contact_phone text,
+  status public.installation_status not null default 'open',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  resolved_at timestamptz,
+  constraint installations_wants_something check (wants_demo or wants_installation)
+);
+
+create index if not exists installations_phone_idx on public.installations (phone, created_at desc);

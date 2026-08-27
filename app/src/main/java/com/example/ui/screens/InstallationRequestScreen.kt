@@ -1,7 +1,9 @@
 package com.example.ui.screens
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +24,8 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -41,15 +45,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.network.Category
-import com.example.data.network.CreateComplaintRequest
+import com.example.data.network.CreateInstallationRequest
 import com.example.data.network.InvoiceFile
 import com.example.data.network.NetworkModule
-import com.example.data.network.Subcategory
 import com.example.ui.theme.GoldPrimary
 import com.example.ui.theme.GoldSecondary
 import com.example.ui.theme.OnSlateText
@@ -60,12 +64,13 @@ import com.example.ui.theme.SlateSurfaceVariant
 import kotlinx.coroutines.launch
 
 /**
- * Full-screen Register Complaint flow (its own screen, not a dashboard
- * overlay) so the form has room to breathe on small devices.
+ * Full-screen Installation Request flow (its own screen, not a dashboard
+ * overlay), mirroring RegisterComplaintScreen's layout so the form has room
+ * to breathe on small devices.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegisterComplaintScreen(
+fun InstallationRequestScreen(
   userPhone: String,
   onBack: () -> Unit,
   onOpenHistory: () -> Unit,
@@ -74,6 +79,7 @@ fun RegisterComplaintScreen(
   BackHandler(onBack = onBack)
 
   val coroutineScope = rememberCoroutineScope()
+  val context = LocalContext.current
 
   var invoices by remember { mutableStateOf<List<InvoiceFile>>(emptyList()) }
   var selectedInvoice by remember { mutableStateOf<InvoiceFile?>(null) }
@@ -83,10 +89,9 @@ fun RegisterComplaintScreen(
   var selectedCategory by remember { mutableStateOf<Category?>(null) }
   var categoryMenuExpanded by remember { mutableStateOf(false) }
 
-  var selectedSubcategory by remember { mutableStateOf<Subcategory?>(null) }
-  var subcategoryMenuExpanded by remember { mutableStateOf(false) }
-
-  var description by remember { mutableStateOf("") }
+  var itemName by remember { mutableStateOf("") }
+  var wantsDemo by remember { mutableStateOf(false) }
+  var wantsInstallation by remember { mutableStateOf(false) }
   var address by remember { mutableStateOf("") }
   var contactPhone by remember { mutableStateOf("") }
 
@@ -94,11 +99,28 @@ fun RegisterComplaintScreen(
   var submitError by remember { mutableStateOf<String?>(null) }
   var submitSuccess by remember { mutableStateOf(false) }
 
+  // Only categories that support at least one of demo/installation are
+  // offered on this form.
+  val visibleCategories = categories.filter { it.canInstall || it.canDemo }
+
+  fun selectCategory(category: Category) {
+    selectedCategory = category
+    categoryMenuExpanded = false
+    // By default, both options are ticked when both are available; when only
+    // one is available, only that one is ticked (the other stays disabled).
+    wantsDemo = category.canDemo
+    wantsInstallation = category.canInstall
+  }
+
+  fun promptUnavailable(feature: String) {
+    Toast.makeText(context, "$feature is not available for this product.", Toast.LENGTH_SHORT).show()
+  }
+
   LaunchedEffect(userPhone) {
     try {
       invoices = NetworkModule.userApi.getInvoices(userPhone).invoices
     } catch (e: Exception) {
-      // Invoice list is optional context for a complaint; silently allow filing without it.
+      // Invoice list is optional context for an installation request; silently allow filing without it.
     }
     try {
       categories = NetworkModule.userApi.getCategories().categories
@@ -123,14 +145,14 @@ fun RegisterComplaintScreen(
         }
         Spacer(modifier = Modifier.width(4.dp))
         Text(
-          text = "Register Complaint",
+          text = "Installation Request",
           color = OnSlateText,
           fontSize = 18.sp,
           fontWeight = FontWeight.Bold,
           modifier = Modifier.weight(1f)
         )
         IconButton(onClick = onOpenHistory) {
-          Icon(Icons.Default.History, contentDescription = "My complaints", tint = GoldPrimary)
+          Icon(Icons.Default.History, contentDescription = "My installation requests", tint = GoldPrimary)
         }
       }
     }
@@ -145,7 +167,7 @@ fun RegisterComplaintScreen(
       ) {
         Icon(Icons.Default.CheckCircle, "Submitted", tint = GoldSecondary, modifier = Modifier.size(48.dp))
         Spacer(modifier = Modifier.height(12.dp))
-        Text("Complaint Registered", color = OnSlateText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text("Request Submitted", color = OnSlateText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Text(
           text = "Our team will get in touch with you shortly.",
           color = OnSlateTextSecondary,
@@ -158,8 +180,9 @@ fun RegisterComplaintScreen(
           onClick = {
             selectedInvoice = null
             selectedCategory = null
-            selectedSubcategory = null
-            description = ""
+            itemName = ""
+            wantsDemo = false
+            wantsInstallation = false
             address = ""
             contactPhone = ""
             submitSuccess = false
@@ -167,7 +190,7 @@ fun RegisterComplaintScreen(
           colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
           shape = RoundedCornerShape(10.dp)
         ) {
-          Text("FILE ANOTHER COMPLAINT", color = SlateBackground, fontWeight = FontWeight.Bold)
+          Text("FILE ANOTHER REQUEST", color = SlateBackground, fontWeight = FontWeight.Bold)
         }
       }
       return@Scaffold
@@ -216,7 +239,23 @@ fun RegisterComplaintScreen(
 
       Spacer(modifier = Modifier.height(14.dp))
 
-      Text("Product Category", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+      Text("Item Name *", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+      OutlinedTextField(
+        value = itemName,
+        onValueChange = { itemName = it },
+        placeholder = { Text("e.g. LG 1.5 Ton Split AC") },
+        colors = OutlinedTextFieldDefaults.colors(
+          focusedTextColor = OnSlateText,
+          unfocusedTextColor = OnSlateText,
+          focusedBorderColor = GoldPrimary,
+          unfocusedBorderColor = SlateSurfaceVariant
+        ),
+        modifier = Modifier.fillMaxWidth()
+      )
+
+      Spacer(modifier = Modifier.height(14.dp))
+
+      Text("Product Category *", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
       ExposedDropdownMenuBox(
         expanded = categoryMenuExpanded,
         onExpandedChange = { categoryMenuExpanded = it }
@@ -237,66 +276,55 @@ fun RegisterComplaintScreen(
             .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
         )
         ExposedDropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
-          categories.forEach { option ->
-            DropdownMenuItem(text = { Text(option.name) }, onClick = {
-              selectedCategory = option
-              selectedSubcategory = null
-              categoryMenuExpanded = false
-            })
+          visibleCategories.forEach { option ->
+            DropdownMenuItem(text = { Text(option.name) }, onClick = { selectCategory(option) })
           }
         }
       }
 
-      if (selectedCategory != null && selectedCategory!!.subcategories.isNotEmpty()) {
+      if (selectedCategory != null) {
         Spacer(modifier = Modifier.height(14.dp))
 
-        Text("Product Type (optional)", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
-        ExposedDropdownMenuBox(
-          expanded = subcategoryMenuExpanded,
-          onExpandedChange = { subcategoryMenuExpanded = it }
-        ) {
-          OutlinedTextField(
-            value = selectedSubcategory?.name ?: "Select a product type",
-            onValueChange = {},
-            readOnly = true,
-            trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = OnSlateTextSecondary) },
-            colors = OutlinedTextFieldDefaults.colors(
-              focusedTextColor = OnSlateText,
-              unfocusedTextColor = OnSlateText,
-              focusedBorderColor = GoldPrimary,
-              unfocusedBorderColor = SlateSurfaceVariant
-            ),
-            modifier = Modifier
-              .fillMaxWidth()
-              .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+        Text("What do you need? *", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+
+        val category = selectedCategory!!
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+          Checkbox(
+            checked = wantsDemo,
+            onCheckedChange = { checked ->
+              if (category.canDemo) wantsDemo = checked else promptUnavailable("Demo")
+            },
+            enabled = category.canDemo,
+            colors = CheckboxDefaults.colors(checkedColor = GoldPrimary)
           )
-          ExposedDropdownMenu(expanded = subcategoryMenuExpanded, onDismissRequest = { subcategoryMenuExpanded = false }) {
-            selectedCategory!!.subcategories.forEach { option ->
-              DropdownMenuItem(text = { Text(option.name) }, onClick = {
-                selectedSubcategory = option
-                subcategoryMenuExpanded = false
-              })
-            }
-          }
+          Text(
+            text = "Demo",
+            color = if (category.canDemo) OnSlateText else OnSlateTextSecondary,
+            fontSize = 13.sp,
+            modifier = Modifier
+              .weight(1f)
+              .clickableIfDisabled(enabled = category.canDemo) { promptUnavailable("Demo") }
+          )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+          Checkbox(
+            checked = wantsInstallation,
+            onCheckedChange = { checked ->
+              if (category.canInstall) wantsInstallation = checked else promptUnavailable("Installation")
+            },
+            enabled = category.canInstall,
+            colors = CheckboxDefaults.colors(checkedColor = GoldPrimary)
+          )
+          Text(
+            text = "Installation",
+            color = if (category.canInstall) OnSlateText else OnSlateTextSecondary,
+            fontSize = 13.sp,
+            modifier = Modifier
+              .weight(1f)
+              .clickableIfDisabled(enabled = category.canInstall) { promptUnavailable("Installation") }
+          )
         }
       }
-
-      Spacer(modifier = Modifier.height(14.dp))
-
-      Text("Description *", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
-      OutlinedTextField(
-        value = description,
-        onValueChange = { description = it },
-        placeholder = { Text("Describe the issue in detail...") },
-        minLines = 3,
-        colors = OutlinedTextFieldDefaults.colors(
-          focusedTextColor = OnSlateText,
-          unfocusedTextColor = OnSlateText,
-          focusedBorderColor = GoldPrimary,
-          unfocusedBorderColor = SlateSurfaceVariant
-        ),
-        modifier = Modifier.fillMaxWidth()
-      )
 
       Spacer(modifier = Modifier.height(14.dp))
 
@@ -341,29 +369,34 @@ fun RegisterComplaintScreen(
       Button(
         onClick = {
           val category = selectedCategory
-          if (category == null || description.trim().isEmpty() || address.trim().isEmpty()) {
-            submitError = "Please fill in category, description and address."
+          if (category == null || itemName.trim().isEmpty() || address.trim().isEmpty()) {
+            submitError = "Please fill in item name, category and address."
+            return@Button
+          }
+          if (!wantsDemo && !wantsInstallation) {
+            submitError = "Please select demo and/or installation."
             return@Button
           }
           submitError = null
           isSubmitting = true
           coroutineScope.launch {
             try {
-              NetworkModule.userApi.createComplaint(
-                CreateComplaintRequest(
+              NetworkModule.userApi.createInstallation(
+                CreateInstallationRequest(
                   phone = userPhone,
                   invoiceFileId = selectedInvoice?.id,
                   invoiceFileName = selectedInvoice?.name,
                   categoryIconKey = category.iconKey,
-                  subcategoryId = selectedSubcategory?.id,
-                  description = description.trim(),
+                  itemName = itemName.trim(),
+                  wantsDemo = wantsDemo,
+                  wantsInstallation = wantsInstallation,
                   address = address.trim(),
                   contactPhone = contactPhone.ifEmpty { null }
                 )
               )
               submitSuccess = true
             } catch (e: Exception) {
-              submitError = "Unable to submit complaint. Please check your connection and try again."
+              submitError = "Unable to submit request. Please check your connection and try again."
             } finally {
               isSubmitting = false
             }
@@ -374,10 +407,13 @@ fun RegisterComplaintScreen(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp)
       ) {
-        Text(if (isSubmitting) "SUBMITTING..." else "SUBMIT COMPLAINT", color = SlateBackground, fontWeight = FontWeight.Bold)
+        Text(if (isSubmitting) "SUBMITTING..." else "SUBMIT REQUEST", color = SlateBackground, fontWeight = FontWeight.Bold)
       }
 
       Spacer(modifier = Modifier.height(12.dp))
     }
   }
 }
+
+private fun Modifier.clickableIfDisabled(enabled: Boolean, onClick: () -> Unit): Modifier =
+  if (enabled) this else this.then(Modifier.clickable(onClick = onClick))

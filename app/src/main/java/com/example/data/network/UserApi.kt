@@ -24,6 +24,12 @@ interface UserApi {
   @GET("api/categories")
   suspend fun getCategories(): CategoriesResponse
 
+  @GET("api/installations")
+  suspend fun getInstallations(@Query("phone") phone: String): InstallationsResponse
+
+  @POST("api/installations")
+  suspend fun createInstallation(@Body request: CreateInstallationRequest): Installation
+
   @GET("api/wishlist")
   suspend fun getWishlist(@Query("phone") phone: String): WishlistResponse
 

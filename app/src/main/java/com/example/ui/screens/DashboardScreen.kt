@@ -93,8 +93,7 @@ import com.example.ui.theme.SuccessGreen
 enum class ActiveModule {
   NONE,
   MY_INVOICES,
-  VISIT_STORE,
-  INSTALLATION_REQUEST
+  VISIT_STORE
 }
 
 @Composable
@@ -104,6 +103,7 @@ fun DashboardScreen(
   onSignOut: () -> Unit,
   onOpenWishlist: () -> Unit,
   onOpenRegisterComplaint: () -> Unit,
+  onOpenInstallation: () -> Unit,
   modifier: Modifier = Modifier
 ) {
   var activeOverlay by remember { mutableStateOf(ActiveModule.NONE) }
@@ -114,7 +114,7 @@ fun DashboardScreen(
     DashboardModuleItem("VISIT STORE", Icons.Default.LocationOn, "Address, map & contact", ActiveModule.VISIT_STORE),
     DashboardModuleItem("REGISTER COMPLAINT", Icons.Default.Warning, "Report a service issue", onClick = onOpenRegisterComplaint),
     DashboardModuleItem("WISHLIST", Icons.Default.Favorite, "Browse categories you've saved", onClick = onOpenWishlist),
-    DashboardModuleItem("INSTALLATION REQUEST", Icons.Default.Settings, "Schedule a new installation", ActiveModule.INSTALLATION_REQUEST)
+    DashboardModuleItem("INSTALLATION REQUEST", Icons.Default.Settings, "Schedule a new installation", onClick = onOpenInstallation)
   )
 
   Scaffold(
@@ -390,7 +390,6 @@ fun DashboardScreen(
                   when (activeOverlay) {
                     ActiveModule.MY_INVOICES -> MyInvoicesSubScreen(userPhone = userPhone)
                     ActiveModule.VISIT_STORE -> VisitStoreSubScreen()
-                    ActiveModule.INSTALLATION_REQUEST -> InstallationRequestSubScreen()
                     else -> Unit
                   }
                 }
@@ -417,7 +416,6 @@ private fun getModuleIcon(module: ActiveModule): ImageVector {
   return when (module) {
     ActiveModule.MY_INVOICES -> Icons.Default.Info
     ActiveModule.VISIT_STORE -> Icons.Default.LocationOn
-    ActiveModule.INSTALLATION_REQUEST -> Icons.Default.Settings
     else -> Icons.Default.Info
   }
 }
@@ -426,7 +424,6 @@ private fun getModuleTitle(module: ActiveModule): String {
   return when (module) {
     ActiveModule.MY_INVOICES -> "Store Invoices & Bills"
     ActiveModule.VISIT_STORE -> "Visit Our Store"
-    ActiveModule.INSTALLATION_REQUEST -> "Installation Request"
     else -> ""
   }
 }
@@ -589,26 +586,5 @@ fun VisitStoreSubScreen() {
       Spacer(modifier = Modifier.width(6.dp))
       Text("CALL STORE", fontWeight = FontWeight.Bold)
     }
-  }
-}
-
-// 3. INSTALLATION REQUEST SUB-SCREEN
-@Composable
-fun InstallationRequestSubScreen() {
-  Column(
-    modifier = Modifier.fillMaxSize(),
-    horizontalAlignment = Alignment.CenterHorizontally,
-    verticalArrangement = Arrangement.Center
-  ) {
-    Icon(Icons.Default.Settings, "Installation request", tint = GoldSecondary, modifier = Modifier.size(48.dp))
-    Spacer(modifier = Modifier.height(12.dp))
-    Text("Installation Request", color = OnSlateText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-    Text(
-      text = "This feature is coming soon.",
-      color = OnSlateTextSecondary,
-      fontSize = 12.sp,
-      textAlign = TextAlign.Center,
-      modifier = Modifier.padding(top = 6.dp)
-    )
   }
 }

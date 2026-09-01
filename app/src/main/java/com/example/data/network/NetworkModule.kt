@@ -18,12 +18,14 @@ object NetworkModule {
     )
     .build()
 
-  val userApi: UserApi by lazy {
+  private val retrofit: Retrofit by lazy {
     Retrofit.Builder()
       .baseUrl("${BuildConfig.SERVER_BASE_URL}/")
       .client(okHttpClient)
       .addConverterFactory(MoshiConverterFactory.create(moshi))
       .build()
-      .create(UserApi::class.java)
   }
+
+  val userApi: UserApi by lazy { retrofit.create(UserApi::class.java) }
+  val authApi: AuthApi by lazy { retrofit.create(AuthApi::class.java) }
 }

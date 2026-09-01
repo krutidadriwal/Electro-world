@@ -57,8 +57,8 @@ class MainActivity : ComponentActivity() {
           when (currentScreen) {
             Screen.LOGIN -> {
               LoginScreen(
-                onLoginSuccess = { name, phone ->
-                  sessionManager.saveSession(name, phone)
+                onLoginSuccess = { name, phone, token ->
+                  sessionManager.saveSession(name, phone, token)
                   userName = name
                   userPhone = phone
                   currentScreen = Screen.DASHBOARD

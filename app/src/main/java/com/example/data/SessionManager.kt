@@ -14,11 +14,15 @@ class SessionManager(context: Context) {
   val userPhone: String
     get() = prefs.getString(KEY_PHONE, "") ?: ""
 
-  fun saveSession(name: String, phone: String) {
+  val sessionToken: String
+    get() = prefs.getString(KEY_TOKEN, "") ?: ""
+
+  fun saveSession(name: String, phone: String, token: String) {
     prefs.edit()
       .putBoolean(KEY_LOGGED_IN, true)
       .putString(KEY_NAME, name)
       .putString(KEY_PHONE, phone)
+      .putString(KEY_TOKEN, token)
       .apply()
   }
 
@@ -31,5 +35,6 @@ class SessionManager(context: Context) {
     private const val KEY_LOGGED_IN = "is_logged_in"
     private const val KEY_NAME = "user_name"
     private const val KEY_PHONE = "user_phone"
+    private const val KEY_TOKEN = "session_token"
   }
 }

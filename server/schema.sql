@@ -15,6 +15,11 @@ alter table public.users add column if not exists how_heard_about_us text;
 -- for this user; matched by a subfolder named after their 10-digit phone number.
 alter table public.users add column if not exists drive_folder_id text;
 
+-- Login PIN, set once the phone number has been OTP-verified via Firebase
+-- Phone Auth (see /api/auth/set-pin). Null until the user completes signup.
+alter table public.users add column if not exists pin_hash text;
+alter table public.users add column if not exists pin_salt text;
+
 -- This table is only ever written to by the trusted server (via the Supabase
 -- transaction pooler connection string), never directly by the Android app,
 -- so Row Level Security is intentionally left off.

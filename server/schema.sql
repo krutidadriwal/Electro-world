@@ -15,14 +15,25 @@ alter table public.users add column if not exists how_heard_about_us text;
 -- for this user; matched by a subfolder named after their 10-digit phone number.
 alter table public.users add column if not exists drive_folder_id text;
 
--- Login PIN, set once the phone number has been OTP-verified via Firebase
--- Phone Auth (see /api/auth/set-pin). Null until the user completes signup.
+-- Login PIN, set once the phone number has been OTP-verified (see
+-- /api/auth/verify-otp and /api/auth/set-pin). Null until signup completes.
 alter table public.users add column if not exists pin_hash text;
 alter table public.users add column if not exists pin_salt text;
 
--- This table is only ever written to by the trusted server (via the Supabase
--- transaction pooler connection string), never directly by the Android app,
--- so Row Level Security is intentionally left off.
+-- One pending OTP per phone, sent via TextBee (see server/lib/textbee.js). A
+-- new send-otp call overwrites any existing row for that phone. Verified (or
+-- expired/exhausted) codes are deleted rather than kept around.
+create table if not exists public.otp_codes (
+  phone text primary key,
+  code_hash text not null,
+  expires_at timestamptz not null,
+  attempts integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+-- These tables are only ever written to by the trusted server (via the
+-- Supabase transaction pooler connection string), never directly by the
+-- Android app, so Row Level Security is intentionally left off.
 
 do $$ begin
   create type public.complaint_status as enum ('open', 'in_progress', 'resolved', 'closed');

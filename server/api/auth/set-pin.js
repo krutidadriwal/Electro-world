@@ -1,6 +1,5 @@
 const { getPool } = require('../../lib/db');
-const { verifyIdToken } = require('../../lib/firebaseAdmin');
-const { signSession } = require('../../lib/jwt');
+const { verifyOtpVerification, signSession } = require('../../lib/jwt');
 const bcrypt = require('bcryptjs');
 
 const PIN_REGEX = /^\d{4}$/;
@@ -8,34 +7,28 @@ const SALT_ROUNDS = 10;
 
 // Finishes both signup (new phone, name required) and forgot-PIN (existing
 // phone, name optional) -- in both cases the caller has just proven phone
-// ownership via a Firebase Phone Auth OTP and is handing us the resulting ID
-// token instead of the raw phone number.
+// ownership via /api/auth/verify-otp and is handing us the resulting
+// verification token instead of the raw phone number.
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { idToken, pin, name, howHeardAboutUs } = req.body ?? {};
+  const { verificationToken, pin, name, howHeardAboutUs } = req.body ?? {};
 
-  if (typeof idToken !== 'string' || idToken.length === 0) {
-    return res.status(400).json({ error: 'idToken is required' });
+  if (typeof verificationToken !== 'string' || verificationToken.length === 0) {
+    return res.status(400).json({ error: 'verificationToken is required' });
   }
   if (typeof pin !== 'string' || !PIN_REGEX.test(pin)) {
     return res.status(400).json({ error: 'pin must be a 4-digit number' });
   }
 
-  let phone;
-  try {
-    const decoded = await verifyIdToken(idToken);
-    phone = decoded.phone_number;
-    if (typeof phone !== 'string' || phone.length === 0) {
-      return res.status(400).json({ error: 'idToken has no verified phone number' });
-    }
-  } catch (err) {
-    console.error('set-pin: idToken verification failed', err);
+  const decoded = verifyOtpVerification(verificationToken);
+  if (!decoded) {
     return res.status(401).json({ error: 'Invalid or expired verification code' });
   }
+  const phone = decoded.phone;
 
   const trimmedName = typeof name === 'string' && name.trim().length > 0 ? name.trim() : null;
   const normalizedHowHeard = typeof howHeardAboutUs === 'string' && howHeardAboutUs.trim().length > 0

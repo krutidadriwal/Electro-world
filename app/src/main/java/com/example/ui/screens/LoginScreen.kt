@@ -1,7 +1,5 @@
 package com.example.ui.screens
 
-import android.app.Activity
-import android.content.ContextWrapper
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -21,9 +19,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -57,7 +58,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -65,10 +65,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.auth.PhoneAuthManager
 import com.example.data.network.LoginRequest
 import com.example.data.network.NetworkModule
+import com.example.data.network.SendOtpRequest
 import com.example.data.network.SetPinRequest
+import com.example.data.network.VerifyOtpRequest
 import com.example.ui.components.ElectroWorldLogo
 import com.example.ui.components.PinEntryField
 import com.example.ui.theme.AlertRed
@@ -97,12 +98,6 @@ private val HOW_HEARD_OPTIONS = listOf(
   "Other"
 )
 
-private tailrec fun android.content.Context.findActivity(): Activity? = when (this) {
-  is Activity -> this
-  is ContextWrapper -> baseContext.findActivity()
-  else -> null
-}
-
 @OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
@@ -120,8 +115,7 @@ fun LoginScreen(
   var resolvedName by remember { mutableStateOf("") }
 
   var otpCode by remember { mutableStateOf("") }
-  var verificationId by remember { mutableStateOf<String?>(null) }
-  var pendingIdToken by remember { mutableStateOf<String?>(null) }
+  var pendingVerificationToken by remember { mutableStateOf<String?>(null) }
 
   var loginPin by remember { mutableStateOf("") }
   var newPin by remember { mutableStateOf("") }
@@ -132,12 +126,11 @@ fun LoginScreen(
   var verificationSuccess by remember { mutableStateOf(false) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
   var showSignupSuggestion by remember { mutableStateOf(false) }
+  var showLoginSuggestion by remember { mutableStateOf(false) }
   var countdownTimer by remember { mutableStateOf(30) }
 
   val coroutineScope = rememberCoroutineScope()
   val focusManager = LocalFocusManager.current
-  val context = LocalContext.current
-  val phoneAuthManager = remember { PhoneAuthManager() }
 
   // Countdown timer logic for Resend OTP
   LaunchedEffect(step, countdownTimer) {
@@ -154,8 +147,7 @@ fun LoginScreen(
     loginPin = ""
     newPin = ""
     confirmPin = ""
-    verificationId = null
-    pendingIdToken = null
+    pendingVerificationToken = null
     errorMessage = null
     verificationSuccess = false
   }
@@ -165,16 +157,18 @@ fun LoginScreen(
     resetToEntry()
     phoneNumber = prefillPhone
     showSignupSuggestion = false
+    showLoginSuggestion = false
   }
 
   fun switchToLogin() {
     mode = AuthMode.LOGIN
     resetToEntry()
     showSignupSuggestion = false
+    showLoginSuggestion = false
   }
 
-  fun proceedToSetPin(idToken: String) {
-    pendingIdToken = idToken
+  fun proceedToSetPin(verificationToken: String) {
+    pendingVerificationToken = verificationToken
     newPin = ""
     confirmPin = ""
     errorMessage = null
@@ -183,30 +177,25 @@ fun LoginScreen(
   }
 
   fun sendOtp() {
-    val activity = context.findActivity()
-    if (activity == null) {
-      errorMessage = "Unable to start verification. Please restart the app."
-      return
-    }
     isSubmitting = true
-    phoneAuthManager.sendOtp("+91$phoneNumber", activity) { event ->
-      when (event) {
-        is PhoneAuthManager.OtpEvent.CodeSent -> {
-          verificationId = event.verificationId
-          isSubmitting = false
-          otpCode = ""
-          countdownTimer = 30
-          errorMessage = null
-          step = AuthStep.OTP
+    coroutineScope.launch {
+      try {
+        NetworkModule.authApi.sendOtp(SendOtpRequest(phone = phoneNumber))
+        isSubmitting = false
+        otpCode = ""
+        countdownTimer = 30
+        errorMessage = null
+        step = AuthStep.OTP
+      } catch (e: HttpException) {
+        isSubmitting = false
+        errorMessage = if (e.code() == 429) {
+          "Please wait a moment before requesting another code."
+        } else {
+          "Unable to send verification code. Please try again."
         }
-        is PhoneAuthManager.OtpEvent.AutoVerified -> {
-          isSubmitting = false
-          proceedToSetPin(event.idToken)
-        }
-        is PhoneAuthManager.OtpEvent.Failed -> {
-          isSubmitting = false
-          errorMessage = event.message
-        }
+      } catch (e: Exception) {
+        isSubmitting = false
+        errorMessage = "Unable to send verification code. Please try again."
       }
     }
   }
@@ -256,7 +245,28 @@ fun LoginScreen(
       return
     }
     isForgotPin = false
-    sendOtp()
+    showLoginSuggestion = false
+    isSubmitting = true
+    coroutineScope.launch {
+      try {
+        NetworkModule.userApi.getUser(phoneNumber)
+        // A 200 here means the phone is already registered.
+        isSubmitting = false
+        errorMessage = "An account with this number already exists."
+        showLoginSuggestion = true
+      } catch (e: HttpException) {
+        if (e.code() == 404) {
+          isSubmitting = false
+          sendOtp()
+        } else {
+          isSubmitting = false
+          errorMessage = "Unable to reach the server. Please check your connection and try again."
+        }
+      } catch (e: Exception) {
+        isSubmitting = false
+        errorMessage = "Unable to reach the server. Please check your connection and try again."
+      }
+    }
   }
 
   fun startForgotPin() {
@@ -271,19 +281,21 @@ fun LoginScreen(
       errorMessage = "OTP must be exactly 6 digits."
       return
     }
-    val vId = verificationId
-    if (vId == null) {
-      errorMessage = "Verification session expired. Please go back and resend the code."
-      return
-    }
     isVerifying = true
     coroutineScope.launch {
       try {
-        val idToken = phoneAuthManager.verifyOtp(vId, otpCode)
+        val response = NetworkModule.authApi.verifyOtp(VerifyOtpRequest(phone = phoneNumber, code = otpCode))
         isVerifying = false
         verificationSuccess = true
         delay(400)
-        proceedToSetPin(idToken)
+        proceedToSetPin(response.verificationToken)
+      } catch (e: HttpException) {
+        isVerifying = false
+        errorMessage = if (e.code() == 429) {
+          "Too many incorrect attempts. Please request a new code."
+        } else {
+          "Invalid verification code. Please try again."
+        }
       } catch (e: Exception) {
         isVerifying = false
         errorMessage = "Invalid verification code. Please try again."
@@ -301,8 +313,8 @@ fun LoginScreen(
       errorMessage = "PINs do not match."
       return
     }
-    val idToken = pendingIdToken
-    if (idToken == null) {
+    val verificationToken = pendingVerificationToken
+    if (verificationToken == null) {
       errorMessage = "Verification session expired. Please start again."
       return
     }
@@ -311,7 +323,7 @@ fun LoginScreen(
       try {
         val response = NetworkModule.authApi.setPin(
           SetPinRequest(
-            idToken = idToken,
+            verificationToken = verificationToken,
             pin = newPin,
             name = if (mode == AuthMode.SIGNUP) fullName.trim() else null,
             howHeardAboutUs = if (mode == AuthMode.SIGNUP) howHeard else null
@@ -352,137 +364,144 @@ fun LoginScreen(
     }
   }
 
-  Box(
+  Column(
     modifier = modifier
       .fillMaxSize()
       .background(SlateBackground)
-      .padding(24.dp)
   ) {
-    // Top-right indicator
-    Text(
-      text = "SECURE AUTH",
-      color = GoldPrimary.copy(alpha = 0.5f),
-      fontSize = 11.sp,
-      fontWeight = FontWeight.Bold,
-      letterSpacing = 2.sp,
+    // 1. Header band: brand logo + secure indicator, on the dark background
+    Box(
       modifier = Modifier
-        .align(Alignment.TopEnd)
-        .padding(top = 16.dp)
-    )
-
-    Column(
-      modifier = Modifier.fillMaxSize(),
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.Center
+        .fillMaxWidth()
+        .height(240.dp)
+        .padding(top = 40.dp, start = 24.dp, end = 24.dp)
     ) {
-      // 1. Brand Logo Header
+      Text(
+        text = "SECURE AUTH",
+        color = GoldPrimary.copy(alpha = 0.5f),
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 2.sp,
+        modifier = Modifier.align(Alignment.TopEnd)
+      )
       ElectroWorldLogo(
-        modifier = Modifier.padding(bottom = 8.dp),
+        modifier = Modifier.align(Alignment.Center),
         iconSize = 72f
       )
+    }
 
-      Text(
-        text = "PREMIUM SMART ELECTRONICS RETAIL",
-        color = OnSlateTextSecondary,
-        fontSize = 10.sp,
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = 1.5.sp,
-        modifier = Modifier.padding(bottom = 32.dp)
-      )
-
-      // 2. Animated Switching Panel across all auth steps
-      AnimatedContent(
-        targetState = step,
-        transitionSpec = {
-          if (targetState.ordinal > initialState.ordinal) {
-            slideInHorizontally(initialOffsetX = { it }) + fadeIn() togetherWith
-                slideOutHorizontally(targetOffsetX = { -it }) + fadeOut()
-          } else {
-            slideInHorizontally(initialOffsetX = { -it }) + fadeIn() togetherWith
-                slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
+    // 2. Rounded content sheet holding the active auth step
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .weight(1f)
+        .background(SlateSurface, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+    ) {
+      Column(
+        modifier = Modifier
+          .fillMaxSize()
+          .imePadding()
+          .verticalScroll(rememberScrollState())
+          .padding(horizontal = 24.dp)
+          .padding(top = 32.dp, bottom = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+      ) {
+        // 3. Animated Switching Panel across all auth steps
+        AnimatedContent(
+          targetState = step,
+          transitionSpec = {
+            if (targetState.ordinal > initialState.ordinal) {
+              slideInHorizontally(initialOffsetX = { it }) + fadeIn() togetherWith
+                  slideOutHorizontally(targetOffsetX = { -it }) + fadeOut()
+            } else {
+              slideInHorizontally(initialOffsetX = { -it }) + fadeIn() togetherWith
+                  slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
+            }
+          },
+          label = "LoginScreensTransition"
+        ) { currentStep ->
+          when (currentStep) {
+            AuthStep.ENTRY -> EntryStepView(
+              mode = mode,
+              fullName = fullName,
+              onFullNameChange = { fullName = it; errorMessage = null },
+              phoneNumber = phoneNumber,
+              onPhoneNumberChange = { phoneNumber = it; errorMessage = null; showSignupSuggestion = false; showLoginSuggestion = false },
+              howHeard = howHeard,
+              howHeardMenuExpanded = howHeardMenuExpanded,
+              onHowHeardMenuExpandedChange = { howHeardMenuExpanded = it },
+              onHowHeardSelected = { howHeard = it; howHeardMenuExpanded = false; errorMessage = null },
+              errorMessage = errorMessage,
+              showSignupSuggestion = showSignupSuggestion,
+              showLoginSuggestion = showLoginSuggestion,
+              isSubmitting = isSubmitting,
+              onSwitchToSignup = { switchToSignup(phoneNumber) },
+              onSwitchToLogin = { switchToLogin() },
+              onSubmit = { if (mode == AuthMode.LOGIN) submitLoginPhone() else submitSignup() }
+            )
+            AuthStep.OTP -> OtpStepView(
+              phoneNumber = phoneNumber,
+              otpCode = otpCode,
+              onOtpChange = { input ->
+                if (input.all { it.isDigit() } && input.length <= 6) {
+                  otpCode = input
+                  errorMessage = null
+                  if (input.length == 6) submitOtp()
+                }
+              },
+              errorMessage = errorMessage,
+              isVerifying = isVerifying,
+              verificationSuccess = verificationSuccess,
+              countdownTimer = countdownTimer,
+              onBack = { resetToEntry() },
+              onVerify = { submitOtp() },
+              onResend = { sendOtp() }
+            )
+            AuthStep.SET_PIN -> SetPinStepView(
+              newPin = newPin,
+              onNewPinChange = { newPin = it; errorMessage = null },
+              confirmPin = confirmPin,
+              onConfirmPinChange = { confirmPin = it; errorMessage = null },
+              errorMessage = errorMessage,
+              isSubmitting = isSubmitting,
+              onSubmit = { submitSetPin() }
+            )
+            AuthStep.ENTER_PIN -> EnterPinStepView(
+              phoneNumber = phoneNumber,
+              pin = loginPin,
+              onPinChange = { loginPin = it; errorMessage = null },
+              errorMessage = errorMessage,
+              isSubmitting = isSubmitting,
+              onBack = { resetToEntry() },
+              onSubmit = { submitLoginPin() },
+              onForgotPin = { startForgotPin() }
+            )
           }
-        },
-        label = "LoginScreensTransition"
-      ) { currentStep ->
-        when (currentStep) {
-          AuthStep.ENTRY -> EntryStepView(
-            mode = mode,
-            fullName = fullName,
-            onFullNameChange = { fullName = it; errorMessage = null },
-            phoneNumber = phoneNumber,
-            onPhoneNumberChange = { phoneNumber = it; errorMessage = null; showSignupSuggestion = false },
-            howHeard = howHeard,
-            howHeardMenuExpanded = howHeardMenuExpanded,
-            onHowHeardMenuExpandedChange = { howHeardMenuExpanded = it },
-            onHowHeardSelected = { howHeard = it; howHeardMenuExpanded = false; errorMessage = null },
-            errorMessage = errorMessage,
-            showSignupSuggestion = showSignupSuggestion,
-            isSubmitting = isSubmitting,
-            onSwitchToSignup = { switchToSignup(phoneNumber) },
-            onSwitchToLogin = { switchToLogin() },
-            onSubmit = { if (mode == AuthMode.LOGIN) submitLoginPhone() else submitSignup() }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Secure protocol footer
+        Row(
+          modifier = Modifier.padding(bottom = 12.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Icon(
+            imageVector = Icons.Default.Lock,
+            contentDescription = "Shield SECURE",
+            tint = OnSlateTextSecondary.copy(alpha = 0.5f),
+            modifier = Modifier.size(12.dp)
           )
-          AuthStep.OTP -> OtpStepView(
-            phoneNumber = phoneNumber,
-            otpCode = otpCode,
-            onOtpChange = { input ->
-              if (input.all { it.isDigit() } && input.length <= 6) {
-                otpCode = input
-                errorMessage = null
-                if (input.length == 6) submitOtp()
-              }
-            },
-            errorMessage = errorMessage,
-            isVerifying = isVerifying,
-            verificationSuccess = verificationSuccess,
-            countdownTimer = countdownTimer,
-            onBack = { resetToEntry() },
-            onVerify = { submitOtp() },
-            onResend = { sendOtp() }
-          )
-          AuthStep.SET_PIN -> SetPinStepView(
-            newPin = newPin,
-            onNewPinChange = { newPin = it; errorMessage = null },
-            confirmPin = confirmPin,
-            onConfirmPinChange = { confirmPin = it; errorMessage = null },
-            errorMessage = errorMessage,
-            isSubmitting = isSubmitting,
-            onSubmit = { submitSetPin() }
-          )
-          AuthStep.ENTER_PIN -> EnterPinStepView(
-            phoneNumber = phoneNumber,
-            pin = loginPin,
-            onPinChange = { loginPin = it; errorMessage = null },
-            errorMessage = errorMessage,
-            isSubmitting = isSubmitting,
-            onBack = { resetToEntry() },
-            onSubmit = { submitLoginPin() },
-            onForgotPin = { startForgotPin() }
+          Spacer(modifier = Modifier.width(4.dp))
+          Text(
+            text = "Electro World Shield • End-To-End Encrypted OTP Verification",
+            color = OnSlateTextSecondary.copy(alpha = 0.5f),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center
           )
         }
       }
-    }
-
-    // Secure protocol footer
-    Row(
-      modifier = Modifier
-        .align(Alignment.BottomCenter)
-        .padding(bottom = 12.dp),
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      Icon(
-        imageVector = Icons.Default.Lock,
-        contentDescription = "Shield SECURE",
-        tint = OnSlateTextSecondary.copy(alpha = 0.5f),
-        modifier = Modifier.size(12.dp)
-      )
-      Spacer(modifier = Modifier.width(4.dp))
-      Text(
-        text = "Electro World Shield • End-To-End Encrypted OTP Verification",
-        color = OnSlateTextSecondary.copy(alpha = 0.5f),
-        fontSize = 10.sp,
-        fontWeight = FontWeight.Medium
-      )
     }
   }
 }
@@ -501,6 +520,7 @@ private fun EntryStepView(
   onHowHeardSelected: (String) -> Unit,
   errorMessage: String?,
   showSignupSuggestion: Boolean,
+  showLoginSuggestion: Boolean,
   isSubmitting: Boolean,
   onSwitchToSignup: () -> Unit,
   onSwitchToLogin: () -> Unit,
@@ -684,6 +704,24 @@ private fun EntryStepView(
       ) {
         Text(
           text = "CREATE AN ACCOUNT",
+          color = GoldSecondary,
+          fontSize = 13.sp,
+          fontWeight = FontWeight.Bold,
+          letterSpacing = 1.sp
+        )
+      }
+    }
+
+    if (mode == AuthMode.SIGNUP && showLoginSuggestion) {
+      TextButton(
+        onClick = onSwitchToLogin,
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(bottom = 12.dp)
+          .testTag("signin_suggestion_button")
+      ) {
+        Text(
+          text = "SIGN IN INSTEAD",
           color = GoldSecondary,
           fontSize = 13.sp,
           fontWeight = FontWeight.Bold,

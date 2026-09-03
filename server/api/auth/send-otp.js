@@ -49,7 +49,7 @@ module.exports = async function handler(req, res) {
       [normalizedPhone, codeHash, expiresAt]
     );
 
-    await sendSms(normalizedPhone, `Your Electro World verification code is ${code}. It expires in 5 minutes.`);
+    await sendSms(normalizedPhone, `Your Electro World code is ${code}. It expires in 5 minutes.`);
 
     return res.status(200).json({ sent: true });
   } catch (err) {

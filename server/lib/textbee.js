@@ -10,19 +10,20 @@ async function sendSms(phone, message) {
   }
   const baseUrl = process.env.TEXTBEE_BASE_URL || DEFAULT_BASE_URL;
 
-  const response = await fetch(`${baseUrl}/gateway/devices/${deviceId}/send-sms`, {
+  const response = await fetch(`${baseUrl}/gateway/send-sms`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-api-key': apiKey
     },
-    body: JSON.stringify({ recipients: [phone], message })
+    body: JSON.stringify({ recipients: [phone], message, deviceId })
   });
 
+  const responseBody = await response.text().catch(() => '');
   if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(`TextBee send-sms failed: ${response.status} ${body}`);
+    throw new Error(`TextBee send-sms failed: ${response.status} ${responseBody}`);
   }
+  console.log('textbee send-sms response', response.status, responseBody);
 }
 
 module.exports = { sendSms };

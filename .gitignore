@@ -19,3 +19,4 @@ debug.keystore
 server/.env
 server/node_modules
 server/.vercel
+/images

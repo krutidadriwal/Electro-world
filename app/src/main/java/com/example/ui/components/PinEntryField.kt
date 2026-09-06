@@ -10,14 +10,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -39,7 +43,10 @@ fun PinEntryField(
   pin: String,
   onPinChange: (String) -> Unit,
   modifier: Modifier = Modifier,
-  testTag: String = "pin_input"
+  testTag: String = "pin_input",
+  imeAction: ImeAction = ImeAction.Done,
+  focusRequester: FocusRequester? = null,
+  onImeAction: (() -> Unit)? = null
 ) {
   Box(modifier = modifier.fillMaxWidth()) {
     BasicTextField(
@@ -49,13 +56,18 @@ fun PinEntryField(
           onPinChange(input)
         }
       },
-      keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+      keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = imeAction),
+      keyboardActions = KeyboardActions(
+        onNext = { onImeAction?.invoke() },
+        onDone = { onImeAction?.invoke() }
+      ),
       textStyle = TextStyle(color = androidx.compose.ui.graphics.Color.Transparent),
       cursorBrush = androidx.compose.ui.graphics.SolidColor(androidx.compose.ui.graphics.Color.Transparent),
       modifier = Modifier
         .fillMaxWidth()
         .height(56.dp)
         .testTag(testTag)
+        .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
     )
     Row(
       modifier = Modifier.fillMaxWidth(),

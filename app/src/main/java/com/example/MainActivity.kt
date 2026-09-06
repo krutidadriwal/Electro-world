@@ -21,7 +21,7 @@ import com.example.ui.screens.ComplaintStatusScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.InstallationRequestScreen
 import com.example.ui.screens.InstallationStatusScreen
-import com.example.ui.screens.LoginScreen
+import com.example.ui.screens.OnboardingScreen
 import com.example.ui.screens.RegisterComplaintScreen
 import com.example.ui.screens.WishlistScreen
 import com.example.ui.theme.MyApplicationTheme
@@ -56,7 +56,7 @@ class MainActivity : ComponentActivity() {
         ) { innerPadding ->
           when (currentScreen) {
             Screen.LOGIN -> {
-              LoginScreen(
+              OnboardingScreen(
                 onLoginSuccess = { name, phone, token ->
                   sessionManager.saveSession(name, phone, token)
                   userName = name

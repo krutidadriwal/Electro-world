@@ -21,6 +21,7 @@ import com.example.ui.screens.ComplaintStatusScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.InstallationRequestScreen
 import com.example.ui.screens.InstallationStatusScreen
+import com.example.ui.screens.MyInvoicesScreen
 import com.example.ui.screens.OnboardingScreen
 import com.example.ui.screens.RegisterComplaintScreen
 import com.example.ui.screens.WishlistScreen
@@ -33,7 +34,8 @@ enum class Screen {
   REGISTER_COMPLAINT,
   COMPLAINT_STATUS,
   INSTALLATION_REQUEST,
-  INSTALLATION_STATUS
+  INSTALLATION_STATUS,
+  MY_INVOICES
 }
 
 class MainActivity : ComponentActivity() {
@@ -77,6 +79,14 @@ class MainActivity : ComponentActivity() {
                 onOpenWishlist = { currentScreen = Screen.WISHLIST },
                 onOpenRegisterComplaint = { currentScreen = Screen.REGISTER_COMPLAINT },
                 onOpenInstallation = { currentScreen = Screen.INSTALLATION_REQUEST },
+                onOpenInvoices = { currentScreen = Screen.MY_INVOICES },
+                modifier = Modifier.padding(innerPadding)
+              )
+            }
+            Screen.MY_INVOICES -> {
+              MyInvoicesScreen(
+                userPhone = userPhone,
+                onBack = { currentScreen = Screen.DASHBOARD },
                 modifier = Modifier.padding(innerPadding)
               )
             }

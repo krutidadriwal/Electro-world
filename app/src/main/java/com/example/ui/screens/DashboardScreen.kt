@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -92,7 +93,6 @@ import com.example.ui.theme.SuccessGreen
 // Screen Enumeration for dialog overlays
 enum class ActiveModule {
   NONE,
-  MY_INVOICES,
   VISIT_STORE
 }
 
@@ -104,13 +104,18 @@ fun DashboardScreen(
   onOpenWishlist: () -> Unit,
   onOpenRegisterComplaint: () -> Unit,
   onOpenInstallation: () -> Unit,
+  onOpenInvoices: () -> Unit,
   modifier: Modifier = Modifier
 ) {
   var activeOverlay by remember { mutableStateOf(ActiveModule.NONE) }
 
+  // Back dismisses whichever overlay module is open instead of falling
+  // through to the system default (closing the app).
+  BackHandler(enabled = activeOverlay != ActiveModule.NONE) { activeOverlay = ActiveModule.NONE }
+
   // Dashboard Grid definition: left/right pairs per row
   val modules = listOf(
-    DashboardModuleItem("MY INVOICES", Icons.Default.Info, "View store receipts & purchases", ActiveModule.MY_INVOICES),
+    DashboardModuleItem("MY INVOICES", Icons.Default.Info, "View store receipts & purchases", onClick = onOpenInvoices),
     DashboardModuleItem("VISIT STORE", Icons.Default.LocationOn, "Address, map & contact", ActiveModule.VISIT_STORE),
     DashboardModuleItem("REGISTER COMPLAINT", Icons.Default.Warning, "Report a service issue", onClick = onOpenRegisterComplaint),
     DashboardModuleItem("WISHLIST", Icons.Default.Favorite, "Browse categories you've saved", onClick = onOpenWishlist),
@@ -388,7 +393,6 @@ fun DashboardScreen(
                 // Render respective interactive placeholder layouts dynamically
                 Box(modifier = Modifier.weight(1f)) {
                   when (activeOverlay) {
-                    ActiveModule.MY_INVOICES -> MyInvoicesSubScreen(userPhone = userPhone)
                     ActiveModule.VISIT_STORE -> VisitStoreSubScreen()
                     else -> Unit
                   }
@@ -414,7 +418,6 @@ data class DashboardModuleItem(
 // Map screen icons
 private fun getModuleIcon(module: ActiveModule): ImageVector {
   return when (module) {
-    ActiveModule.MY_INVOICES -> Icons.Default.Info
     ActiveModule.VISIT_STORE -> Icons.Default.LocationOn
     else -> Icons.Default.Info
   }
@@ -422,10 +425,19 @@ private fun getModuleIcon(module: ActiveModule): ImageVector {
 
 private fun getModuleTitle(module: ActiveModule): String {
   return when (module) {
-    ActiveModule.MY_INVOICES -> "Store Invoices & Bills"
     ActiveModule.VISIT_STORE -> "Visit Our Store"
     else -> ""
   }
+}
+
+// Google Drive returns full ISO-8601 timestamps (createdTime, e.g.
+// "2024-05-01T12:34:56.789Z"); invoices only need the date, as DD-MM-YYYY.
+// minSdk 24 predates java.time (API 26) with no desugaring configured, so
+// this parses the "yyyy-MM-dd" prefix directly rather than via java.time.
+private fun formatInvoiceDate(isoTimestamp: String): String {
+  val datePart = isoTimestamp.substringBefore('T')
+  val parts = datePart.split("-")
+  return if (parts.size == 3) "${parts[2]}-${parts[1]}-${parts[0]}" else isoTimestamp
 }
 
 // ==========================================
@@ -515,7 +527,7 @@ fun MyInvoicesSubScreen(userPhone: String) {
                   overflow = TextOverflow.Ellipsis
                 )
                 inv.createdAt?.let {
-                  Text(text = it, color = OnSlateTextSecondary, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                  Text(text = formatInvoiceDate(it), color = OnSlateTextSecondary, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
                 }
               }
               Icon(Icons.Default.Description, "Open PDF", tint = GoldPrimary, modifier = Modifier.size(20.dp))

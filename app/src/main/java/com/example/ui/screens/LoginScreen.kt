@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -7,19 +8,26 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -60,14 +68,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.data.network.LoginRequest
 import com.example.data.network.NetworkModule
 import com.example.data.network.SendOtpRequest
@@ -101,11 +112,12 @@ private val HOW_HEARD_OPTIONS = listOf(
   "Other"
 )
 
-@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun LoginScreen(
   onLoginSuccess: (name: String, phone: String, token: String) -> Unit,
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  showLogo: Boolean = true
 ) {
   var mode by remember { mutableStateOf(AuthMode.LOGIN) }
   var step by remember { mutableStateOf(AuthStep.ENTRY) }
@@ -135,6 +147,12 @@ fun LoginScreen(
   val coroutineScope = rememberCoroutineScope()
   val focusManager = LocalFocusManager.current
 
+  // Shrinks the branding header out of the way while the keyboard is up, so
+  // the card and its fields have room to breathe instead of getting squished.
+  val imeVisible = WindowInsets.isImeVisible
+  val headerHeight by animateDpAsState(if (imeVisible) 88.dp else 240.dp, tween(250), label = "HeaderHeight")
+  val headerTopPadding by animateDpAsState(if (imeVisible) 12.dp else 40.dp, tween(250), label = "HeaderTopPadding")
+
   // Countdown timer logic for Resend OTP
   LaunchedEffect(step, countdownTimer) {
     if (step == AuthStep.OTP && countdownTimer > 0) {
@@ -154,6 +172,13 @@ fun LoginScreen(
     errorMessage = null
     verificationSuccess = false
   }
+
+  // Hardware/gesture back navigates one step back within the auth flow
+  // instead of falling through to the system default (closing the app).
+  // At ENTRY there's no earlier step here, so the handler is disabled and
+  // the event propagates up to whatever hosts this screen (e.g. the
+  // onboarding welcome panel).
+  BackHandler(enabled = step != AuthStep.ENTRY) { resetToEntry() }
 
   fun switchToSignup(prefillPhone: String) {
     mode = AuthMode.SIGNUP
@@ -374,25 +399,38 @@ fun LoginScreen(
       .fillMaxSize()
       .background(SlateBackground)
   ) {
-    // 1. Header band: brand logo + secure indicator, on the dark background
+    // 1. Header band: brand logo, on the dark background. While the keyboard
+    // is open, the full logo fades out (freeing up vertical space) and a
+    // small mark fades in at the top-right as a minimal persistent brand cue.
     Box(
       modifier = Modifier
         .fillMaxWidth()
-        .height(240.dp)
-        .padding(top = 40.dp, start = 24.dp, end = 24.dp)
+        .height(headerHeight)
+        .padding(top = headerTopPadding, start = 24.dp, end = 24.dp)
     ) {
-      Text(
-        text = "SECURE AUTH",
-        color = GoldPrimary.copy(alpha = 0.5f),
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = 2.sp,
-        modifier = Modifier.align(Alignment.TopEnd)
-      )
-      ElectroWorldLogo(
-        modifier = Modifier.align(Alignment.Center),
-        iconSize = 72f
-      )
+      if (showLogo) {
+        androidx.compose.animation.AnimatedVisibility(
+          visible = !imeVisible,
+          modifier = Modifier.align(Alignment.Center),
+          enter = fadeIn(tween(250)),
+          exit = fadeOut(tween(250))
+        ) {
+          ElectroWorldLogo(iconSize = 72f)
+        }
+
+        androidx.compose.animation.AnimatedVisibility(
+          visible = imeVisible,
+          modifier = Modifier.align(Alignment.TopEnd),
+          enter = fadeIn(tween(250)),
+          exit = fadeOut(tween(250))
+        ) {
+          Image(
+            painter = painterResource(id = R.drawable.ew_logo_small),
+            contentDescription = "Electro World",
+            modifier = Modifier.size(32.dp)
+          )
+        }
+      }
     }
 
     // 2. Rounded content sheet holding the active auth step
@@ -402,105 +440,258 @@ fun LoginScreen(
         .weight(1f)
         .background(SlateSurface, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
     ) {
-      Column(
-        modifier = Modifier
-          .fillMaxSize()
-          .imePadding()
-          .verticalScroll(rememberScrollState())
-          .padding(horizontal = 24.dp)
-          .padding(top = 32.dp, bottom = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-      ) {
-        // 3. Animated Switching Panel across all auth steps
-        AnimatedContent(
-          targetState = step,
-          transitionSpec = {
-            if (targetState.ordinal > initialState.ordinal) {
-              slideInHorizontally(initialOffsetX = { it }) + fadeIn() togetherWith
-                  slideOutHorizontally(targetOffsetX = { -it }) + fadeOut()
-            } else {
-              slideInHorizontally(initialOffsetX = { -it }) + fadeIn() togetherWith
-                  slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
+      Column(modifier = Modifier.fillMaxSize()) {
+        // 2a. Scrollable body: fields, links, error messages -- everything
+        // except the primary action, which is pinned below so it never
+        // scrolls out of reach.
+        Column(
+          modifier = Modifier
+            .weight(1f)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp)
+            .padding(top = 40.dp),
+          horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+          // 3. Animated Switching Panel across all auth steps
+          AnimatedContent(
+            targetState = step,
+            transitionSpec = {
+              if (targetState.ordinal > initialState.ordinal) {
+                slideInHorizontally(initialOffsetX = { it }) + fadeIn() togetherWith
+                    slideOutHorizontally(targetOffsetX = { -it }) + fadeOut()
+              } else {
+                slideInHorizontally(initialOffsetX = { -it }) + fadeIn() togetherWith
+                    slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
+              }
+            },
+            label = "LoginScreensTransition"
+          ) { currentStep ->
+            when (currentStep) {
+              AuthStep.ENTRY -> EntryStepView(
+                mode = mode,
+                imeVisible = imeVisible,
+                fullName = fullName,
+                onFullNameChange = { fullName = it; errorMessage = null },
+                phoneNumber = phoneNumber,
+                onPhoneNumberChange = { phoneNumber = it; errorMessage = null; showSignupSuggestion = false; showLoginSuggestion = false },
+                howHeard = howHeard,
+                howHeardMenuExpanded = howHeardMenuExpanded,
+                onHowHeardMenuExpandedChange = { howHeardMenuExpanded = it },
+                onHowHeardSelected = { howHeard = it; howHeardMenuExpanded = false; errorMessage = null },
+                errorMessage = errorMessage,
+                showSignupSuggestion = showSignupSuggestion,
+                showLoginSuggestion = showLoginSuggestion,
+                onSwitchToSignup = { switchToSignup(phoneNumber) },
+                onSwitchToLogin = { switchToLogin() },
+                onSubmit = { if (mode == AuthMode.LOGIN) submitLoginPhone() else submitSignup() }
+              )
+              AuthStep.OTP -> OtpStepView(
+                phoneNumber = phoneNumber,
+                otpCode = otpCode,
+                onOtpChange = { input ->
+                  if (input.all { it.isDigit() } && input.length <= 6) {
+                    otpCode = input
+                    errorMessage = null
+                    if (input.length == 6) submitOtp()
+                  }
+                },
+                errorMessage = errorMessage,
+                onBack = { resetToEntry() }
+              )
+              AuthStep.SET_PIN -> SetPinStepView(
+                newPin = newPin,
+                onNewPinChange = { newPin = it; errorMessage = null },
+                confirmPin = confirmPin,
+                onConfirmPinChange = { confirmPin = it; errorMessage = null },
+                errorMessage = errorMessage,
+                onSubmit = { submitSetPin() }
+              )
+              AuthStep.ENTER_PIN -> EnterPinStepView(
+                phoneNumber = phoneNumber,
+                pin = loginPin,
+                onPinChange = { loginPin = it; errorMessage = null },
+                errorMessage = errorMessage,
+                onBack = { resetToEntry() },
+                onSubmit = { submitLoginPin() },
+                onForgotPin = { startForgotPin() }
+              )
             }
-          },
-          label = "LoginScreensTransition"
-        ) { currentStep ->
-          when (currentStep) {
-            AuthStep.ENTRY -> EntryStepView(
-              mode = mode,
-              fullName = fullName,
-              onFullNameChange = { fullName = it; errorMessage = null },
-              phoneNumber = phoneNumber,
-              onPhoneNumberChange = { phoneNumber = it; errorMessage = null; showSignupSuggestion = false; showLoginSuggestion = false },
-              howHeard = howHeard,
-              howHeardMenuExpanded = howHeardMenuExpanded,
-              onHowHeardMenuExpandedChange = { howHeardMenuExpanded = it },
-              onHowHeardSelected = { howHeard = it; howHeardMenuExpanded = false; errorMessage = null },
-              errorMessage = errorMessage,
-              showSignupSuggestion = showSignupSuggestion,
-              showLoginSuggestion = showLoginSuggestion,
-              isSubmitting = isSubmitting,
-              onSwitchToSignup = { switchToSignup(phoneNumber) },
-              onSwitchToLogin = { switchToLogin() },
-              onSubmit = { if (mode == AuthMode.LOGIN) submitLoginPhone() else submitSignup() }
-            )
-            AuthStep.OTP -> OtpStepView(
-              phoneNumber = phoneNumber,
-              otpCode = otpCode,
-              onOtpChange = { input ->
-                if (input.all { it.isDigit() } && input.length <= 6) {
-                  otpCode = input
-                  errorMessage = null
-                  if (input.length == 6) submitOtp()
-                }
-              },
-              errorMessage = errorMessage,
-              isVerifying = isVerifying,
-              verificationSuccess = verificationSuccess,
-              countdownTimer = countdownTimer,
-              onBack = { resetToEntry() },
-              onVerify = { submitOtp() },
-              onResend = { sendOtp() }
-            )
-            AuthStep.SET_PIN -> SetPinStepView(
-              newPin = newPin,
-              onNewPinChange = { newPin = it; errorMessage = null },
-              confirmPin = confirmPin,
-              onConfirmPinChange = { confirmPin = it; errorMessage = null },
-              errorMessage = errorMessage,
-              isSubmitting = isSubmitting,
-              onSubmit = { submitSetPin() }
-            )
-            AuthStep.ENTER_PIN -> EnterPinStepView(
-              phoneNumber = phoneNumber,
-              pin = loginPin,
-              onPinChange = { loginPin = it; errorMessage = null },
-              errorMessage = errorMessage,
-              isSubmitting = isSubmitting,
-              onBack = { resetToEntry() },
-              onSubmit = { submitLoginPin() },
-              onForgotPin = { startForgotPin() }
-            )
           }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        // 2b. Pinned action area: rides above the keyboard (imePadding) so
+        // the primary button and trust footer stay visible and tap-ready
+        // no matter how tall the keyboard is or how the body scrolls.
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .imePadding()
+            .padding(horizontal = 24.dp)
+            .padding(bottom = if (imeVisible) 8.dp else 16.dp)
+        ) {
+          when (step) {
+            AuthStep.ENTRY -> {
+              Button(
+                onClick = { if (mode == AuthMode.LOGIN) submitLoginPhone() else submitSignup() },
+                enabled = !isSubmitting,
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .height(54.dp)
+                  .testTag("send_otp_button"),
+                colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, disabledContainerColor = GoldDark),
+                shape = RoundedCornerShape(12.dp)
+              ) {
+                if (isSubmitting) {
+                  CircularProgressIndicator(modifier = Modifier.size(24.dp), color = SlateBackground, strokeWidth = 2.5.dp)
+                } else {
+                  Text(
+                    text = if (mode == AuthMode.LOGIN) "Continue" else "Send One-Time Password",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = SlateBackground
+                  )
+                }
+              }
 
-        // Secure protocol footer
+              if (mode == AuthMode.SIGNUP) {
+                Row(
+                  modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
+                  horizontalArrangement = Arrangement.Center,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Text(text = "Already have an account? ", color = OnSlateTextSecondary, fontSize = 13.sp)
+                  Text(
+                    text = "Sign in instead",
+                    color = GoldSecondary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                      .clickable { switchToLogin() }
+                      .testTag("signin_instead_link")
+                  )
+                }
+              }
+
+              if (mode == AuthMode.LOGIN) {
+                Row(
+                  modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
+                  horizontalArrangement = Arrangement.Center,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Text(text = "New here? ", color = OnSlateTextSecondary, fontSize = 13.sp)
+                  Text(
+                    text = "Sign up instead",
+                    color = GoldSecondary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                      .clickable { switchToSignup(phoneNumber) }
+                      .testTag("signup_instead_link")
+                  )
+                }
+              }
+            }
+            AuthStep.OTP -> {
+              if (isVerifying) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp)) {
+                  CircularProgressIndicator(color = GoldPrimary, modifier = Modifier.size(28.dp))
+                  Spacer(modifier = Modifier.height(8.dp))
+                  Text(text = "Verifying security credentials...", color = GoldSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                }
+              } else if (verificationSuccess) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp)) {
+                  Icon(imageVector = Icons.Default.CheckCircle, contentDescription = "Verified success", tint = SuccessGreen, modifier = Modifier.size(36.dp))
+                  Spacer(modifier = Modifier.height(4.dp))
+                  Text(text = "Verification Successful!", color = SuccessGreen, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+              } else {
+                Button(
+                  onClick = { submitOtp() },
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp)
+                    .testTag("verify_otp_button"),
+                  colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
+                  shape = RoundedCornerShape(12.dp)
+                ) {
+                  Text(text = "Verify", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = SlateBackground)
+                }
+              }
+
+              Spacer(modifier = Modifier.height(20.dp))
+
+              Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                Text(text = "Didn't receive the SMS? ", color = OnSlateTextSecondary, fontSize = 13.sp)
+                if (countdownTimer > 0) {
+                  Text(text = "Resend in ${countdownTimer}s", color = GoldPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                } else {
+                  TextButton(onClick = { sendOtp() }) {
+                    Text(text = "Resend OTP Code", color = GoldSecondary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                  }
+                }
+              }
+            }
+            AuthStep.SET_PIN -> {
+              Button(
+                onClick = { submitSetPin() },
+                enabled = !isSubmitting,
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .height(54.dp)
+                  .testTag("set_pin_button"),
+                colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, disabledContainerColor = GoldDark),
+                shape = RoundedCornerShape(12.dp)
+              ) {
+                if (isSubmitting) {
+                  CircularProgressIndicator(modifier = Modifier.size(24.dp), color = SlateBackground, strokeWidth = 2.5.dp)
+                } else {
+                  Text(text = "Save PIN & Continue", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = SlateBackground)
+                }
+              }
+            }
+            AuthStep.ENTER_PIN -> {
+              Button(
+                onClick = { submitLoginPin() },
+                enabled = !isSubmitting,
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .height(54.dp)
+                  .testTag("login_pin_button"),
+                colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, disabledContainerColor = GoldDark),
+                shape = RoundedCornerShape(12.dp)
+              ) {
+                if (isSubmitting) {
+                  CircularProgressIndicator(modifier = Modifier.size(24.dp), color = SlateBackground, strokeWidth = 2.5.dp)
+                } else {
+                  Text(text = "Log In", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = SlateBackground)
+                }
+              }
+            }
+          }
+        }
+
+        // Secure protocol footer -- a normal (non-pinned) row that sits
+        // right after the action area. It has no imePadding of its own, so
+        // when the keyboard opens and pushes the action area up, this footer
+        // is simply the first thing to slide out of view behind it, rather
+        // than competing with it for space.
         Row(
-          modifier = Modifier.padding(bottom = 12.dp),
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp, bottom = 12.dp),
+          horizontalArrangement = Arrangement.Center,
           verticalAlignment = Alignment.CenterVertically
         ) {
           Icon(
             imageVector = Icons.Default.Lock,
-            contentDescription = "Shield SECURE",
-            tint = OnSlateTextSecondary.copy(alpha = 0.5f),
+            contentDescription = "Secure",
+            tint = Color(0xFFA0A0A0),
             modifier = Modifier.size(12.dp)
           )
           Spacer(modifier = Modifier.width(4.dp))
           Text(
             text = "Electro World Shield • End-To-End Encrypted OTP Verification",
-            color = OnSlateTextSecondary.copy(alpha = 0.5f),
+            color = Color(0xFFA0A0A0),
             fontSize = 10.sp,
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center
@@ -515,6 +706,7 @@ fun LoginScreen(
 @Composable
 private fun EntryStepView(
   mode: AuthMode,
+  imeVisible: Boolean,
   fullName: String,
   onFullNameChange: (String) -> Unit,
   phoneNumber: String,
@@ -526,7 +718,6 @@ private fun EntryStepView(
   errorMessage: String?,
   showSignupSuggestion: Boolean,
   showLoginSuggestion: Boolean,
-  isSubmitting: Boolean,
   onSwitchToSignup: () -> Unit,
   onSwitchToLogin: () -> Unit,
   onSubmit: () -> Unit
@@ -542,21 +733,23 @@ private fun EntryStepView(
       color = OnSlateText,
       fontSize = 24.sp,
       fontWeight = FontWeight.Bold,
-      modifier = Modifier.padding(bottom = 8.dp)
+      modifier = Modifier.padding(bottom = 12.dp)
     )
 
-    Text(
-      text = if (mode == AuthMode.LOGIN) {
-        "Enter your registered mobile number to sign in with your PIN."
-      } else {
-        "Tell us a bit about yourself to create your Electro World account."
-      },
-      color = OnSlateTextSecondary,
-      fontSize = 13.sp,
-      textAlign = TextAlign.Center,
-      modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 24.dp),
-      lineHeight = 18.sp
-    )
+    AnimatedVisibility(visible = mode == AuthMode.LOGIN || !imeVisible) {
+      Text(
+        text = if (mode == AuthMode.LOGIN) {
+          "Enter your registered mobile number to sign in with your PIN."
+        } else {
+          "Tell us a bit about yourself to create your Electro World account."
+        },
+        color = OnSlateTextSecondary,
+        fontSize = 13.sp,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 28.dp),
+        lineHeight = 18.sp
+      )
+    }
 
     if (mode == AuthMode.SIGNUP) {
       OutlinedTextField(
@@ -568,7 +761,7 @@ private fun EntryStepView(
         },
         modifier = Modifier
           .fillMaxWidth()
-          .padding(bottom = 16.dp)
+          .padding(bottom = 20.dp)
           .testTag("full_name_input"),
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(
@@ -583,74 +776,46 @@ private fun EntryStepView(
       )
     }
 
-    Row(
+    OutlinedTextField(
+      value = phoneNumber,
+      onValueChange = { input ->
+        if (input.all { it.isDigit() } && input.length <= 10) {
+          onPhoneNumberChange(input)
+        }
+      },
+      placeholder = { Text("Mobile Number", color = OnSlateTextSecondary) },
+      leadingIcon = {
+        Icon(imageVector = Icons.Default.Phone, contentDescription = "Phone Icon", tint = GoldPrimary)
+      },
+      prefix = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Box(
+            modifier = Modifier
+              .padding(end = 10.dp)
+              .width(1.dp)
+              .height(20.dp)
+              .background(SlateSurfaceVariant)
+          )
+          Text(text = "+91", color = OnSlateText, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+        }
+      },
       modifier = Modifier
         .fillMaxWidth()
-        .padding(bottom = 16.dp),
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      Box(
-        modifier = Modifier
-          .height(56.dp)
-          .background(SlateSurface, RoundedCornerShape(12.dp))
-          .border(1.dp, SlateSurfaceVariant, RoundedCornerShape(12.dp))
-          .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.Center
-      ) {
-        Text(text = "🇮🇳 +91", color = OnSlateText, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-      }
-
-      Spacer(modifier = Modifier.width(8.dp))
-
-      OutlinedTextField(
-        value = phoneNumber,
-        onValueChange = { input ->
-          if (input.all { it.isDigit() } && input.length <= 10) {
-            onPhoneNumberChange(input)
-          }
-        },
-        placeholder = { Text("Mobile Phone Number", color = OnSlateTextSecondary) },
-        leadingIcon = {
-          Icon(imageVector = Icons.Default.Phone, contentDescription = "Phone Icon", tint = GoldPrimary)
-        },
-        modifier = Modifier
-          .fillMaxWidth()
-          .testTag("phone_number_input"),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { if (mode == AuthMode.LOGIN) onSubmit() }),
-        singleLine = true,
-        colors = OutlinedTextFieldDefaults.colors(
-          focusedBorderColor = GoldPrimary,
-          unfocusedBorderColor = SlateSurfaceVariant,
-          focusedContainerColor = SlateSurface,
-          unfocusedContainerColor = SlateSurface,
-          focusedTextColor = OnSlateText,
-          unfocusedTextColor = OnSlateText
-        ),
-        shape = RoundedCornerShape(12.dp)
-      )
-    }
-
-    if (mode == AuthMode.LOGIN) {
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(bottom = 16.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Text(text = "New here? ", color = OnSlateTextSecondary, fontSize = 13.sp)
-        Text(
-          text = "Sign up instead",
-          color = GoldSecondary,
-          fontSize = 13.sp,
-          fontWeight = FontWeight.Bold,
-          modifier = Modifier
-            .clickable { onSwitchToSignup() }
-            .testTag("signup_instead_link")
-        )
-      }
-    }
+        .padding(bottom = 20.dp)
+        .testTag("phone_number_input"),
+      keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+      keyboardActions = KeyboardActions(onDone = { if (mode == AuthMode.LOGIN) onSubmit() }),
+      singleLine = true,
+      colors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = GoldPrimary,
+        unfocusedBorderColor = SlateSurfaceVariant,
+        focusedContainerColor = SlateSurface,
+        unfocusedContainerColor = SlateSurface,
+        focusedTextColor = OnSlateText,
+        unfocusedTextColor = OnSlateText
+      ),
+      shape = RoundedCornerShape(12.dp)
+    )
 
     if (mode == AuthMode.SIGNUP) {
       ExposedDropdownMenuBox(
@@ -658,7 +823,7 @@ private fun EntryStepView(
         onExpandedChange = onHowHeardMenuExpandedChange,
         modifier = Modifier
           .fillMaxWidth()
-          .padding(bottom = 16.dp)
+          .padding(bottom = 20.dp)
       ) {
         OutlinedTextField(
           value = howHeard ?: "",
@@ -705,15 +870,14 @@ private fun EntryStepView(
         onClick = onSwitchToSignup,
         modifier = Modifier
           .fillMaxWidth()
-          .padding(bottom = 12.dp)
+          .padding(bottom = 16.dp)
           .testTag("create_account_button")
       ) {
         Text(
-          text = "CREATE AN ACCOUNT",
+          text = "Create an Account",
           color = GoldSecondary,
           fontSize = 13.sp,
-          fontWeight = FontWeight.Bold,
-          letterSpacing = 1.sp
+          fontWeight = FontWeight.SemiBold
         )
       }
     }
@@ -723,57 +887,14 @@ private fun EntryStepView(
         onClick = onSwitchToLogin,
         modifier = Modifier
           .fillMaxWidth()
-          .padding(bottom = 12.dp)
+          .padding(bottom = 16.dp)
           .testTag("signin_suggestion_button")
       ) {
         Text(
-          text = "SIGN IN INSTEAD",
+          text = "Sign In Instead",
           color = GoldSecondary,
           fontSize = 13.sp,
-          fontWeight = FontWeight.Bold,
-          letterSpacing = 1.sp
-        )
-      }
-    }
-
-    Button(
-      onClick = onSubmit,
-      enabled = !isSubmitting,
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(54.dp)
-        .testTag("send_otp_button"),
-      colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, disabledContainerColor = GoldDark),
-      shape = RoundedCornerShape(12.dp)
-    ) {
-      if (isSubmitting) {
-        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = SlateBackground, strokeWidth = 2.5.dp)
-      } else {
-        Text(
-          text = if (mode == AuthMode.LOGIN) "CONTINUE" else "SEND ONE-TIME PASSWORD",
-          fontSize = 14.sp,
-          fontWeight = FontWeight.Bold,
-          color = SlateBackground,
-          letterSpacing = 1.sp
-        )
-      }
-    }
-
-    if (mode == AuthMode.SIGNUP) {
-      Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Text(text = "Already have an account? ", color = OnSlateTextSecondary, fontSize = 13.sp)
-        Text(
-          text = "Sign in instead",
-          color = GoldSecondary,
-          fontSize = 13.sp,
-          fontWeight = FontWeight.Bold,
-          modifier = Modifier
-            .clickable { onSwitchToLogin() }
-            .testTag("signin_instead_link")
+          fontWeight = FontWeight.SemiBold
         )
       }
     }
@@ -786,12 +907,7 @@ private fun OtpStepView(
   otpCode: String,
   onOtpChange: (String) -> Unit,
   errorMessage: String?,
-  isVerifying: Boolean,
-  verificationSuccess: Boolean,
-  countdownTimer: Int,
-  onBack: () -> Unit,
-  onVerify: () -> Unit,
-  onResend: () -> Unit
+  onBack: () -> Unit
 ) {
   Column(
     modifier = Modifier
@@ -806,14 +922,14 @@ private fun OtpStepView(
       Spacer(modifier = Modifier.weight(1f))
     }
 
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(20.dp))
 
     Text(
       text = "Enter Verification Code",
       color = OnSlateText,
       fontSize = 24.sp,
       fontWeight = FontWeight.Bold,
-      modifier = Modifier.padding(bottom = 8.dp)
+      modifier = Modifier.padding(bottom = 12.dp)
     )
 
     Text(
@@ -821,7 +937,7 @@ private fun OtpStepView(
       color = OnSlateTextSecondary,
       fontSize = 13.sp,
       textAlign = TextAlign.Center,
-      modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 24.dp),
+      modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 28.dp),
       lineHeight = 18.sp
     )
 
@@ -836,7 +952,7 @@ private fun OtpStepView(
       },
       modifier = Modifier
         .fillMaxWidth()
-        .padding(bottom = 16.dp)
+        .padding(bottom = 20.dp)
         .testTag("otp_code_input"),
       keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
       singleLine = true,
@@ -861,45 +977,6 @@ private fun OtpStepView(
     AnimatedVisibility(visible = errorMessage != null) {
       ErrorRow(message = errorMessage ?: "")
     }
-
-    if (isVerifying) {
-      Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp)) {
-        CircularProgressIndicator(color = GoldPrimary, modifier = Modifier.size(28.dp))
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "Verifying security credentials...", color = GoldSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-      }
-    } else if (verificationSuccess) {
-      Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp)) {
-        Icon(imageVector = Icons.Default.CheckCircle, contentDescription = "Verified success", tint = SuccessGreen, modifier = Modifier.size(36.dp))
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(text = "Verification Successful!", color = SuccessGreen, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-      }
-    } else {
-      Button(
-        onClick = onVerify,
-        modifier = Modifier
-          .fillMaxWidth()
-          .height(54.dp)
-          .testTag("verify_otp_button"),
-        colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
-        shape = RoundedCornerShape(12.dp)
-      ) {
-        Text(text = "VERIFY", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SlateBackground, letterSpacing = 1.sp)
-      }
-    }
-
-    Spacer(modifier = Modifier.height(20.dp))
-
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-      Text(text = "Didn't receive the SMS? ", color = OnSlateTextSecondary, fontSize = 13.sp)
-      if (countdownTimer > 0) {
-        Text(text = "Resend in ${countdownTimer}s", color = GoldPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-      } else {
-        TextButton(onClick = onResend) {
-          Text(text = "RESEND OTP CODE", color = GoldSecondary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-        }
-      }
-    }
   }
 }
 
@@ -910,7 +987,6 @@ private fun SetPinStepView(
   confirmPin: String,
   onConfirmPinChange: (String) -> Unit,
   errorMessage: String?,
-  isSubmitting: Boolean,
   onSubmit: () -> Unit
 ) {
   val confirmPinFocusRequester = remember { FocusRequester() }
@@ -926,14 +1002,14 @@ private fun SetPinStepView(
       color = OnSlateText,
       fontSize = 24.sp,
       fontWeight = FontWeight.Bold,
-      modifier = Modifier.padding(bottom = 8.dp)
+      modifier = Modifier.padding(bottom = 12.dp)
     )
     Text(
       text = "Choose a 4-digit PIN. You'll use it to sign in from now on.",
       color = OnSlateTextSecondary,
       fontSize = 13.sp,
       textAlign = TextAlign.Center,
-      modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 24.dp),
+      modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 28.dp),
       lineHeight = 18.sp
     )
 
@@ -965,7 +1041,7 @@ private fun SetPinStepView(
     PinEntryField(
       pin = confirmPin,
       onPinChange = onConfirmPinChange,
-      modifier = Modifier.padding(bottom = 16.dp),
+      modifier = Modifier.padding(bottom = 20.dp),
       testTag = "confirm_pin_input",
       focusRequester = confirmPinFocusRequester,
       onImeAction = onSubmit
@@ -973,23 +1049,6 @@ private fun SetPinStepView(
 
     AnimatedVisibility(visible = errorMessage != null) {
       ErrorRow(message = errorMessage ?: "")
-    }
-
-    Button(
-      onClick = onSubmit,
-      enabled = !isSubmitting,
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(54.dp)
-        .testTag("set_pin_button"),
-      colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, disabledContainerColor = GoldDark),
-      shape = RoundedCornerShape(12.dp)
-    ) {
-      if (isSubmitting) {
-        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = SlateBackground, strokeWidth = 2.5.dp)
-      } else {
-        Text(text = "SAVE PIN & CONTINUE", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SlateBackground, letterSpacing = 1.sp)
-      }
     }
   }
 }
@@ -1000,7 +1059,6 @@ private fun EnterPinStepView(
   pin: String,
   onPinChange: (String) -> Unit,
   errorMessage: String?,
-  isSubmitting: Boolean,
   onBack: () -> Unit,
   onSubmit: () -> Unit,
   onForgotPin: () -> Unit
@@ -1018,28 +1076,28 @@ private fun EnterPinStepView(
       Spacer(modifier = Modifier.weight(1f))
     }
 
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(20.dp))
 
     Text(
       text = "Enter Your PIN",
       color = OnSlateText,
       fontSize = 24.sp,
       fontWeight = FontWeight.Bold,
-      modifier = Modifier.padding(bottom = 8.dp)
+      modifier = Modifier.padding(bottom = 12.dp)
     )
     Text(
       text = "Enter the 4-digit PIN for +91 $phoneNumber.",
       color = OnSlateTextSecondary,
       fontSize = 13.sp,
       textAlign = TextAlign.Center,
-      modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 24.dp),
+      modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 28.dp),
       lineHeight = 18.sp
     )
 
     PinEntryField(
       pin = pin,
       onPinChange = onPinChange,
-      modifier = Modifier.padding(bottom = 16.dp),
+      modifier = Modifier.padding(bottom = 20.dp),
       testTag = "login_pin_input",
       onImeAction = onSubmit
     )
@@ -1049,7 +1107,7 @@ private fun EnterPinStepView(
     }
 
     Row(
-      modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+      modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp),
       horizontalArrangement = Arrangement.End
     ) {
       Text(
@@ -1059,23 +1117,6 @@ private fun EnterPinStepView(
         fontWeight = FontWeight.Bold,
         modifier = Modifier.clickable { onForgotPin() }.testTag("forgot_pin_link")
       )
-    }
-
-    Button(
-      onClick = onSubmit,
-      enabled = !isSubmitting,
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(54.dp)
-        .testTag("login_pin_button"),
-      colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, disabledContainerColor = GoldDark),
-      shape = RoundedCornerShape(12.dp)
-    ) {
-      if (isSubmitting) {
-        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = SlateBackground, strokeWidth = 2.5.dp)
-      } else {
-        Text(text = "LOGIN", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SlateBackground, letterSpacing = 1.sp)
-      }
     }
   }
 }

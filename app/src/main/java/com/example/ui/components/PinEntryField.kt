@@ -71,7 +71,7 @@ fun PinEntryField(
     )
     Row(
       modifier = Modifier.fillMaxWidth(),
-      horizontalArrangement = Arrangement.spacedBy(12.dp)
+      horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)
     ) {
       repeat(PIN_LENGTH) { index ->
         val filled = index < pin.length

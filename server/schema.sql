@@ -215,3 +215,20 @@ create table if not exists public.installations (
 );
 
 create index if not exists installations_phone_idx on public.installations (phone, created_at desc);
+
+-- Delete Account (see PATCH/DELETE /api/user) removes the users row outright;
+-- these were created without an explicit ON DELETE behavior (so the default
+-- RESTRICT would block that delete), promoted here to CASCADE so a deleted
+-- user's complaints/wishlist/installations go with them. Default constraint
+-- names (Postgres auto-generates "<table>_<column>_fkey" when none is given).
+alter table public.complaints drop constraint if exists complaints_phone_fkey;
+alter table public.complaints add constraint complaints_phone_fkey
+  foreign key (phone) references public.users(phone) on delete cascade;
+
+alter table public.wishlist_items drop constraint if exists wishlist_items_phone_fkey;
+alter table public.wishlist_items add constraint wishlist_items_phone_fkey
+  foreign key (phone) references public.users(phone) on delete cascade;
+
+alter table public.installations drop constraint if exists installations_phone_fkey;
+alter table public.installations add constraint installations_phone_fkey
+  foreign key (phone) references public.users(phone) on delete cascade;

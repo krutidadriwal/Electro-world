@@ -26,6 +26,10 @@ class SessionManager(context: Context) {
       .apply()
   }
 
+  fun updateName(name: String) {
+    prefs.edit().putString(KEY_NAME, name).apply()
+  }
+
   fun clearSession() {
     prefs.edit().clear().apply()
   }

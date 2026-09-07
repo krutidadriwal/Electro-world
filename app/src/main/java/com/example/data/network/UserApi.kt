@@ -2,6 +2,8 @@ package com.example.data.network
 
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.HTTP
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Query
 
@@ -11,6 +13,12 @@ interface UserApi {
 
   @GET("api/user")
   suspend fun getUser(@Query("phone") phone: String): UserResponse
+
+  @PATCH("api/user")
+  suspend fun updateUser(@Body request: UpdateUserRequest): UserResponse
+
+  @HTTP(method = "DELETE", path = "api/user", hasBody = true)
+  suspend fun deleteUser(@Body request: DeleteUserRequest): DeleteUserResponse
 
   @GET("api/invoices")
   suspend fun getInvoices(@Query("phone") phone: String): InvoicesResponse

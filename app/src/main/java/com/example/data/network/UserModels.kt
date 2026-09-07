@@ -19,6 +19,22 @@ data class UserResponse(
 )
 
 @JsonClass(generateAdapter = true)
+data class UpdateUserRequest(
+  val phone: String,
+  val name: String
+)
+
+@JsonClass(generateAdapter = true)
+data class DeleteUserRequest(
+  val phone: String
+)
+
+@JsonClass(generateAdapter = true)
+data class DeleteUserResponse(
+  val deleted: Boolean
+)
+
+@JsonClass(generateAdapter = true)
 data class InvoiceFile(
   val id: String,
   val name: String,

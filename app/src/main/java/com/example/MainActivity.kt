@@ -23,6 +23,7 @@ import com.example.ui.screens.InstallationRequestScreen
 import com.example.ui.screens.InstallationStatusScreen
 import com.example.ui.screens.MyInvoicesScreen
 import com.example.ui.screens.OnboardingScreen
+import com.example.ui.screens.ProfileScreen
 import com.example.ui.screens.RegisterComplaintScreen
 import com.example.ui.screens.WishlistScreen
 import com.example.ui.theme.MyApplicationTheme
@@ -35,7 +36,8 @@ enum class Screen {
   COMPLAINT_STATUS,
   INSTALLATION_REQUEST,
   INSTALLATION_STATUS,
-  MY_INVOICES
+  MY_INVOICES,
+  PROFILE
 }
 
 class MainActivity : ComponentActivity() {
@@ -72,10 +74,7 @@ class MainActivity : ComponentActivity() {
               DashboardScreen(
                 userName = userName,
                 userPhone = userPhone,
-                onSignOut = {
-                  sessionManager.clearSession()
-                  currentScreen = Screen.LOGIN
-                },
+                onOpenProfile = { currentScreen = Screen.PROFILE },
                 onOpenWishlist = { currentScreen = Screen.WISHLIST },
                 onOpenRegisterComplaint = { currentScreen = Screen.REGISTER_COMPLAINT },
                 onOpenInstallation = { currentScreen = Screen.INSTALLATION_REQUEST },
@@ -87,6 +86,26 @@ class MainActivity : ComponentActivity() {
               MyInvoicesScreen(
                 userPhone = userPhone,
                 onBack = { currentScreen = Screen.DASHBOARD },
+                modifier = Modifier.padding(innerPadding)
+              )
+            }
+            Screen.PROFILE -> {
+              ProfileScreen(
+                userName = userName,
+                userPhone = userPhone,
+                onBack = { currentScreen = Screen.DASHBOARD },
+                onNameUpdated = { updatedName ->
+                  sessionManager.updateName(updatedName)
+                  userName = updatedName
+                },
+                onAccountDeleted = {
+                  sessionManager.clearSession()
+                  currentScreen = Screen.LOGIN
+                },
+                onSignOut = {
+                  sessionManager.clearSession()
+                  currentScreen = Screen.LOGIN
+                },
                 modifier = Modifier.padding(innerPadding)
               )
             }

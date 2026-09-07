@@ -34,11 +34,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
@@ -78,7 +80,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.components.ElectroWorldLogo
+import com.example.data.network.InvoiceFile
+import com.example.data.network.NetworkModule
 import com.example.ui.theme.GoldDark
 import com.example.ui.theme.GoldLight
 import com.example.ui.theme.GoldPrimary
@@ -88,7 +91,6 @@ import com.example.ui.theme.OnSlateTextSecondary
 import com.example.ui.theme.SlateBackground
 import com.example.ui.theme.SlateSurface
 import com.example.ui.theme.SlateSurfaceVariant
-import com.example.ui.theme.SuccessGreen
 
 // Screen Enumeration for dialog overlays
 enum class ActiveModule {
@@ -100,14 +102,25 @@ enum class ActiveModule {
 fun DashboardScreen(
   userName: String,
   userPhone: String,
-  onSignOut: () -> Unit,
+  onOpenProfile: () -> Unit,
   onOpenWishlist: () -> Unit,
   onOpenRegisterComplaint: () -> Unit,
   onOpenInstallation: () -> Unit,
   onOpenInvoices: () -> Unit,
   modifier: Modifier = Modifier
 ) {
+  val context = LocalContext.current
   var activeOverlay by remember { mutableStateOf(ActiveModule.NONE) }
+  var showNotificationsToast by remember { mutableStateOf(false) }
+  var recentInvoices by remember { mutableStateOf<List<InvoiceFile>>(emptyList()) }
+
+  LaunchedEffect(userPhone) {
+    try {
+      recentInvoices = NetworkModule.userApi.getInvoices(userPhone).invoices.take(3)
+    } catch (e: Exception) {
+      recentInvoices = emptyList()
+    }
+  }
 
   // Back dismisses whichever overlay module is open instead of falling
   // through to the system default (closing the app).
@@ -115,60 +128,15 @@ fun DashboardScreen(
 
   // Dashboard Grid definition: left/right pairs per row
   val modules = listOf(
-    DashboardModuleItem("MY INVOICES", Icons.Default.Info, "View store receipts & purchases", onClick = onOpenInvoices),
-    DashboardModuleItem("VISIT STORE", Icons.Default.LocationOn, "Address, map & contact", ActiveModule.VISIT_STORE),
+    DashboardModuleItem("INSTALLATION REQUEST", Icons.Default.Settings, "Schedule a new installation", onClick = onOpenInstallation),
     DashboardModuleItem("REGISTER COMPLAINT", Icons.Default.Warning, "Report a service issue", onClick = onOpenRegisterComplaint),
     DashboardModuleItem("WISHLIST", Icons.Default.Favorite, "Browse categories you've saved", onClick = onOpenWishlist),
-    DashboardModuleItem("INSTALLATION REQUEST", Icons.Default.Settings, "Schedule a new installation", onClick = onOpenInstallation)
+    DashboardModuleItem("VISIT STORE", Icons.Default.LocationOn, "Address, map & contact", ActiveModule.VISIT_STORE)
   )
 
   Scaffold(
     modifier = modifier.fillMaxSize(),
-    containerColor = SlateBackground,
-    topBar = {
-      // Custom Dashboard Brand Header
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .background(SlateSurface)
-          .padding(top = 40.dp, bottom = 12.dp, start = 16.dp, end = 16.dp)
-      ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-          ElectroWorldLogo(iconSize = 42f)
-
-          // Header Right controls (Avatar with Status indicator + Logout)
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-              modifier = Modifier
-                .size(38.dp)
-                .background(SlateSurfaceVariant, CircleShape)
-                .clickable { onSignOut() },
-              contentAlignment = Alignment.Center
-            ) {
-              Text(
-                text = "EW",
-                color = GoldPrimary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp
-              )
-              // Online Indicator dot
-              Box(
-                modifier = Modifier
-                  .size(10.dp)
-                  .background(SuccessGreen, CircleShape)
-                  .align(Alignment.TopEnd)
-                  .border(2.dp, SlateSurface, CircleShape)
-              )
-            }
-          }
-        }
-
-      }
-    }
+    containerColor = SlateBackground
   ) { paddingValues ->
     Box(
       modifier = Modifier
@@ -182,52 +150,67 @@ fun DashboardScreen(
           .verticalScroll(rememberScrollState())
           .padding(bottom = 24.dp)
       ) {
-        // Welcome User Card Banner
-        Card(
+        // Flat header: avatar + greeting (tap to open Profile) and a
+        // notification bell, matching the reference layout.
+        Row(
           modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-          colors = CardDefaults.cardColors(containerColor = SlateSurface),
-          shape = RoundedCornerShape(16.dp),
-          border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.2f))
+            .padding(top = 40.dp, bottom = 16.dp, start = 20.dp, end = 20.dp),
+          verticalAlignment = Alignment.CenterVertically
         ) {
           Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+              .weight(1f)
+              .clickable { onOpenProfile() },
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Box(
+              modifier = Modifier
+                .size(48.dp)
+                .background(SlateSurfaceVariant, CircleShape),
+              contentAlignment = Alignment.Center
+            ) {
               Text(
-                text = "Welcome Back,",
-                color = OnSlateTextSecondary,
-                fontSize = 13.sp
+                text = userName.take(2).ifBlank { "EW" }.uppercase(),
+                color = GoldPrimary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
               )
+            }
+            Column(modifier = Modifier.padding(start = 12.dp)) {
+              Text(text = "Welcome Back,", color = OnSlateTextSecondary, fontSize = 12.sp)
               Text(
                 text = userName.ifBlank { "Guest" },
                 color = OnSlateText,
-                fontSize = 18.sp,
+                fontSize = 17.sp,
                 fontWeight = FontWeight.Bold
               )
-              Text(
-                text = "+91 $userPhone",
-                color = GoldSecondary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 1.sp,
-                modifier = Modifier.padding(top = 4.dp)
-              )
-            }
-
-            // Points indicator badge
-            Column(
-              horizontalAlignment = Alignment.End,
-              modifier = Modifier
-                .background(SlateSurfaceVariant, RoundedCornerShape(12.dp))
-                .padding(10.dp)
-            ) {
-              Text("PTS BALANCE", color = OnSlateTextSecondary, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-              Text("12,450", color = GoldPrimary, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
             }
           }
+
+          Box(
+            modifier = Modifier
+              .size(44.dp)
+              .background(SlateSurface, CircleShape)
+              .clickable { showNotificationsToast = true },
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              imageVector = Icons.Default.Notifications,
+              contentDescription = "Notifications",
+              tint = GoldSecondary,
+              modifier = Modifier.size(20.dp)
+            )
+          }
+        }
+
+        if (showNotificationsToast) {
+          Text(
+            text = "You're all caught up -- no new notifications.",
+            color = OnSlateTextSecondary,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+          )
         }
 
         // Section header
@@ -245,7 +228,7 @@ fun DashboardScreen(
           columns = GridCells.Fixed(2),
           modifier = Modifier
             .fillMaxWidth()
-            .height(370.dp)
+            .height(300.dp)
             .padding(horizontal = 12.dp),
           userScrollEnabled = false,
           verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -254,33 +237,25 @@ fun DashboardScreen(
           items(modules) { item ->
             Card(
               modifier = Modifier
-                .height(118.dp)
+                .height(140.dp)
                 .clickable { item.onClick?.invoke() ?: run { activeOverlay = item.actionType } }
                 .testTag("module_${item.title.lowercase().replace(" ", "_")}"),
               colors = CardDefaults.cardColors(containerColor = SlateSurface),
-              shape = RoundedCornerShape(12.dp),
+              shape = RoundedCornerShape(16.dp),
               border = BorderStroke(1.dp, SlateSurfaceVariant)
             ) {
-              Column(
-                modifier = Modifier
-                  .fillMaxSize()
-                  .padding(14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-              ) {
-                // Glowy backing for icon
+              Column(modifier = Modifier.fillMaxSize().padding(14.dp)) {
                 Box(
                   modifier = Modifier
-                    .size(46.dp)
-                    .background(GoldPrimary.copy(alpha = 0.08f), CircleShape)
-                    .border(1.dp, GoldPrimary.copy(alpha = 0.2f), CircleShape),
+                    .size(38.dp)
+                    .background(GoldPrimary.copy(alpha = 0.12f), CircleShape),
                   contentAlignment = Alignment.Center
                 ) {
                   Icon(
                     imageVector = item.icon,
                     contentDescription = item.title,
                     tint = GoldSecondary,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(18.dp)
                   )
                 }
 
@@ -289,21 +264,19 @@ fun DashboardScreen(
                 Text(
                   text = item.title,
                   color = OnSlateText,
-                  fontSize = 13.sp,
+                  fontSize = 12.sp,
                   fontWeight = FontWeight.Bold,
-                  textAlign = TextAlign.Center,
-                  maxLines = 1,
+                  maxLines = 2,
                   overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                   text = item.subtitle,
                   color = OnSlateTextSecondary,
-                  fontSize = 9.sp,
-                  textAlign = TextAlign.Center,
-                  maxLines = 1,
+                  fontSize = 10.sp,
+                  maxLines = 2,
                   overflow = TextOverflow.Ellipsis
                 )
               }
@@ -311,6 +284,69 @@ fun DashboardScreen(
           }
         }
 
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 18.dp)
+            .padding(top = 20.dp, bottom = 6.dp),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Text(
+            text = "MY INVOICES",
+            color = GoldPrimary,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 2.sp
+          )
+          Row(
+            modifier = Modifier.clickable { onOpenInvoices() },
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Text(text = "See more", color = GoldSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Icon(
+              imageVector = Icons.Default.ChevronRight,
+              contentDescription = null,
+              tint = GoldSecondary,
+              modifier = Modifier.size(14.dp)
+            )
+          }
+        }
+
+        Card(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+          colors = CardDefaults.cardColors(containerColor = SlateSurface),
+          shape = RoundedCornerShape(16.dp),
+          border = BorderStroke(1.dp, SlateSurfaceVariant)
+        ) {
+          if (recentInvoices.isEmpty()) {
+            Text(
+              text = "No invoices yet.",
+              color = OnSlateTextSecondary,
+              fontSize = 12.sp,
+              modifier = Modifier.padding(16.dp)
+            )
+          } else {
+            Row(
+              modifier = Modifier
+                .horizontalScroll(rememberScrollState())
+                .padding(14.dp),
+              horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+              recentInvoices.forEach { invoice ->
+                InvoiceChip(
+                  invoice = invoice,
+                  onClick = {
+                    val url = "${com.example.BuildConfig.SERVER_BASE_URL}/api/invoice-file?id=${invoice.id}&phone=$userPhone"
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                  }
+                )
+              }
+            }
+          }
+        }
       }
 
       // Overlay portal for the active module's detail screen
@@ -414,6 +450,43 @@ data class DashboardModuleItem(
   val actionType: ActiveModule = ActiveModule.NONE,
   val onClick: (() -> Unit)? = null
 )
+
+@Composable
+private fun InvoiceChip(invoice: InvoiceFile, onClick: () -> Unit) {
+  Column(
+    modifier = Modifier
+      .width(130.dp)
+      .background(SlateSurfaceVariant, RoundedCornerShape(12.dp))
+      .clickable { onClick() }
+      .padding(12.dp)
+  ) {
+    Box(
+      modifier = Modifier
+        .size(28.dp)
+        .background(GoldPrimary.copy(alpha = 0.15f), CircleShape),
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(imageVector = Icons.Default.Description, contentDescription = null, tint = GoldSecondary, modifier = Modifier.size(14.dp))
+    }
+    Spacer(modifier = Modifier.height(10.dp))
+    Text(
+      text = invoice.name,
+      color = OnSlateText,
+      fontSize = 12.sp,
+      fontWeight = FontWeight.SemiBold,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis
+    )
+    invoice.createdAt?.let {
+      Text(
+        text = formatInvoiceDate(it),
+        color = OnSlateTextSecondary,
+        fontSize = 10.sp,
+        modifier = Modifier.padding(top = 2.dp)
+      )
+    }
+  }
+}
 
 // Map screen icons
 private fun getModuleIcon(module: ActiveModule): ImageVector {

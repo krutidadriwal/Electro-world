@@ -31,6 +31,17 @@ create table if not exists public.otp_codes (
   created_at timestamptz not null default now()
 );
 
+-- Caps OTP sends to once per calendar day per phone (see POST
+-- /api/auth/send-otp), independent of otp_codes -- that row gets deleted on
+-- successful verification or overwritten on resend, so it can't be used to
+-- remember "already sent today" across a verify. Day boundary is IST
+-- (Asia/Kolkata), matching the app's user base.
+create table if not exists public.otp_daily_limits (
+  phone text primary key,
+  send_date date not null,
+  send_count integer not null default 0
+);
+
 -- These tables are only ever written to by the trusted server (via the
 -- Supabase transaction pooler connection string), never directly by the
 -- Android app, so Row Level Security is intentionally left off.

@@ -217,7 +217,7 @@ fun LoginScreen(
       } catch (e: HttpException) {
         isSubmitting = false
         errorMessage = if (e.code() == 429) {
-          "Please wait a moment before requesting another code."
+          "You've already requested an OTP today. Please try again tomorrow."
         } else {
           "Unable to send verification code. Please try again."
         }

@@ -1,11 +1,13 @@
 package com.example.data.network
 
+import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.HTTP
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Query
+import retrofit2.http.Streaming
 
 interface UserApi {
   @POST("api/user")
@@ -22,6 +24,15 @@ interface UserApi {
 
   @GET("api/invoices")
   suspend fun getInvoices(@Query("phone") phone: String): InvoicesResponse
+
+  // @Streaming so the PDF body is handed over as a stream to copy to disk,
+  // instead of Retrofit buffering the whole file in memory first.
+  @Streaming
+  @GET("api/invoice-file")
+  suspend fun downloadInvoiceFile(@Query("id") id: String, @Query("phone") phone: String): ResponseBody
+
+  @POST("api/invoice-requests")
+  suspend fun createInvoiceRequest(@Body request: CreateInvoiceRequestRequest): InvoiceRequest
 
   @GET("api/complaints")
   suspend fun getComplaints(@Query("phone") phone: String): ComplaintsResponse

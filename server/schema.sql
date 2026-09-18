@@ -243,3 +243,26 @@ alter table public.wishlist_items add constraint wishlist_items_phone_fkey
 alter table public.installations drop constraint if exists installations_phone_fkey;
 alter table public.installations add constraint installations_phone_fkey
   foreign key (phone) references public.users(phone) on delete cascade;
+
+do $$ begin
+  create type public.invoice_request_status as enum ('open', 'in_progress', 'resolved', 'closed');
+exception
+  when duplicate_object then null;
+end $$;
+
+-- A user asking the store to issue/re-send an invoice they can't find in
+-- their own Drive folder (e.g. an older purchase never scanned in, or a
+-- lost copy). Free-text description only -- there's no structured item/
+-- category to pick from since the whole point is the user doesn't have a
+-- record of it themselves.
+create table if not exists public.invoice_requests (
+  id uuid primary key default gen_random_uuid(),
+  phone text not null references public.users(phone) on delete cascade,
+  description text not null,
+  status public.invoice_request_status not null default 'open',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  resolved_at timestamptz
+);
+
+create index if not exists invoice_requests_phone_idx on public.invoice_requests (phone, created_at desc);

@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -33,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
@@ -65,6 +67,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,6 +83,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.InvoiceFileCache
+import com.example.data.InvoiceListCache
+import com.example.data.network.CreateInvoiceRequestRequest
 import com.example.data.network.InvoiceFile
 import com.example.data.network.NetworkModule
 import com.example.ui.theme.GoldDark
@@ -91,6 +97,7 @@ import com.example.ui.theme.OnSlateTextSecondary
 import com.example.ui.theme.SlateBackground
 import com.example.ui.theme.SlateSurface
 import com.example.ui.theme.SlateSurfaceVariant
+import kotlinx.coroutines.launch
 
 // Screen Enumeration for dialog overlays
 enum class ActiveModule {
@@ -110,15 +117,36 @@ fun DashboardScreen(
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
+  val coroutineScope = rememberCoroutineScope()
+  val invoiceListCache = remember { InvoiceListCache(context) }
   var activeOverlay by remember { mutableStateOf(ActiveModule.NONE) }
   var showNotificationsToast by remember { mutableStateOf(false) }
-  var recentInvoices by remember { mutableStateOf<List<InvoiceFile>>(emptyList()) }
+  var recentInvoices by remember { mutableStateOf(invoiceListCache.get(userPhone)?.take(3) ?: emptyList()) }
+  var openingInvoiceId by remember { mutableStateOf<String?>(null) }
+
+  fun openInvoice(invoice: InvoiceFile) {
+    if (openingInvoiceId != null) return
+    openingInvoiceId = invoice.id
+    coroutineScope.launch {
+      try {
+        val file = InvoiceFileCache.getOrDownload(context, userPhone, invoice)
+        InvoiceFileCache.openFile(context, file)
+      } catch (e: Exception) {
+        Toast.makeText(context, "Unable to open invoice. Please try again.", Toast.LENGTH_SHORT).show()
+      } finally {
+        openingInvoiceId = null
+      }
+    }
+  }
 
   LaunchedEffect(userPhone) {
     try {
-      recentInvoices = NetworkModule.userApi.getInvoices(userPhone).invoices.take(3)
+      val fresh = NetworkModule.userApi.getInvoices(userPhone).invoices
+      invoiceListCache.save(userPhone, fresh)
+      recentInvoices = fresh.take(3)
     } catch (e: Exception) {
-      recentInvoices = emptyList()
+      // Offline -- leave whatever was loaded from cache (or the empty list)
+      // showing rather than clearing it out.
     }
   }
 
@@ -328,10 +356,8 @@ fun DashboardScreen(
               recentInvoices.forEach { invoice ->
                 InvoiceChip(
                   invoice = invoice,
-                  onClick = {
-                    val url = "${com.example.BuildConfig.SERVER_BASE_URL}/api/invoice-file?id=${invoice.id}&phone=$userPhone"
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                  }
+                  isOpening = openingInvoiceId == invoice.id,
+                  onClick = { openInvoice(invoice) }
                 )
               }
             }
@@ -442,12 +468,12 @@ data class DashboardModuleItem(
 )
 
 @Composable
-private fun InvoiceChip(invoice: InvoiceFile, onClick: () -> Unit) {
+private fun InvoiceChip(invoice: InvoiceFile, isOpening: Boolean, onClick: () -> Unit) {
   Column(
     modifier = Modifier
       .width(130.dp)
       .background(SlateSurfaceVariant, RoundedCornerShape(12.dp))
-      .clickable { onClick() }
+      .clickable(enabled = !isOpening) { onClick() }
       .padding(12.dp)
   ) {
     Box(
@@ -456,7 +482,15 @@ private fun InvoiceChip(invoice: InvoiceFile, onClick: () -> Unit) {
         .background(GoldPrimary.copy(alpha = 0.15f), CircleShape),
       contentAlignment = Alignment.Center
     ) {
-      Icon(imageVector = Icons.Default.Description, contentDescription = null, tint = GoldSecondary, modifier = Modifier.size(14.dp))
+      if (isOpening) {
+        androidx.compose.material3.CircularProgressIndicator(
+          modifier = Modifier.size(14.dp),
+          color = GoldSecondary,
+          strokeWidth = 1.5.dp
+        )
+      } else {
+        Icon(imageVector = Icons.Default.Description, contentDescription = null, tint = GoldSecondary, modifier = Modifier.size(14.dp))
+      }
     }
     Spacer(modifier = Modifier.height(10.dp))
     Text(
@@ -510,69 +544,114 @@ private fun formatInvoiceDate(isoTimestamp: String): String {
 // 1. MY INVOICES SUB-SCREEN
 @Composable
 fun MyInvoicesSubScreen(userPhone: String) {
-  var invoices by remember { mutableStateOf<List<com.example.data.network.InvoiceFile>>(emptyList()) }
-  var isLoading by remember { mutableStateOf(true) }
-  var errorMessage by remember { mutableStateOf<String?>(null) }
   val context = LocalContext.current
+  val invoiceListCache = remember { InvoiceListCache(context) }
+  var invoices by remember { mutableStateOf(invoiceListCache.get(userPhone) ?: emptyList()) }
+  var isLoading by remember { mutableStateOf(invoices.isEmpty()) }
+  var errorMessage by remember { mutableStateOf<String?>(null) }
+  var openingInvoiceId by remember { mutableStateOf<String?>(null) }
+  var showRequestDialog by remember { mutableStateOf(false) }
+  var requestDescription by remember { mutableStateOf("") }
+  var isSubmittingRequest by remember { mutableStateOf(false) }
+  val coroutineScope = rememberCoroutineScope()
+
+  fun openInvoice(invoice: InvoiceFile) {
+    if (openingInvoiceId != null) return
+    openingInvoiceId = invoice.id
+    coroutineScope.launch {
+      try {
+        val file = InvoiceFileCache.getOrDownload(context, userPhone, invoice)
+        InvoiceFileCache.openFile(context, file)
+      } catch (e: Exception) {
+        Toast.makeText(context, "Unable to open invoice. Please try again.", Toast.LENGTH_SHORT).show()
+      } finally {
+        openingInvoiceId = null
+      }
+    }
+  }
+
+  fun submitInvoiceRequest() {
+    val trimmed = requestDescription.trim()
+    if (trimmed.isEmpty()) return
+    isSubmittingRequest = true
+    coroutineScope.launch {
+      try {
+        NetworkModule.userApi.createInvoiceRequest(CreateInvoiceRequestRequest(phone = userPhone, description = trimmed))
+        isSubmittingRequest = false
+        showRequestDialog = false
+        requestDescription = ""
+        Toast.makeText(context, "Request submitted. Our team will follow up soon.", Toast.LENGTH_SHORT).show()
+      } catch (e: Exception) {
+        isSubmittingRequest = false
+        Toast.makeText(context, "Unable to submit request. Please try again.", Toast.LENGTH_SHORT).show()
+      }
+    }
+  }
 
   LaunchedEffect(userPhone) {
-    isLoading = true
-    errorMessage = null
+    if (invoices.isEmpty()) isLoading = true
     try {
-      invoices = com.example.data.network.NetworkModule.userApi.getInvoices(userPhone).invoices
+      val fresh = com.example.data.network.NetworkModule.userApi.getInvoices(userPhone).invoices
+      invoices = fresh
+      invoiceListCache.save(userPhone, fresh)
+      errorMessage = null
     } catch (e: Exception) {
-      errorMessage = "Unable to load invoices. Please check your connection and try again."
+      // Offline (or the request just failed) with something already cached
+      // to show -- stay on the stale list silently rather than erroring out.
+      if (invoices.isEmpty()) {
+        errorMessage = "Unable to load invoices. Please check your connection and try again."
+      }
     } finally {
       isLoading = false
     }
   }
 
-  when {
-    isLoading -> {
-      Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-      ) {
-        androidx.compose.material3.CircularProgressIndicator(color = GoldPrimary)
+  LazyColumn(
+    verticalArrangement = Arrangement.spacedBy(10.dp),
+    modifier = Modifier.fillMaxSize()
+  ) {
+    when {
+      isLoading -> {
+        item {
+          Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 60.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            androidx.compose.material3.CircularProgressIndicator(color = GoldPrimary)
+          }
+        }
       }
-    }
-    errorMessage != null -> {
-      Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-      ) {
-        Icon(Icons.Default.Warning, "Error", tint = GoldSecondary, modifier = Modifier.size(40.dp))
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(errorMessage ?: "", color = OnSlateTextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center)
+      errorMessage != null -> {
+        item {
+          Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            Icon(Icons.Default.Warning, "Error", tint = GoldSecondary, modifier = Modifier.size(40.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(errorMessage ?: "", color = OnSlateTextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center)
+          }
+        }
       }
-    }
-    invoices.isEmpty() -> {
-      Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-      ) {
-        Icon(Icons.Default.Info, "No invoices", tint = GoldSecondary, modifier = Modifier.size(40.dp))
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("No invoices found for your account yet.", color = OnSlateTextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center)
+      invoices.isEmpty() -> {
+        item {
+          Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            Icon(Icons.Default.Info, "No invoices", tint = GoldSecondary, modifier = Modifier.size(40.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("No invoices found for your account yet.", color = OnSlateTextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center)
+          }
+        }
       }
-    }
-    else -> {
-      LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = Modifier.fillMaxSize()
-      ) {
+      else -> {
         items(invoices) { inv ->
           Card(
             colors = CardDefaults.cardColors(containerColor = SlateSurfaceVariant),
             modifier = Modifier
               .fillMaxWidth()
-              .clickable {
-                val url = "${com.example.BuildConfig.SERVER_BASE_URL}/api/invoice-file?id=${inv.id}&phone=$userPhone"
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-              },
+              .clickable(enabled = openingInvoiceId == null) { openInvoice(inv) },
             shape = RoundedCornerShape(12.dp)
           ) {
             Row(
@@ -593,12 +672,105 @@ fun MyInvoicesSubScreen(userPhone: String) {
                   Text(text = formatInvoiceDate(it), color = OnSlateTextSecondary, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
                 }
               }
-              Icon(Icons.Default.Description, "Open PDF", tint = GoldPrimary, modifier = Modifier.size(20.dp))
+              if (openingInvoiceId == inv.id) {
+                androidx.compose.material3.CircularProgressIndicator(
+                  modifier = Modifier.size(20.dp),
+                  color = GoldPrimary,
+                  strokeWidth = 2.dp
+                )
+              } else {
+                Icon(Icons.Default.Description, "Open PDF", tint = GoldPrimary, modifier = Modifier.size(20.dp))
+              }
             }
           }
         }
       }
     }
+
+    // Always the last item, regardless of loading/error/empty/list state,
+    // so it naturally sits at the bottom of the scroll -- for a user who
+    // can't find what they're looking for above, or has nothing listed yet.
+    item {
+      Card(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(top = 6.dp)
+          .clickable { showRequestDialog = true },
+        colors = CardDefaults.cardColors(containerColor = SlateSurfaceVariant),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.25f))
+      ) {
+        Row(
+          modifier = Modifier.fillMaxWidth().padding(16.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Box(
+            modifier = Modifier
+              .size(36.dp)
+              .background(GoldPrimary.copy(alpha = 0.12f), CircleShape),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(Icons.Default.Add, contentDescription = null, tint = GoldPrimary, modifier = Modifier.size(18.dp))
+          }
+          Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
+            Text(text = "Can't find an invoice?", color = OnSlateText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(text = "Request one from our team", color = OnSlateTextSecondary, fontSize = 11.sp)
+          }
+          Icon(Icons.Default.ChevronRight, contentDescription = null, tint = GoldSecondary, modifier = Modifier.size(18.dp))
+        }
+      }
+    }
+  }
+
+  if (showRequestDialog) {
+    androidx.compose.material3.AlertDialog(
+      onDismissRequest = { if (!isSubmittingRequest) showRequestDialog = false },
+      containerColor = SlateSurface,
+      title = { Text("Request an Invoice", color = OnSlateText, fontWeight = FontWeight.Bold) },
+      text = {
+        Column {
+          Text(
+            text = "Describe the purchase you need an invoice for (item, approximate date, etc.) and our team will follow up.",
+            color = OnSlateTextSecondary,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(bottom = 12.dp)
+          )
+          androidx.compose.material3.OutlinedTextField(
+            value = requestDescription,
+            onValueChange = { requestDescription = it },
+            placeholder = { Text("e.g. Refrigerator purchased around March 2026", color = OnSlateTextSecondary) },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+              focusedBorderColor = GoldPrimary,
+              unfocusedBorderColor = SlateSurfaceVariant,
+              focusedContainerColor = SlateSurface,
+              unfocusedContainerColor = SlateSurface,
+              focusedTextColor = OnSlateText,
+              unfocusedTextColor = OnSlateText
+            ),
+            shape = RoundedCornerShape(12.dp)
+          )
+        }
+      },
+      confirmButton = {
+        TextButton(
+          onClick = { submitInvoiceRequest() },
+          enabled = !isSubmittingRequest && requestDescription.trim().isNotEmpty()
+        ) {
+          if (isSubmittingRequest) {
+            androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(16.dp), color = GoldPrimary, strokeWidth = 2.dp)
+          } else {
+            Text("Submit", color = GoldPrimary, fontWeight = FontWeight.Bold)
+          }
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { showRequestDialog = false }, enabled = !isSubmittingRequest) {
+          Text("Cancel", color = OnSlateTextSecondary)
+        }
+      }
+    )
   }
 }
 

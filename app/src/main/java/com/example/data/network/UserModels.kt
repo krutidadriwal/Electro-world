@@ -48,6 +48,27 @@ data class InvoicesResponse(
 )
 
 @JsonClass(generateAdapter = true)
+data class CreateInvoiceRequestRequest(
+  val phone: String,
+  val description: String
+)
+
+@JsonClass(generateAdapter = true)
+data class InvoiceRequest(
+  val id: String,
+  val description: String,
+  val status: String,
+  @Json(name = "created_at") val createdAt: String,
+  @Json(name = "updated_at") val updatedAt: String,
+  @Json(name = "resolved_at") val resolvedAt: String?
+)
+
+@JsonClass(generateAdapter = true)
+data class InvoiceRequestsResponse(
+  val requests: List<InvoiceRequest>
+)
+
+@JsonClass(generateAdapter = true)
 data class CreateComplaintRequest(
   val phone: String,
   val invoiceFileId: String? = null,

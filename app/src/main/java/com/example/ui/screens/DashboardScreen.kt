@@ -269,16 +269,6 @@ fun DashboardScreen(
                   maxLines = 2,
                   overflow = TextOverflow.Ellipsis
                 )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                  text = item.subtitle,
-                  color = OnSlateTextSecondary,
-                  fontSize = 10.sp,
-                  maxLines = 2,
-                  overflow = TextOverflow.Ellipsis
-                )
               }
             }
           }

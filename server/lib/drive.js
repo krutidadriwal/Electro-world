@@ -1,38 +1,71 @@
-// Minimal Google Drive v3 REST wrapper authenticated via a long-lived OAuth
-// refresh token (no googleapis dependency -- just the token endpoint + REST API).
+// Minimal Google Drive v3 REST wrapper authenticated as a service account
+// (JWT bearer grant, RFC 7523) -- no user consent screen, no refresh token,
+// no expiry to babysit. The service account's own email must be added as a
+// collaborator (Editor) on the Drive folder this app reads/writes.
+
+const jwt = require('jsonwebtoken');
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive';
+const JWT_BEARER_GRANT = 'urn:ietf:params:oauth:grant-type:jwt-bearer';
 
 let cachedToken = null;
 let cachedTokenExpiresAt = 0;
+
+function loadServiceAccount() {
+  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!raw) {
+    throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON must be set to the service account key JSON.');
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON is not valid JSON.');
+  }
+  if (!parsed.client_email || !parsed.private_key) {
+    throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON is missing client_email or private_key.');
+  }
+  return parsed;
+}
 
 async function getAccessToken() {
   if (cachedToken && Date.now() < cachedTokenExpiresAt) {
     return cachedToken;
   }
 
-  const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-  const refreshToken = process.env.GOOGLE_OAUTH_REFRESH_TOKEN;
-  if (!clientId || !clientSecret || !refreshToken) {
-    throw new Error('GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET and GOOGLE_OAUTH_REFRESH_TOKEN must be set.');
-  }
+  const { client_email: clientEmail, private_key: privateKey } = loadServiceAccount();
+  const now = Math.floor(Date.now() / 1000);
+
+  // Self-signed JWT asserting this service account's identity, exchanged
+  // below for a short-lived (1hr) Drive access token. This assertion step
+  // needs no stored, long-lived credential beyond the key itself, which
+  // Google never expires or rotates out from under you.
+  const assertion = jwt.sign(
+    {
+      iss: clientEmail,
+      scope: DRIVE_SCOPE,
+      aud: TOKEN_URL,
+      iat: now,
+      exp: now + 3600
+    },
+    privateKey,
+    { algorithm: 'RS256' }
+  );
 
   const response = await fetch(TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: refreshToken,
-      grant_type: 'refresh_token'
+      grant_type: JWT_BEARER_GRANT,
+      assertion
     })
   });
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`Failed to refresh Google OAuth access token: ${response.status} ${errText}`);
+    throw new Error(`Failed to obtain Google service account access token: ${response.status} ${errText}`);
   }
 
   const data = await response.json();

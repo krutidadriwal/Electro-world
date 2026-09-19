@@ -1,5 +1,4 @@
 const http = require('http');
-const url = require('url');
 
 const user = require('../api/user');
 const invoices = require('../api/invoices');
@@ -43,7 +42,7 @@ function resolveHandler(pathname) {
 }
 
 const server = http.createServer((req, res) => {
-  const parsed = url.parse(req.url, true);
+  const parsed = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
   const resolved = resolveHandler(parsed.pathname);
   if (!resolved) {
     res.writeHead(404, { 'Content-Type': 'application/json' });
@@ -51,7 +50,10 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  req.query = { ...parsed.query, ...(resolved.pathSegments.length > 0 ? { path: resolved.pathSegments } : {}) };
+  req.query = {
+    ...Object.fromEntries(parsed.searchParams),
+    ...(resolved.pathSegments.length > 0 ? { path: resolved.pathSegments } : {})
+  };
 
   let body = '';
   req.on('data', (chunk) => (body += chunk));

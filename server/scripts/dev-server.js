@@ -4,11 +4,25 @@ const url = require('url');
 const user = require('../api/user');
 const invoices = require('../api/invoices');
 const invoiceFile = require('../api/invoice-file');
+const deviceTokens = require('../api/device-tokens');
+const staffMe = require('../api/staff/me');
+const staffList = require('../api/staff/list');
+const staffCreate = require('../api/staff/create');
+const staffRole = require('../api/staff/role');
+const notifications = require('../api/notifications/index');
+const notificationImage = require('../api/notifications/image');
 
 const routes = {
   '/api/user': user,
   '/api/invoices': invoices,
-  '/api/invoice-file': invoiceFile
+  '/api/invoice-file': invoiceFile,
+  '/api/device-tokens': deviceTokens,
+  '/api/staff/me': staffMe,
+  '/api/staff/list': staffList,
+  '/api/staff/create': staffCreate,
+  '/api/staff/role': staffRole,
+  '/api/notifications': notifications,
+  '/api/notifications/image': notificationImage
 };
 
 const server = http.createServer((req, res) => {

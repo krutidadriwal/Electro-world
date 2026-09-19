@@ -28,4 +28,5 @@ object NetworkModule {
 
   val userApi: UserApi by lazy { retrofit.create(UserApi::class.java) }
   val authApi: AuthApi by lazy { retrofit.create(AuthApi::class.java) }
+  val deviceTokenApi: DeviceTokenApi by lazy { retrofit.create(DeviceTokenApi::class.java) }
 }

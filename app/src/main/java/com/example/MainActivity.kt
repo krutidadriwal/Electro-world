@@ -1,14 +1,20 @@
 package com.example
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -16,7 +22,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.content.ContextCompat
 import com.example.data.SessionManager
+import com.example.data.network.NetworkModule
+import com.example.data.notifications.registerFcmToken
 import com.example.ui.screens.ComplaintStatusScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.InstallationRequestScreen
@@ -53,6 +62,21 @@ class MainActivity : ComponentActivity() {
         }
         var userName by remember { mutableStateOf(sessionManager.userName) }
         var userPhone by remember { mutableStateOf(sessionManager.userPhone) }
+
+        val notificationPermissionLauncher = rememberLauncherForActivityResult(
+          ActivityResultContracts.RequestPermission()
+        ) { /* no-op: pushes still arrive, just without a tray notification if denied */ }
+
+        LaunchedEffect(userPhone) {
+          if (userPhone.isBlank()) return@LaunchedEffect
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+          ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+          }
+          registerFcmToken(NetworkModule.deviceTokenApi, userPhone)
+        }
 
         Scaffold(
           modifier = Modifier.fillMaxSize(),

@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "331825271712",
-    "project_id": "ew-app-48acf",
-    "storage_bucket": "ew-app-48acf.firebasestorage.app"
+    "project_number": "612033769122",
+    "project_id": "ew-app-gondia",
+    "storage_bucket": "ew-app-gondia.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:331825271712:android:ef68391e5d6b4b15080ac5",
+        "mobilesdk_app_id": "1:612033769122:android:8ef10da79b94e76fc5f1fb",
         "android_client_info": {
           "package_name": "com.aistudio.electroworld.zpqxvd"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDRpp7feQFSJa-6tlK1vijeh0oaEhEaj4w"
+          "current_key": "AIzaSyDT27t9GYjvltt2TaWuJNU918buhUM04eM"
         }
       ],
       "services": {

@@ -136,4 +136,49 @@ async function downloadFile(fileId) {
   return Buffer.from(arrayBuffer);
 }
 
-module.exports = { findUserFolder, listPdfFiles, getFileMetadata, downloadFile };
+// Uploads a file into folderId via the multipart upload endpoint (metadata +
+// content in one request -- simplest option for the image sizes a
+// notification image realistically needs). Makes the file readable by
+// anyone with the link, since notification images are shown in the
+// customer app, not gated per-user like invoices.
+async function uploadFile(folderId, filename, mimeType, buffer) {
+  const boundary = `drive-upload-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const metadata = JSON.stringify({ name: filename, parents: [folderId] });
+
+  const body = Buffer.concat([
+    Buffer.from(
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n` +
+        `--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`
+    ),
+    buffer,
+    Buffer.from(`\r\n--${boundary}--`)
+  ]);
+
+  const token = await getAccessToken();
+  const response = await fetch(
+    `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': `multipart/related; boundary=${boundary}`
+      },
+      body
+    }
+  );
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Drive upload failed: ${response.status} ${errText}`);
+  }
+  const file = await response.json();
+
+  await driveRequest(`/files/${file.id}/permissions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role: 'reader', type: 'anyone' })
+  });
+
+  return { id: file.id, name: file.name, url: `https://drive.google.com/uc?id=${file.id}` };
+}
+
+module.exports = { findUserFolder, listPdfFiles, getFileMetadata, downloadFile, uploadFile };

@@ -266,3 +266,62 @@ create table if not exists public.invoice_requests (
 );
 
 create index if not exists invoice_requests_phone_idx on public.invoice_requests (phone, created_at desc);
+
+do $$ begin
+  create type public.staff_role as enum ('admin', 'employee');
+exception
+  when duplicate_object then null;
+end $$;
+
+-- Staff (admin/employee) profiles, keyed by the Supabase Auth user id. Only
+-- an admin can create these rows (via POST /api/staff/create) or change an
+-- existing row's role (via PATCH /api/staff/role).
+create table if not exists public.staff_profiles (
+  id uuid primary key,                 -- == auth.users.id
+  email text not null,
+  role public.staff_role not null,
+  invited_by uuid references public.staff_profiles(id),
+  created_at timestamptz not null default now()
+);
+
+-- One-time migration for databases where staff_profiles.role was created as
+-- plain text (check-constrained) before staff_role existed. No-op on a
+-- fresh install, where the column above is already the enum type.
+do $$ begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'staff_profiles' and column_name = 'role' and data_type = 'text'
+  ) then
+    alter table public.staff_profiles drop constraint if exists staff_profiles_role_check;
+    alter table public.staff_profiles alter column role type public.staff_role using role::public.staff_role;
+  end if;
+end $$;
+
+-- One row per push notification an admin sends. Rows are never deleted --
+-- duration_minutes only controls how long it's shown as "active" in the
+-- customer app's notification tab (created_at + duration_minutes), not how
+-- long the row is kept, so history always remains queryable.
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  message text not null,
+  image_drive_file_id text,
+  image_url text,
+  duration_minutes integer not null,
+  created_by uuid not null references public.staff_profiles(id),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists notifications_created_at_idx on public.notifications (created_at desc);
+
+-- FCM device tokens for customers, so a notification can be pushed to every
+-- registered device. A phone may have more than one token (multiple
+-- installs/devices); fcm_token is the unique key since a token belongs to
+-- exactly one app install.
+create table if not exists public.device_tokens (
+  id uuid primary key default gen_random_uuid(),
+  phone text not null references public.users(phone) on delete cascade,
+  fcm_token text not null unique,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists device_tokens_phone_idx on public.device_tokens (phone);

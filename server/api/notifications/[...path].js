@@ -1,32 +1,44 @@
 // Combined into one function for the same reason as api/auth/[...path].js --
-// staying under Vercel Hobby's 12-Serverless-Function cap. External URLs are
-// unchanged: /api/notifications (GET/POST) and /api/notifications/image
-// (POST) both still work, just served by this one function.
+// staying under Vercel Hobby's 12-Serverless-Function cap.
+//
+// Routes live under /api/notifications/<segment> (list, create, image)
+// rather than at the bare /api/notifications path: Vercel's [...path] catch-
+// all only matches one-or-more segments, not the prefix itself, so a bare
+// /api/notifications request never even reaches this function (confirmed by
+// testing against the deployed server -- it 404s at the Vercel routing layer,
+// before req.query.path or req.url parsing ever runs). Giving every route an
+// explicit segment sidesteps that entirely.
 
 const { getPool } = require('../../lib/db');
 const { requireStaff, requireAdmin, StaffAuthError } = require('../../lib/staffAuth');
 const { sendToTokens } = require('../../lib/fcm');
 const { uploadFile } = require('../../lib/drive');
+const { routeSegmentsAfter } = require('../../lib/routeSegments');
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // base64 inflates ~33%; Vercel caps request bodies at 4.5MB
 
 module.exports = async function handler(req, res) {
-  const segments = Array.isArray(req.query.path) ? req.query.path : req.query.path ? [req.query.path] : [];
-  const route = segments.join('/');
+  // .../api/notifications/<...> -- drop "api", "notifications".
+  const route = routeSegmentsAfter(req, 2).join('/');
 
-  if (route === '') {
-    if (req.method === 'GET') return list(req, res);
-    if (req.method === 'POST') return create(req, res);
-    res.setHeader('Allow', 'GET, POST');
-    return res.status(405).json({ error: 'Method not allowed' });
+  switch (route) {
+    case 'list':
+      return list(req, res);
+    case 'create':
+      return create(req, res);
+    case 'image':
+      return uploadImage(req, res);
+    default:
+      return res.status(404).json({ error: 'Not found' });
   }
-  if (route === 'image') {
-    return uploadImage(req, res);
-  }
-  return res.status(404).json({ error: 'Not found' });
 };
 
 async function list(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
     await requireStaff(req);
 
@@ -48,6 +60,11 @@ async function list(req, res) {
 }
 
 async function create(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   const { message, durationMinutes, imageDriveFileId, imageUrl } = req.body ?? {};
   if (typeof message !== 'string' || message.trim().length === 0) {
     return res.status(400).json({ error: 'message is required' });

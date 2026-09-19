@@ -44,10 +44,10 @@ data class UploadNotificationImageResponse(
 )
 
 interface NotificationsApi {
-  @GET("api/notifications")
+  @GET("api/notifications/list")
   suspend fun list(): NotificationsResponse
 
-  @POST("api/notifications")
+  @POST("api/notifications/create")
   suspend fun create(@Body request: CreateNotificationRequest): NotificationItem
 
   @POST("api/notifications/image")

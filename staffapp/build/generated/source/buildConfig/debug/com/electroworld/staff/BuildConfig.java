@@ -17,6 +17,8 @@ public final class BuildConfig {
   public static final String STORE_NAME = "Electro World";
   public static final String STORE_PHONE = "+91 9322 576500";
   public static final String STORE_WORKING_HOURS = "10:30 AM - 08:30 PM ";
-  public static final String SUPABASE_ANON_KEY = "REPLACE_WITH_YOUR_SUPABASE_ANON_KEY";
-  public static final String SUPABASE_URL = "https://REPLACE_WITH_YOUR_PROJECT.supabase.co";
+  public static final String SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaXViZmpuZHBtZnRudXF0cmp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxMTczNjIsImV4cCI6MjA5OTY5MzM2Mn0.taWZwNv4Zy9Uy6xgL3mTMe_fyY7dV-02rheObG8nDrI";
+  public static final String SUPABASE_JWT_SECRET = "6bsX6scI7w+KW1VNJsEIoV/Dq2FYBbox7EiXTclqqLoIw94e/iK9SPbK4TbV3MFRvirmtpOWwsNC9Ly7N8C4cQ==";
+  public static final String SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaXViZmpuZHBtZnRudXF0cmp3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDExNzM2MiwiZXhwIjoyMDk5NjkzMzYyfQ.Upx8wlMoopFdoazWdDqTp2-XHngMf-L7LznVvenA9jA";
+  public static final String SUPABASE_URL = "https://hniubfjndpmftnuqtrjw.supabase.co";
 }

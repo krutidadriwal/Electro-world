@@ -5,12 +5,13 @@
 const { getPool } = require('../../lib/db');
 const { getSupabaseAdmin } = require('../../lib/supabaseAdmin');
 const { requireStaff, requireAdmin, StaffAuthError } = require('../../lib/staffAuth');
+const { routeSegmentsAfter } = require('../../lib/routeSegments');
 
 const VALID_ROLES = ['admin', 'employee'];
 
 module.exports = async function handler(req, res) {
-  const segments = Array.isArray(req.query.path) ? req.query.path : req.query.path ? [req.query.path] : [];
-  const route = segments.join('/');
+  // .../api/staff/<...> -- drop "api", "staff".
+  const route = routeSegmentsAfter(req, 2).join('/');
 
   switch (route) {
     case 'me':

@@ -18,8 +18,11 @@ const routes = {
 
 // Catch-all routes, mirroring Vercel's api/<prefix>/[...path].js dynamic
 // routing: any request under one of these prefixes is handed to the same
-// function, with req.query.path set to the remaining segments (an array,
-// same shape Vercel gives the handler).
+// function. The handler itself parses req.url to figure out which sub-route
+// it is (see lib/routeSegments.js) -- not req.query.path, which turned out
+// not to be reliably populated by Vercel's Node runtime for these dynamic
+// routes -- so this file only needs to pick the right function, not compute
+// the segments.
 const catchAllRoutes = {
   '/api/auth': auth,
   '/api/staff': staff,
@@ -28,14 +31,11 @@ const catchAllRoutes = {
 
 function resolveHandler(pathname) {
   if (routes[pathname]) {
-    return { handler: routes[pathname], pathSegments: [] };
+    return routes[pathname];
   }
   for (const [prefix, handler] of Object.entries(catchAllRoutes)) {
-    if (pathname === prefix) {
-      return { handler, pathSegments: [] };
-    }
-    if (pathname.startsWith(`${prefix}/`)) {
-      return { handler, pathSegments: pathname.slice(prefix.length + 1).split('/') };
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
+      return handler;
     }
   }
   return null;
@@ -43,17 +43,14 @@ function resolveHandler(pathname) {
 
 const server = http.createServer((req, res) => {
   const parsed = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
-  const resolved = resolveHandler(parsed.pathname);
-  if (!resolved) {
+  const handler = resolveHandler(parsed.pathname);
+  if (!handler) {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Not found' }));
     return;
   }
 
-  req.query = {
-    ...Object.fromEntries(parsed.searchParams),
-    ...(resolved.pathSegments.length > 0 ? { path: resolved.pathSegments } : {})
-  };
+  req.query = Object.fromEntries(parsed.searchParams);
 
   let body = '';
   req.on('data', (chunk) => (body += chunk));

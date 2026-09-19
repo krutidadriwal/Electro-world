@@ -11,6 +11,7 @@ const { getPool } = require('../../lib/db');
 const { normalizePhone } = require('../../lib/phone');
 const { sendSms } = require('../../lib/textbee');
 const { signSession, signOtpVerification, verifyOtpVerification } = require('../../lib/jwt');
+const { routeSegmentsAfter } = require('../../lib/routeSegments');
 
 const SALT_ROUNDS = 10;
 const CODE_EXPIRY_MS = 5 * 60 * 1000;
@@ -19,8 +20,8 @@ const PIN_REGEX = /^\d{4}$/;
 const MAX_OTP_ATTEMPTS = 5;
 
 module.exports = async function handler(req, res) {
-  const segments = Array.isArray(req.query.path) ? req.query.path : req.query.path ? [req.query.path] : [];
-  const route = segments.join('/');
+  // .../api/auth/<...> -- drop "api", "auth".
+  const route = routeSegmentsAfter(req, 2).join('/');
 
   switch (route) {
     case 'login':

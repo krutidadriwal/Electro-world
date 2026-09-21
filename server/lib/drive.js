@@ -78,10 +78,14 @@ async function getAccessToken() {
 async function driveRequest(path, { params, ...init } = {}) {
   const token = await getAccessToken();
   const url = new URL(`${DRIVE_API}${path}`);
-  if (params) {
-    for (const [key, value] of Object.entries(params)) {
-      url.searchParams.set(key, value);
-    }
+  // Drive API v3 ignores Shared Drive content by default -- these two flags
+  // opt every call into seeing it too. Harmless for plain My Drive files
+  // (the invoices folder); required for the notifications folder, which
+  // lives in a Shared Drive (a bare service account has no storage quota of
+  // its own, so file *uploads* only succeed inside a Shared Drive).
+  const mergedParams = { supportsAllDrives: 'true', includeItemsFromAllDrives: 'true', ...params };
+  for (const [key, value] of Object.entries(mergedParams)) {
+    url.searchParams.set(key, value);
   }
 
   const response = await fetch(url, {
@@ -156,7 +160,7 @@ async function uploadFile(folderId, filename, mimeType, buffer) {
 
   const token = await getAccessToken();
   const response = await fetch(
-    `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name`,
+    `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name&supportsAllDrives=true`,
     {
       method: 'POST',
       headers: {

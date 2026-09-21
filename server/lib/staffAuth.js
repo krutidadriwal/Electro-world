@@ -1,10 +1,14 @@
 // Verifies the staff app's Supabase-issued access token and loads the
-// caller's role from public.staff_profiles. Supabase mints access tokens as
-// HS256 JWTs signed with the project's JWT secret, so verifying one needs no
-// network call -- unlike getSupabaseAdmin(), which is only for privileged
-// actions (creating/listing staff).
+// caller's role from public.staff_profiles.
+//
+// This project's Supabase instance signs access tokens asymmetrically
+// (ES256, confirmed from a real token's header: {"alg":"ES256",...}) rather
+// than with the older shared HS256 JWT secret -- so verification has to go
+// through Supabase's published JWKS (its public keys), not a local secret.
+// jose's createRemoteJWKSet handles fetching + caching those keys (and
+// re-fetching on an unrecognized "kid") for us.
 
-const jwt = require('jsonwebtoken');
+const { createRemoteJWKSet, jwtVerify } = require('jose');
 const { getPool } = require('./db');
 
 class StaffAuthError extends Error {
@@ -14,12 +18,17 @@ class StaffAuthError extends Error {
   }
 }
 
-function getSupabaseJwtSecret() {
-  const secret = process.env.SUPABASE_JWT_SECRET;
-  if (!secret) {
-    throw new Error('SUPABASE_JWT_SECRET environment variable is not set.');
+let jwks;
+
+function getJwks() {
+  if (!jwks) {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    if (!supabaseUrl) {
+      throw new Error('SUPABASE_URL environment variable is not set.');
+    }
+    jwks = createRemoteJWKSet(new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`));
   }
-  return secret;
+  return jwks;
 }
 
 function extractBearerToken(req) {
@@ -41,7 +50,7 @@ async function requireStaff(req, { minRole } = {}) {
 
   let payload;
   try {
-    payload = jwt.verify(token, getSupabaseJwtSecret(), { algorithms: ['HS256'] });
+    ({ payload } = await jwtVerify(token, getJwks()));
   } catch (err) {
     throw new StaffAuthError(401, 'Invalid or expired token');
   }

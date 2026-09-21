@@ -37,21 +37,37 @@ const BATCH_SIZE = 500;
 // Sends the same notification to every token, batching as needed. Returns
 // the subset of tokens FCM reports as no-longer-registered, so the caller
 // can prune them from device_tokens.
-async function sendToTokens(tokens, { title, body, imageUrl, data }) {
+//
+// Deliberately data-only (no top-level `notification` field): a message
+// carrying both `notification` and `data` gets auto-displayed by the OS
+// itself whenever the app isn't in the foreground, using Android's own
+// fallback channel -- bypassing EWFirebaseMessagingService.onMessageReceived
+// entirely, which broke this app's own channel, its stable per-notification
+// tray id (needed to cancel a tray entry when read in-app, for badge-count
+// accuracy), and image rendering. Data-only messages always reach
+// onMessageReceived, foreground or not.
+async function sendToTokens(tokens, { title, body, imageUrl, notificationId }) {
   if (tokens.length === 0) {
     return { deadTokens: [] };
   }
 
   const messaging = getMessaging();
   const deadTokens = [];
+  const data = Object.fromEntries(
+    Object.entries({ title, body, imageUrl, notificationId })
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => [key, String(value)])
+  );
 
   for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
     const batch = tokens.slice(i, i + BATCH_SIZE);
     const response = await messaging.sendEachForMulticast({
       tokens: batch,
-      notification: { title, body, ...(imageUrl ? { imageUrl } : {}) },
-      // FCM data payload values must all be strings.
-      ...(data ? { data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])) } : {})
+      data,
+      // Data-only messages default to normal priority; without this,
+      // delivery to a backgrounded/doze'd device can be significantly
+      // delayed compared to how `notification` messages behaved.
+      android: { priority: 'high' }
     });
     response.responses.forEach((result, index) => {
       if (!result.success && result.error?.code === 'messaging/registration-token-not-registered') {

@@ -12,7 +12,7 @@
 const { getPool } = require('../../lib/db');
 const { requireStaff, requireAdmin, StaffAuthError } = require('../../lib/staffAuth');
 const { sendToTokens } = require('../../lib/fcm');
-const { uploadFile } = require('../../lib/drive');
+const { uploadNotificationImage } = require('../../lib/notificationImages');
 const { routeSegmentsAfter } = require('../../lib/routeSegments');
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // base64 inflates ~33%; Vercel caps request bodies at 4.5MB
@@ -164,11 +164,6 @@ async function uploadImage(req, res) {
     return res.status(400).json({ error: 'base64Data is required' });
   }
 
-  const folderId = process.env.DRIVE_NOTIFICATIONS_FOLDER_ID;
-  if (!folderId) {
-    return res.status(500).json({ error: 'DRIVE_NOTIFICATIONS_FOLDER_ID is not configured' });
-  }
-
   let buffer;
   try {
     buffer = Buffer.from(base64Data, 'base64');
@@ -182,8 +177,12 @@ async function uploadImage(req, res) {
   try {
     await requireAdmin(req);
 
-    const file = await uploadFile(folderId, fileName.trim(), mimeType, buffer);
-    return res.status(201).json({ driveFileId: file.id, url: file.url });
+    // driveFileId is a legacy name from when this uploaded to Google Drive
+    // (a bare service account has no storage quota to own a file there --
+    // see lib/notificationImages.js); it now holds the Supabase Storage
+    // object path instead, kept as-is to avoid a client + column rename.
+    const file = await uploadNotificationImage(fileName.trim(), mimeType, buffer);
+    return res.status(201).json({ driveFileId: file.path, url: file.url });
   } catch (err) {
     if (err instanceof StaffAuthError) {
       return res.status(err.status).json({ error: err.message });

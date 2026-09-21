@@ -125,7 +125,13 @@ async function create(req, res) {
         const { deadTokens } = await sendToTokens(tokens, {
           title: 'Electro World',
           body: notification.message,
-          imageUrl: notification.image_url ?? undefined
+          imageUrl: notification.image_url ?? undefined,
+          // Lets the client use a stable tray-notification id (tied to this
+          // row) instead of a random one, so opening/reading it in-app can
+          // cancel that specific tray notification -- keeping the launcher's
+          // unread badge count (where the OEM launcher supports one) in
+          // sync with what the in-app notification list shows as read.
+          data: { notificationId: notification.id }
         });
         if (deadTokens.length > 0) {
           await pool.query('delete from public.device_tokens where fcm_token = any($1)', [deadTokens]);

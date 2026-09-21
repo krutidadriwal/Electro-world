@@ -37,7 +37,7 @@ const BATCH_SIZE = 500;
 // Sends the same notification to every token, batching as needed. Returns
 // the subset of tokens FCM reports as no-longer-registered, so the caller
 // can prune them from device_tokens.
-async function sendToTokens(tokens, { title, body, imageUrl }) {
+async function sendToTokens(tokens, { title, body, imageUrl, data }) {
   if (tokens.length === 0) {
     return { deadTokens: [] };
   }
@@ -49,7 +49,9 @@ async function sendToTokens(tokens, { title, body, imageUrl }) {
     const batch = tokens.slice(i, i + BATCH_SIZE);
     const response = await messaging.sendEachForMulticast({
       tokens: batch,
-      notification: { title, body, ...(imageUrl ? { imageUrl } : {}) }
+      notification: { title, body, ...(imageUrl ? { imageUrl } : {}) },
+      // FCM data payload values must all be strings.
+      ...(data ? { data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])) } : {})
     });
     response.responses.forEach((result, index) => {
       if (!result.success && result.error?.code === 'messaging/registration-token-not-registered') {

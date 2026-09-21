@@ -24,6 +24,8 @@ module.exports = async function handler(req, res) {
   switch (route) {
     case 'list':
       return list(req, res);
+    case 'active':
+      return active(req, res);
     case 'create':
       return create(req, res);
     case 'image':
@@ -32,6 +34,31 @@ module.exports = async function handler(req, res) {
       return res.status(404).json({ error: 'Not found' });
   }
 };
+
+// Public (no staff auth) -- the customer app's in-app notification center.
+// Unlike list(), this only returns not-yet-expired notifications, and
+// customers have no login of their own to gate this behind (same trust
+// model as the other customer-facing endpoints, e.g. GET /api/invoices).
+async function active(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const pool = getPool();
+    const result = await pool.query(
+      `select id, message, image_url, duration_minutes, created_at
+       from public.notifications
+       where (created_at + (duration_minutes || ' minutes')::interval) >= now()
+       order by created_at desc`
+    );
+    return res.status(200).json({ notifications: result.rows });
+  } catch (err) {
+    console.error('list active notifications error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
 
 async function list(req, res) {
   if (req.method !== 'GET') {

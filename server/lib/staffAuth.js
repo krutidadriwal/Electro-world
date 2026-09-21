@@ -8,7 +8,10 @@
 // jose's createRemoteJWKSet handles fetching + caching those keys (and
 // re-fetching on an unrecognized "kid") for us.
 
-const { createRemoteJWKSet, jwtVerify } = require('jose');
+// jose is ESM-only (no CJS build) -- this file is CommonJS, so it has to be
+// loaded via dynamic import() rather than require(). require('jose') builds
+// fine locally (Node's experimental require(esm) papers over it) but crashes
+// with ERR_REQUIRE_ESM on Vercel's serverless runtime.
 const { getPool } = require('./db');
 
 class StaffAuthError extends Error {
@@ -20,12 +23,13 @@ class StaffAuthError extends Error {
 
 let jwks;
 
-function getJwks() {
+async function getJwks() {
   if (!jwks) {
     const supabaseUrl = process.env.SUPABASE_URL;
     if (!supabaseUrl) {
       throw new Error('SUPABASE_URL environment variable is not set.');
     }
+    const { createRemoteJWKSet } = await import('jose');
     jwks = createRemoteJWKSet(new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`));
   }
   return jwks;
@@ -50,7 +54,8 @@ async function requireStaff(req, { minRole } = {}) {
 
   let payload;
   try {
-    ({ payload } = await jwtVerify(token, getJwks()));
+    const { jwtVerify } = await import('jose');
+    ({ payload } = await jwtVerify(token, await getJwks()));
   } catch (err) {
     throw new StaffAuthError(401, 'Invalid or expired token');
   }

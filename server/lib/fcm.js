@@ -18,7 +18,13 @@ function getMessaging() {
     try {
       serviceAccount = JSON.parse(raw);
     } catch (err) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON.');
+      // Length + boundary char codes (never the content) to diagnose paste
+      // mistakes -- e.g. a wrapping quote pair or smart quotes -- without
+      // logging the private key itself.
+      throw new Error(
+        `FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON: ${err.message}. ` +
+        `length=${raw.length} firstCharCode=${raw.charCodeAt(0)} lastCharCode=${raw.charCodeAt(raw.length - 1)}`
+      );
     }
     app = admin.apps.length > 0 ? admin.app() : admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
   }

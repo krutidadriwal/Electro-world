@@ -23,9 +23,15 @@ module.exports = async function handler(req, res) {
       return create(req, res);
     case 'role':
       return role(req, res);
-    case 'price-list/list':
+    // Single hyphenated segments, not nested ("price-list/list") -- Vercel's
+    // [...path].js catch-all only ever routes a *1-segment* remainder to
+    // this function in production (confirmed by testing against the
+    // deployed server: a 2+-segment path under /api/staff/ never reaches
+    // this handler at all, returning Vercel's own platform 404 instead of
+    // ours). Every other route above is single-segment for the same reason.
+    case 'price-list-list':
       return priceListList(req, res);
-    case 'price-list/sync':
+    case 'price-list-sync':
       return priceListSync(req, res);
     default:
       return res.status(404).json({ error: 'Not found' });

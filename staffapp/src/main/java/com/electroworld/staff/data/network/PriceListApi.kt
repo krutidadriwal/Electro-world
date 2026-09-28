@@ -26,9 +26,9 @@ data class SyncPriceListResponse(
 )
 
 interface PriceListApi {
-  @GET("api/staff/price-list/list")
+  @GET("api/staff/price-list-list")
   suspend fun list(): PriceListResponse
 
-  @POST("api/staff/price-list/sync")
+  @POST("api/staff/price-list-sync")
   suspend fun sync(): SyncPriceListResponse
 }

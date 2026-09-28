@@ -1,0 +1,394 @@
+<!doctype html>
+<title>Electro World Privacy Policy</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  :root {
+    --bg: #f7f5f1;
+    --surface: #ffffff;
+    --border: #e4ded2;
+    --ink: #23241f;
+    --ink-soft: #57584f;
+    --ink-faint: #8b8c81;
+    --accent: #1f5f4f;
+    --accent-soft: #e4efe9;
+    --accent-ink: #144035;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16181a;
+      --surface: #1e2124;
+      --border: #33373a;
+      --ink: #eceae4;
+      --ink-soft: #b5b6ae;
+      --ink-faint: #82847d;
+      --accent: #6fbfa5;
+      --accent-soft: #223531;
+      --accent-ink: #bfe9da;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16181a;
+    --surface: #1e2124;
+    --border: #33373a;
+    --ink: #eceae4;
+    --ink-soft: #b5b6ae;
+    --ink-faint: #82847d;
+    --accent: #6fbfa5;
+    --accent-soft: #223531;
+    --accent-ink: #bfe9da;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    padding-inline: 20px;
+    padding-block: 48px;
+  }
+  main {
+    max-width: 700px;
+    margin-inline: auto;
+  }
+
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 18px;
+  }
+  .eyebrow .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  h1 {
+    font-family: "Source Serif 4", Georgia, serif;
+    font-weight: 700;
+    font-size: clamp(2rem, 5vw, 2.7rem);
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin: 0 0 10px;
+    color: var(--ink);
+  }
+
+  .dek {
+    color: var(--ink-soft);
+    font-size: 1.02rem;
+    max-width: 56ch;
+    margin: 0 0 8px;
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    margin: 20px 0 36px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .meta-row span b {
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 44px;
+  }
+  nav.toc p {
+    margin: 0 0 10px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  nav.toc ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    columns: 2;
+    column-gap: 24px;
+  }
+  nav.toc li { break-inside: avoid; margin-bottom: 6px; }
+  nav.toc a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-size: 14.5px;
+  }
+  nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); }
+  nav.toc a .num {
+    font-family: "IBM Plex Mono", monospace;
+    color: var(--accent);
+    margin-right: 8px;
+    font-size: 12.5px;
+  }
+
+  section {
+    margin-bottom: 40px;
+    scroll-margin-top: 24px;
+  }
+  section h2 {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-family: "Source Serif 4", Georgia, serif;
+    font-weight: 600;
+    font-size: 1.32rem;
+    color: var(--ink);
+    margin: 0 0 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  section h2 .num {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  p { margin: 0 0 14px; color: var(--ink); }
+  p.lede { color: var(--ink-soft); }
+  ul { margin: 0 0 14px; padding-left: 1.2em; }
+  li { margin-bottom: 8px; }
+  strong { font-weight: 600; }
+
+  .table-wrap { overflow-x: auto; margin: 0 0 14px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+    min-width: 480px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 500;
+  }
+  td { color: var(--ink-soft); }
+  td.item { color: var(--ink); font-weight: 500; }
+  tr:last-child td { border-bottom: none; }
+
+  .callout {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 0 0 14px;
+  }
+  .callout p { margin: 0; color: var(--accent-ink); }
+  .callout p + p { margin-top: 8px; }
+
+  .contact-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 32px;
+  }
+  .contact-card div { min-width: 160px; }
+  .contact-card .label {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 4px;
+  }
+  .contact-card .value { color: var(--ink); font-weight: 500; }
+  .contact-card a { color: var(--accent); text-decoration: none; }
+  .contact-card a:hover { text-decoration: underline; }
+
+  footer {
+    margin-top: 52px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--ink-faint);
+  }
+
+  a { color: var(--accent); }
+  ::selection { background: var(--accent-soft); color: var(--accent-ink); }
+
+  @media (max-width: 460px) {
+    nav.toc ol { columns: 1; }
+  }
+</style>
+
+<main>
+  <div class="eyebrow"><span class="dot"></span>Electro World &middot; Android App</div>
+  <h1>Privacy Policy</h1>
+  <p class="dek">How the Electro World app collects, uses, and protects information when you place service requests, track invoices, and receive updates from us.</p>
+
+  <div class="meta-row">
+    <span><b>Effective</b> September 22, 2026</span>
+    <span><b>Applies to</b> Electro World Android app</span>
+    <span><b>Package</b> com.aistudio.electroworld.zpqxvd</span>
+  </div>
+
+  <nav class="toc" aria-label="Table of contents">
+    <p>On this page</p>
+    <ol>
+      <li><a href="#collect"><span class="num">01</span>Information we collect</a></li>
+      <li><a href="#use"><span class="num">02</span>How we use it</a></li>
+      <li><a href="#share"><span class="num">03</span>Who we share it with</a></li>
+      <li><a href="#notifications"><span class="num">04</span>Push notifications</a></li>
+      <li><a href="#retention"><span class="num">05</span>Retention &amp; deletion</a></li>
+      <li><a href="#security"><span class="num">06</span>Security</a></li>
+      <li><a href="#rights"><span class="num">07</span>Your choices</a></li>
+      <li><a href="#children"><span class="num">08</span>Children's privacy</a></li>
+      <li><a href="#changes"><span class="num">09</span>Changes to this policy</a></li>
+      <li><a href="#contact"><span class="num">10</span>Contact us</a></li>
+    </ol>
+  </nav>
+
+  <section id="collect">
+    <h2><span class="num">01</span>Information we collect</h2>
+    <p class="lede">The app is used to browse products, request installations, file complaints, and track invoices with Electro World. We only collect what's needed to fulfil those requests.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Category</th><th>What we collect</th><th>When</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="item">Account details</td>
+            <td>Name and phone number</td>
+            <td>When you register or sign in</td>
+          </tr>
+          <tr>
+            <td class="item">Service requests</td>
+            <td>Delivery/service address, an optional alternate contact number, and a description of the issue or item</td>
+            <td>When you file a complaint or request an installation or demo</td>
+          </tr>
+          <tr>
+            <td class="item">Invoices &amp; files</td>
+            <td>Invoice files you link to a request or complaint</td>
+            <td>When you attach an invoice to a request</td>
+          </tr>
+          <tr>
+            <td class="item">Wishlist</td>
+            <td>Product categories you save</td>
+            <td>When you save items to your wishlist</td>
+          </tr>
+          <tr>
+            <td class="item">Device token</td>
+            <td>A Firebase push-notification token tied to your device</td>
+            <td>Automatically, when notifications are enabled</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>We do not collect precise location, contacts, camera, or microphone data &mdash; the app does not request those permissions.</p>
+  </section>
+
+  <section id="use">
+    <h2><span class="num">02</span>How we use it</h2>
+    <ul>
+      <li>To create and maintain your account, and recognise you when you sign in.</li>
+      <li>To process and update you on complaints, installation requests, and demo requests.</li>
+      <li>To locate your invoices and connect them to a request when you ask us to.</li>
+      <li>To keep your wishlist in sync across sessions.</li>
+      <li>To send you push notifications about offers, order updates, and account activity.</li>
+    </ul>
+    <p>We do not use your information for advertising, and we do not sell it.</p>
+  </section>
+
+  <section id="share">
+    <h2><span class="num">03</span>Who we share it with</h2>
+    <p>We do not sell or rent your information. We share it only with the service providers that run the app on our behalf:</p>
+    <ul>
+      <li><strong>Supabase</strong> &mdash; hosts our database and stores invoice files, acting as our data processor.</li>
+      <li><strong>Google Firebase Cloud Messaging</strong> &mdash; delivers push notifications to your device.</li>
+    </ul>
+    <p>Electro World staff can access your request details to respond to and resolve them. We may also disclose information if required by law.</p>
+  </section>
+
+  <section id="notifications">
+    <h2><span class="num">04</span>Push notifications</h2>
+    <p>The app requests notification permission so we can send you updates about your requests, invoices, and offers. Your device receives a Firebase token used only to target notifications to your device &mdash; you can turn notifications off at any time in your device's system settings, which stops new notifications from reaching you.</p>
+  </section>
+
+  <section id="retention">
+    <h2><span class="num">05</span>Retention &amp; deletion</h2>
+    <p>We keep your account and request history for as long as your account is active, so you can track past complaints, installations, and invoices.</p>
+    <div class="callout">
+      <p><strong>You can delete your account at any time</strong> from Profile &rarr; Delete Account in the app, or via our <a href="/delete-account.html">account deletion page</a> if you no longer have the app installed.</p>
+      <p>This permanently removes your account along with your complaints, wishlist, and installation requests, and cannot be undone.</p>
+    </div>
+  </section>
+
+  <section id="security">
+    <h2><span class="num">06</span>Security</h2>
+    <p>Data is transmitted over encrypted (HTTPS) connections and stored with our infrastructure provider, Supabase. No method of transmission or storage is 100% secure, but we take reasonable steps to protect your information from unauthorised access, alteration, or disclosure.</p>
+  </section>
+
+  <section id="rights">
+    <h2><span class="num">07</span>Your choices</h2>
+    <ul>
+      <li><strong>Access &amp; correction</strong> &mdash; update your name and phone number from the Profile screen at any time.</li>
+      <li><strong>Deletion</strong> &mdash; delete your account and associated data from Profile &rarr; Delete Account, or by contacting us below.</li>
+      <li><strong>Notifications</strong> &mdash; disable push notifications in your device settings.</li>
+    </ul>
+  </section>
+
+  <section id="children">
+    <h2><span class="num">08</span>Children's privacy</h2>
+    <p>The app is not directed at children under 13, and we do not knowingly collect information from them. If you believe a child has provided us with personal information, contact us and we will delete it.</p>
+  </section>
+
+  <section id="changes">
+    <h2><span class="num">09</span>Changes to this policy</h2>
+    <p>We may update this policy as the app changes. We'll update the effective date above when we do. Continued use of the app after a change means you accept the revised policy.</p>
+  </section>
+
+  <section id="contact">
+    <h2><span class="num">10</span>Contact us</h2>
+    <p>Questions about this policy or your data? Reach out:</p>
+    <div class="contact-card">
+      <div>
+        <div class="label">Email</div>
+        <div class="value"><a href="mailto:dopp1804@gmail.com">dopp1804@gmail.com</a></div>
+      </div>
+      <div>
+        <div class="label">App</div>
+        <div class="value">Electro World</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    &copy; 2026 Electro World. This policy covers the Electro World Android app only.
+  </footer>
+</main>

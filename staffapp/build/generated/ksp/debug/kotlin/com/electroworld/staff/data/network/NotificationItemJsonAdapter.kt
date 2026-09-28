@@ -25,7 +25,7 @@ public class NotificationItemJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<NotificationItem>() {
   private val options: JsonReader.Options = JsonReader.Options.of("id", "message",
-      "imageDriveFileId", "imageUrl", "durationMinutes", "createdBy", "createdAt", "expired")
+      "image_drive_file_id", "image_url", "duration_minutes", "created_by", "created_at", "expired")
 
   private val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java, emptySet(),
       "id")
@@ -72,11 +72,11 @@ public class NotificationItemJsonAdapter(
           mask0 = mask0 and 0xfffffff7.toInt()
         }
         4 -> durationMinutes = intAdapter.fromJson(reader) ?:
-            throw Util.unexpectedNull("durationMinutes", "durationMinutes", reader)
+            throw Util.unexpectedNull("durationMinutes", "duration_minutes", reader)
         5 -> createdBy = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("createdBy",
-            "createdBy", reader)
+            "created_by", reader)
         6 -> createdAt = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("createdAt",
-            "createdAt", reader)
+            "created_at", reader)
         7 -> {
           expired = booleanAdapter.fromJson(reader) ?: throw Util.unexpectedNull("expired",
               "expired", reader)
@@ -99,9 +99,9 @@ public class NotificationItemJsonAdapter(
           imageDriveFileId = imageDriveFileId,
           imageUrl = imageUrl,
           durationMinutes = durationMinutes ?: throw Util.missingProperty("durationMinutes",
-              "durationMinutes", reader),
-          createdBy = createdBy ?: throw Util.missingProperty("createdBy", "createdBy", reader),
-          createdAt = createdAt ?: throw Util.missingProperty("createdAt", "createdAt", reader),
+              "duration_minutes", reader),
+          createdBy = createdBy ?: throw Util.missingProperty("createdBy", "created_by", reader),
+          createdAt = createdAt ?: throw Util.missingProperty("createdAt", "created_at", reader),
           expired = expired as Boolean
       )
     } else {
@@ -118,10 +118,10 @@ public class NotificationItemJsonAdapter(
           message ?: throw Util.missingProperty("message", "message", reader),
           imageDriveFileId,
           imageUrl,
-          durationMinutes ?: throw Util.missingProperty("durationMinutes", "durationMinutes",
+          durationMinutes ?: throw Util.missingProperty("durationMinutes", "duration_minutes",
               reader),
-          createdBy ?: throw Util.missingProperty("createdBy", "createdBy", reader),
-          createdAt ?: throw Util.missingProperty("createdAt", "createdAt", reader),
+          createdBy ?: throw Util.missingProperty("createdBy", "created_by", reader),
+          createdAt ?: throw Util.missingProperty("createdAt", "created_at", reader),
           expired,
           mask0,
           /* DefaultConstructorMarker */ null
@@ -138,15 +138,15 @@ public class NotificationItemJsonAdapter(
     stringAdapter.toJson(writer, value_.id)
     writer.name("message")
     stringAdapter.toJson(writer, value_.message)
-    writer.name("imageDriveFileId")
+    writer.name("image_drive_file_id")
     nullableStringAdapter.toJson(writer, value_.imageDriveFileId)
-    writer.name("imageUrl")
+    writer.name("image_url")
     nullableStringAdapter.toJson(writer, value_.imageUrl)
-    writer.name("durationMinutes")
+    writer.name("duration_minutes")
     intAdapter.toJson(writer, value_.durationMinutes)
-    writer.name("createdBy")
+    writer.name("created_by")
     stringAdapter.toJson(writer, value_.createdBy)
-    writer.name("createdAt")
+    writer.name("created_at")
     stringAdapter.toJson(writer, value_.createdAt)
     writer.name("expired")
     booleanAdapter.toJson(writer, value_.expired)

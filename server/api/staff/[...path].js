@@ -6,6 +6,7 @@ const { getPool } = require('../../lib/db');
 const { getSupabaseAdmin } = require('../../lib/supabaseAdmin');
 const { requireStaff, requireAdmin, StaffAuthError } = require('../../lib/staffAuth');
 const { routeSegmentsAfter } = require('../../lib/routeSegments');
+const { syncPriceList } = require('../../lib/priceList');
 
 const VALID_ROLES = ['admin', 'employee'];
 
@@ -22,6 +23,10 @@ module.exports = async function handler(req, res) {
       return create(req, res);
     case 'role':
       return role(req, res);
+    case 'price-list/list':
+      return priceListList(req, res);
+    case 'price-list/sync':
+      return priceListSync(req, res);
     default:
       return res.status(404).json({ error: 'Not found' });
   }
@@ -150,6 +155,53 @@ async function role(req, res) {
       return res.status(err.status).json({ error: err.message });
     }
     console.error('update staff role error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Any signed-in staff member (admin or employee) can browse the price list --
+// it's read-only reference data, not a role-restricted action.
+async function priceListList(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    await requireStaff(req);
+
+    const pool = getPool();
+    const result = await pool.query(
+      `select category, group_name, item_name, final_price, stock_label
+       from public.price_list_items
+       order by category, group_name, item_name`
+    );
+    return res.status(200).json({ items: result.rows });
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('list price list error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+async function priceListSync(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    await requireAdmin(req);
+
+    const result = await syncPriceList();
+    return res.status(200).json(result);
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('sync price list error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

@@ -24,7 +24,7 @@ public class StaffMemberJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<StaffMember>() {
   private val options: JsonReader.Options = JsonReader.Options.of("id", "email", "role",
-      "createdAt")
+      "created_at")
 
   private val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java, emptySet(),
       "id")
@@ -102,7 +102,7 @@ public class StaffMemberJsonAdapter(
     stringAdapter.toJson(writer, value_.email)
     writer.name("role")
     stringAdapter.toJson(writer, value_.role)
-    writer.name("createdAt")
+    writer.name("created_at")
     nullableStringAdapter.toJson(writer, value_.createdAt)
     writer.endObject()
   }

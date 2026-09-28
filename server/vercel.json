@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    { "source": "/api/categories", "destination": "/api/catalog" },
+    { "source": "/api/wishlist", "destination": "/api/catalog?resource=wishlist" },
+    { "source": "/api/complaints", "destination": "/api/service-requests" },
+    { "source": "/api/installations", "destination": "/api/service-requests?resource=installations" },
+    { "source": "/api/invoice-requests", "destination": "/api/service-requests?resource=invoice-requests" },
+    { "source": "/api/user", "destination": "/api/account" },
+    { "source": "/api/device-tokens", "destination": "/api/account?resource=device-tokens" },
+    { "source": "/api/invoice-file", "destination": "/api/invoices?resource=invoice-file" }
+  ]
+}

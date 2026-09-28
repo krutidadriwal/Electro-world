@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,6 +28,7 @@ import androidx.core.content.ContextCompat
 import com.example.data.SessionManager
 import com.example.data.network.NetworkModule
 import com.example.data.notifications.registerFcmToken
+import com.example.update.InAppUpdateChecker
 import com.example.ui.screens.ComplaintStatusScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.InstallationRequestScreen
@@ -67,20 +70,31 @@ class MainActivity : ComponentActivity() {
           ActivityResultContracts.RequestPermission()
         ) { /* no-op: pushes still arrive, just without a tray notification if denied */ }
 
-        LaunchedEffect(userPhone) {
-          if (userPhone.isBlank()) return@LaunchedEffect
+        // Asked once, right at launch -- regardless of login state -- rather
+        // than waiting for the user to log in, since Android only lets you
+        // prompt the system dialog once per install (a denial requires the
+        // user to flip it on manually in Settings afterwards).
+        LaunchedEffect(Unit) {
           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
           ) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
           }
+        }
+
+        LaunchedEffect(userPhone) {
+          if (userPhone.isBlank()) return@LaunchedEffect
           registerFcmToken(NetworkModule.deviceTokenApi, userPhone)
         }
 
+        val snackbarHostState = remember { SnackbarHostState() }
+        InAppUpdateChecker(snackbarHostState)
+
         Scaffold(
           modifier = Modifier.fillMaxSize(),
-          contentWindowInsets = WindowInsets(0, 0, 0, 0)
+          contentWindowInsets = WindowInsets(0, 0, 0, 0),
+          snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { innerPadding ->
           when (currentScreen) {
             Screen.LOGIN -> {

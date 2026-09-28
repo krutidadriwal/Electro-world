@@ -1,5 +1,6 @@
 package com.electroworld.staff.data.network
 
+import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -9,11 +10,11 @@ import retrofit2.http.POST
 data class NotificationItem(
   val id: String,
   val message: String,
-  val imageDriveFileId: String? = null,
-  val imageUrl: String? = null,
-  val durationMinutes: Int,
-  val createdBy: String,
-  val createdAt: String,
+  @Json(name = "image_drive_file_id") val imageDriveFileId: String? = null,
+  @Json(name = "image_url") val imageUrl: String? = null,
+  @Json(name = "duration_minutes") val durationMinutes: Int,
+  @Json(name = "created_by") val createdBy: String,
+  @Json(name = "created_at") val createdAt: String,
   val expired: Boolean = false
 )
 

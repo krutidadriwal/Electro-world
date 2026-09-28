@@ -325,3 +325,19 @@ create table if not exists public.device_tokens (
 );
 
 create index if not exists device_tokens_phone_idx on public.device_tokens (phone);
+
+-- Snapshot of the Tally-exported retail price list (see server/lib/priceList.js),
+-- fully replaced on every admin-triggered sync (POST /api/staff/price-list/sync)
+-- rather than upserted -- there's no stable external id to match rows against
+-- across syncs, and nothing else references this table by row id.
+create table if not exists public.price_list_items (
+  id uuid primary key default gen_random_uuid(),
+  category text not null,
+  group_name text not null,
+  item_name text not null,
+  final_price numeric not null,
+  stock_label text not null default '',
+  synced_at timestamptz not null default now()
+);
+
+create index if not exists price_list_items_category_idx on public.price_list_items (category);

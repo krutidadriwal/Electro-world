@@ -11,6 +11,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Sell
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,7 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 
-private enum class HomeTab { NOTIFICATIONS, STAFF }
+private enum class HomeTab { NOTIFICATIONS, PRICE_LIST, STAFF }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +38,12 @@ fun HomeScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
             label = { Text("Notifications") }
           )
           NavigationBarItem(
+            selected = selectedTab == HomeTab.PRICE_LIST,
+            onClick = { selectedTab = HomeTab.PRICE_LIST },
+            icon = { Icon(Icons.Default.Sell, contentDescription = "Price List") },
+            label = { Text("Price List") }
+          )
+          NavigationBarItem(
             selected = selectedTab == HomeTab.STAFF,
             onClick = { selectedTab = HomeTab.STAFF },
             icon = { Icon(Icons.Default.People, contentDescription = "Staff") },
@@ -49,6 +56,7 @@ fun HomeScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
   ) { padding ->
     when (selectedTab) {
       HomeTab.NOTIFICATIONS -> NotificationsScreen(isAdmin = isAdmin, modifier = Modifier.padding(padding))
+      HomeTab.PRICE_LIST -> PriceListScreen(isAdmin = isAdmin, modifier = Modifier.padding(padding))
       HomeTab.STAFF -> StaffScreen(modifier = Modifier.padding(padding))
     }
   }

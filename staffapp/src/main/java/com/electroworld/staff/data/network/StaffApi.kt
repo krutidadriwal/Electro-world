@@ -1,5 +1,6 @@
 package com.electroworld.staff.data.network
 
+import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -11,7 +12,7 @@ data class StaffMember(
   val id: String,
   val email: String,
   val role: String,
-  val createdAt: String? = null
+  @Json(name = "created_at") val createdAt: String? = null
 )
 
 @JsonClass(generateAdapter = true)

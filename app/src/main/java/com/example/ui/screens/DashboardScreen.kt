@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -83,11 +84,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.NotificationManagerCompat
+import coil.compose.AsyncImage
 import com.example.data.InvoiceFileCache
 import com.example.data.InvoiceListCache
+import com.example.data.NotificationReadStore
+import com.example.data.network.ActiveNotification
 import com.example.data.network.CreateInvoiceRequestRequest
 import com.example.data.network.InvoiceFile
 import com.example.data.network.NetworkModule
+import com.example.data.notifications.notificationTrayId
 import com.example.ui.theme.GoldDark
 import com.example.ui.theme.GoldLight
 import com.example.ui.theme.GoldPrimary
@@ -102,7 +108,8 @@ import kotlinx.coroutines.launch
 // Screen Enumeration for dialog overlays
 enum class ActiveModule {
   NONE,
-  VISIT_STORE
+  VISIT_STORE,
+  NOTIFICATIONS
 }
 
 @Composable
@@ -120,9 +127,22 @@ fun DashboardScreen(
   val coroutineScope = rememberCoroutineScope()
   val invoiceListCache = remember { InvoiceListCache(context) }
   var activeOverlay by remember { mutableStateOf(ActiveModule.NONE) }
-  var showNotificationsToast by remember { mutableStateOf(false) }
   var recentInvoices by remember { mutableStateOf(invoiceListCache.get(userPhone)?.take(3) ?: emptyList()) }
   var openingInvoiceId by remember { mutableStateOf<String?>(null) }
+  val notificationReadStore = remember { NotificationReadStore(context) }
+  var unreadNotificationCount by remember { mutableStateOf(0) }
+
+  // Re-fetches whenever the notifications overlay closes, so opening one
+  // (which marks it read) is reflected in the bell badge right away.
+  LaunchedEffect(activeOverlay) {
+    if (activeOverlay != ActiveModule.NONE) return@LaunchedEffect
+    try {
+      val active = NetworkModule.notificationsApi.getActiveNotifications().notifications
+      unreadNotificationCount = active.count { !notificationReadStore.isRead(it.id) }
+    } catch (e: Exception) {
+      // Offline -- leave the previous count showing rather than clearing it.
+    }
+  }
 
   fun openInvoice(invoice: InvoiceFile) {
     if (openingInvoiceId != null) return
@@ -216,29 +236,43 @@ fun DashboardScreen(
             }
           }
 
-          Box(
-            modifier = Modifier
-              .size(44.dp)
-              .background(SlateSurface, CircleShape)
-              .clickable { showNotificationsToast = true },
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              imageVector = Icons.Default.Notifications,
-              contentDescription = "Notifications",
-              tint = GoldSecondary,
-              modifier = Modifier.size(20.dp)
-            )
+          Box {
+            Box(
+              modifier = Modifier
+                .size(44.dp)
+                .background(SlateSurface, CircleShape)
+                .clickable { activeOverlay = ActiveModule.NOTIFICATIONS },
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(
+                imageVector = Icons.Default.Notifications,
+                contentDescription = "Notifications",
+                tint = GoldSecondary,
+                modifier = Modifier.size(20.dp)
+              )
+            }
+            if (unreadNotificationCount > 0) {
+              Box(
+                modifier = Modifier
+                  .align(Alignment.TopEnd)
+                  .offset(x = 2.dp, y = (-2).dp)
+                  .size(18.dp)
+                  .background(Color(0xFFE53935), CircleShape),
+                contentAlignment = Alignment.Center
+              ) {
+                Text(
+                  text = if (unreadNotificationCount > 9) "9+" else unreadNotificationCount.toString(),
+                  color = Color.White,
+                  fontSize = 10.sp,
+                  lineHeight = 10.sp,
+                  fontWeight = FontWeight.Bold,
+                  style = androidx.compose.ui.text.TextStyle(
+                    platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)
+                  )
+                )
+              }
+            }
           }
-        }
-
-        if (showNotificationsToast) {
-          Text(
-            text = "You're all caught up -- no new notifications.",
-            color = OnSlateTextSecondary,
-            fontSize = 12.sp,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
-          )
         }
 
         // Section header
@@ -446,6 +480,7 @@ fun DashboardScreen(
                 Box(modifier = Modifier.weight(1f)) {
                   when (activeOverlay) {
                     ActiveModule.VISIT_STORE -> VisitStoreSubScreen()
+                    ActiveModule.NOTIFICATIONS -> NotificationsSubScreen()
                     else -> Unit
                   }
                 }
@@ -516,6 +551,7 @@ private fun InvoiceChip(invoice: InvoiceFile, isOpening: Boolean, onClick: () ->
 private fun getModuleIcon(module: ActiveModule): ImageVector {
   return when (module) {
     ActiveModule.VISIT_STORE -> Icons.Default.LocationOn
+    ActiveModule.NOTIFICATIONS -> Icons.Default.Notifications
     else -> Icons.Default.Info
   }
 }
@@ -523,6 +559,7 @@ private fun getModuleIcon(module: ActiveModule): ImageVector {
 private fun getModuleTitle(module: ActiveModule): String {
   return when (module) {
     ActiveModule.VISIT_STORE -> "Visit Our Store"
+    ActiveModule.NOTIFICATIONS -> "Notifications"
     else -> ""
   }
 }
@@ -832,6 +869,188 @@ fun VisitStoreSubScreen() {
       Icon(Icons.Default.Phone, "Call", tint = GoldPrimary, modifier = Modifier.size(16.dp))
       Spacer(modifier = Modifier.width(6.dp))
       Text("CALL STORE", fontWeight = FontWeight.Bold)
+    }
+  }
+}
+
+// 3. NOTIFICATIONS SUB-SCREEN
+// Lists still-active (not-yet-expired) notifications, first line only,
+// greyed out once opened. Read state is a local "seen" marker -- kept in
+// SharedPreferences via NotificationReadStore, never sent to the server.
+@Composable
+fun NotificationsSubScreen() {
+  val context = LocalContext.current
+  val readStore = remember { NotificationReadStore(context) }
+  var notifications by remember { mutableStateOf<List<ActiveNotification>>(emptyList()) }
+  var isLoading by remember { mutableStateOf(true) }
+  var errorMessage by remember { mutableStateOf<String?>(null) }
+  var readIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+  var selected by remember { mutableStateOf<ActiveNotification?>(null) }
+
+  LaunchedEffect(Unit) {
+    try {
+      val fresh = NetworkModule.notificationsApi.getActiveNotifications().notifications
+      notifications = fresh
+      readIds = fresh.filter { readStore.isRead(it.id) }.map { it.id }.toSet()
+      errorMessage = null
+    } catch (e: Exception) {
+      errorMessage = "Unable to load notifications. Please check your connection and try again."
+    } finally {
+      isLoading = false
+    }
+  }
+
+  fun openNotification(notification: ActiveNotification) {
+    readStore.markRead(notification.id)
+    readIds = readIds + notification.id
+    selected = notification
+    // Clears this specific tray notification so OEM launchers that show a
+    // numeric home-screen badge (a count of active, undismissed
+    // notifications) decrement it immediately, same as reading a chat does
+    // in WhatsApp -- see notificationTrayId's doc for why this id matches.
+    NotificationManagerCompat.from(context).cancel(notificationTrayId(notification.id))
+  }
+
+  // Unread first, read (greyed out) pushed to the bottom -- stable within
+  // each group, so it doesn't reshuffle the server's created_at desc order.
+  val sortedNotifications = remember(notifications, readIds) {
+    notifications.sortedBy { it.id in readIds }
+  }
+
+  when {
+    isLoading -> {
+      Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 60.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+      ) {
+        androidx.compose.material3.CircularProgressIndicator(color = GoldPrimary)
+      }
+    }
+    errorMessage != null -> {
+      Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+      ) {
+        Icon(Icons.Default.Warning, "Error", tint = GoldSecondary, modifier = Modifier.size(40.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(errorMessage ?: "", color = OnSlateTextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center)
+      }
+    }
+    notifications.isEmpty() -> {
+      Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+      ) {
+        Icon(Icons.Default.Notifications, "No notifications", tint = GoldSecondary, modifier = Modifier.size(40.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("You're all caught up -- no active notifications.", color = OnSlateTextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center)
+      }
+    }
+    else -> {
+      LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxSize()
+      ) {
+        items(sortedNotifications, key = { it.id }) { notification ->
+          val isRead = notification.id in readIds
+          Card(
+            colors = CardDefaults.cardColors(
+              containerColor = if (isRead) SlateSurfaceVariant.copy(alpha = 0.5f) else SlateSurfaceVariant
+            ),
+            modifier = Modifier
+              .fillMaxWidth()
+              .clickable { openNotification(notification) },
+            shape = RoundedCornerShape(12.dp)
+          ) {
+            Row(
+              modifier = Modifier.padding(14.dp),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Box(
+                modifier = Modifier
+                  .size(32.dp)
+                  .background(
+                    (if (isRead) OnSlateTextSecondary else GoldPrimary).copy(alpha = 0.15f),
+                    CircleShape
+                  ),
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(
+                  imageVector = Icons.Default.Notifications,
+                  contentDescription = null,
+                  tint = if (isRead) OnSlateTextSecondary else GoldSecondary,
+                  modifier = Modifier.size(16.dp)
+                )
+              }
+              Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
+                Text(
+                  text = notification.message.substringBefore('\n'),
+                  color = if (isRead) OnSlateTextSecondary else OnSlateText,
+                  fontSize = 13.sp,
+                  fontWeight = if (isRead) FontWeight.Normal else FontWeight.Bold,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                  text = formatInvoiceDate(notification.createdAt),
+                  color = OnSlateTextSecondary,
+                  fontSize = 11.sp,
+                  modifier = Modifier.padding(top = 4.dp)
+                )
+              }
+              Icon(Icons.Default.ChevronRight, contentDescription = null, tint = OnSlateTextSecondary, modifier = Modifier.size(16.dp))
+            }
+          }
+        }
+      }
+    }
+  }
+
+  selected?.let { notification ->
+    NotificationDetailDialog(notification = notification, onDismiss = { selected = null })
+  }
+}
+
+@Composable
+private fun NotificationDetailDialog(notification: ActiveNotification, onDismiss: () -> Unit) {
+  androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+    Card(
+      modifier = Modifier.fillMaxWidth(),
+      colors = CardDefaults.cardColors(containerColor = SlateSurface),
+      shape = RoundedCornerShape(16.dp),
+      border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.3f))
+    ) {
+      Column(
+        modifier = Modifier
+          .padding(20.dp)
+          .verticalScroll(rememberScrollState())
+      ) {
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Text(text = "Announcement", color = GoldPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+          IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+            Icon(Icons.Default.Close, contentDescription = "Close", tint = OnSlateTextSecondary)
+          }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        notification.imageUrl?.let { url ->
+          AsyncImage(
+            model = url,
+            contentDescription = null,
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(12.dp)),
+            contentScale = androidx.compose.ui.layout.ContentScale.FillWidth
+          )
+          Spacer(modifier = Modifier.height(14.dp))
+        }
+        Text(text = notification.message, color = OnSlateText, fontSize = 14.sp)
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(text = formatInvoiceDate(notification.createdAt), color = OnSlateTextSecondary, fontSize = 11.sp)
+      }
     }
   }
 }

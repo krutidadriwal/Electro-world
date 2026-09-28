@@ -1,19 +1,21 @@
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 
-const user = require('../api/user');
+const account = require('../api/account');
+const catalog = require('../api/catalog');
+const serviceRequests = require('../api/service-requests');
 const invoices = require('../api/invoices');
-const invoiceFile = require('../api/invoice-file');
-const deviceTokens = require('../api/device-tokens');
 const auth = require('../api/auth/[...path]');
 const staff = require('../api/staff/[...path]');
 const notifications = require('../api/notifications/[...path]');
 
 // Exact-path routes, same as Vercel's static api/*.js file routing.
 const routes = {
-  '/api/user': user,
-  '/api/invoices': invoices,
-  '/api/invoice-file': invoiceFile,
-  '/api/device-tokens': deviceTokens
+  '/api/account': { handler: account },
+  '/api/catalog': { handler: catalog },
+  '/api/service-requests': { handler: serviceRequests },
+  '/api/invoices': { handler: invoices }
 };
 
 // Catch-all routes, mirroring Vercel's api/<prefix>/[...path].js dynamic
@@ -29,13 +31,33 @@ const catchAllRoutes = {
   '/api/notifications': notifications
 };
 
-function resolveHandler(pathname) {
+// Consolidated endpoints (categories, wishlist, complaints, installations,
+// invoice-requests, user, device-tokens, invoice-file) live under grouped
+// files (catalog/service-requests/account/invoices) to stay under Vercel
+// Hobby's 12-serverless-function cap -- server/vercel.json's `rewrites`
+// preserve their original URLs by mapping to the grouped file plus a
+// ?resource= query param. Reading that file here (rather than duplicating
+// the mapping) keeps this dev server from drifting out of sync with it.
+const { rewrites } = JSON.parse(fs.readFileSync(path.join(__dirname, '../vercel.json'), 'utf8'));
+for (const { source, destination } of rewrites) {
+  const [destPath, destQuery] = destination.split('?');
+  const target = routes[destPath];
+  if (!target) {
+    throw new Error(`vercel.json rewrite destination ${destPath} has no matching route in dev-server.js`);
+  }
+  routes[source] = {
+    handler: target.handler,
+    resource: destQuery ? new URLSearchParams(destQuery).get('resource') : undefined
+  };
+}
+
+function resolveRoute(pathname) {
   if (routes[pathname]) {
     return routes[pathname];
   }
   for (const [prefix, handler] of Object.entries(catchAllRoutes)) {
     if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
-      return handler;
+      return { handler };
     }
   }
   return null;
@@ -43,14 +65,17 @@ function resolveHandler(pathname) {
 
 const server = http.createServer((req, res) => {
   const parsed = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
-  const handler = resolveHandler(parsed.pathname);
-  if (!handler) {
+  const resolved = resolveRoute(parsed.pathname);
+  if (!resolved) {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Not found' }));
     return;
   }
 
   req.query = Object.fromEntries(parsed.searchParams);
+  if (resolved.resource) {
+    req.query.resource = resolved.resource;
+  }
 
   let body = '';
   req.on('data', (chunk) => (body += chunk));

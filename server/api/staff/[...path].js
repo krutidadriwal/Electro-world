@@ -178,7 +178,7 @@ async function priceListList(req, res) {
 
     const pool = getPool();
     const result = await pool.query(
-      `select category, group_name, item_name, final_price, stock_label
+      `select category, group_name, item_name, final_price, mrp, stock_label
        from public.price_list_items
        order by category, group_name, item_name`
     );

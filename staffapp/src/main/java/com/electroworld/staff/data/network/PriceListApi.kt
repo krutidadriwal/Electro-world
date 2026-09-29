@@ -11,6 +11,7 @@ data class PriceListItem(
   @Json(name = "group_name") val groupName: String,
   @Json(name = "item_name") val itemName: String,
   @Json(name = "final_price") val finalPrice: Double,
+  val mrp: Double,
   @Json(name = "stock_label") val stockLabel: String
 )
 

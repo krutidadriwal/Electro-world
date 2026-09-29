@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -1037,13 +1038,20 @@ private fun NotificationDetailDialog(notification: ActiveNotification, onDismiss
         }
         Spacer(modifier = Modifier.height(8.dp))
         notification.imageUrl?.let { url ->
+          // AsyncImage needs an explicit height before the image has loaded
+          // (its intrinsic size is unknown until then) -- fillMaxWidth()
+          // alone, with no height/aspectRatio, was collapsing to zero height
+          // inside this Dialog + scrollable Column and never showing
+          // anything. 16:9 matches the images actually uploaded so far;
+          // Crop keeps it filling the box even if that ever varies slightly.
           AsyncImage(
             model = url,
             contentDescription = null,
             modifier = Modifier
               .fillMaxWidth()
+              .aspectRatio(16f / 9f)
               .clip(RoundedCornerShape(12.dp)),
-            contentScale = androidx.compose.ui.layout.ContentScale.FillWidth
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop
           )
           Spacer(modifier = Modifier.height(14.dp))
         }

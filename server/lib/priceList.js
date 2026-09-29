@@ -37,9 +37,9 @@ function extractNumber(record, key) {
   return match ? Number(match[1]) : null;
 }
 
-// Returns { itemName, category, groupName, finalPrice, stockLabel }[].
+// Returns { itemName, category, groupName, finalPrice, mrp, stockLabel }[].
 // Records with no item name are skipped (nothing to display); a missing
-// final price defaults to 0 rather than dropping the item, since a
+// final price or MRP defaults to 0 rather than dropping the item, since a
 // zero/unpriced item should still show up in the price list.
 function parsePriceListDocument(buffer) {
   const text = decodeText(buffer);
@@ -54,6 +54,7 @@ function parsePriceListDocument(buffer) {
       category: extractString(record, 'EWCategory') || '',
       groupName: extractString(record, 'EWGroup') || '',
       finalPrice: extractNumber(record, 'EWFINAL') ?? 0,
+      mrp: extractNumber(record, 'EWMRP') ?? 0,
       stockLabel: extractString(record, 'EWCLSTK') || ''
     });
   }
@@ -84,12 +85,12 @@ async function syncPriceList() {
       const batch = items.slice(offset, offset + rowsPerStatement);
       const params = [];
       const rows = batch.map((item, i) => {
-        const base = i * 5;
-        params.push(item.category, item.groupName, item.itemName, item.finalPrice, item.stockLabel);
-        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`;
+        const base = i * 6;
+        params.push(item.category, item.groupName, item.itemName, item.finalPrice, item.mrp, item.stockLabel);
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`;
       });
       await pool.query(
-        `insert into public.price_list_items (category, group_name, item_name, final_price, stock_label)
+        `insert into public.price_list_items (category, group_name, item_name, final_price, mrp, stock_label)
          values ${rows.join(', ')}`,
         params
       );

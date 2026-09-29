@@ -336,8 +336,11 @@ create table if not exists public.price_list_items (
   group_name text not null,
   item_name text not null,
   final_price numeric not null,
+  mrp numeric not null default 0,
   stock_label text not null default '',
   synced_at timestamptz not null default now()
 );
+
+alter table public.price_list_items add column if not exists mrp numeric not null default 0;
 
 create index if not exists price_list_items_category_idx on public.price_list_items (category);

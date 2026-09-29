@@ -22,7 +22,7 @@ public class PriceListItemJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<PriceListItem>() {
   private val options: JsonReader.Options = JsonReader.Options.of("category", "group_name",
-      "item_name", "final_price", "stock_label")
+      "item_name", "final_price", "mrp", "stock_label")
 
   private val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java, emptySet(),
       "category")
@@ -38,6 +38,7 @@ public class PriceListItemJsonAdapter(
     var groupName: String? = null
     var itemName: String? = null
     var finalPrice: Double? = null
+    var mrp: Double? = null
     var stockLabel: String? = null
     reader.beginObject()
     while (reader.hasNext()) {
@@ -50,7 +51,8 @@ public class PriceListItemJsonAdapter(
             "item_name", reader)
         3 -> finalPrice = doubleAdapter.fromJson(reader) ?: throw Util.unexpectedNull("finalPrice",
             "final_price", reader)
-        4 -> stockLabel = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("stockLabel",
+        4 -> mrp = doubleAdapter.fromJson(reader) ?: throw Util.unexpectedNull("mrp", "mrp", reader)
+        5 -> stockLabel = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("stockLabel",
             "stock_label", reader)
         -1 -> {
           // Unknown name, skip it.
@@ -65,6 +67,7 @@ public class PriceListItemJsonAdapter(
         groupName = groupName ?: throw Util.missingProperty("groupName", "group_name", reader),
         itemName = itemName ?: throw Util.missingProperty("itemName", "item_name", reader),
         finalPrice = finalPrice ?: throw Util.missingProperty("finalPrice", "final_price", reader),
+        mrp = mrp ?: throw Util.missingProperty("mrp", "mrp", reader),
         stockLabel = stockLabel ?: throw Util.missingProperty("stockLabel", "stock_label", reader)
     )
   }
@@ -82,6 +85,8 @@ public class PriceListItemJsonAdapter(
     stringAdapter.toJson(writer, value_.itemName)
     writer.name("final_price")
     doubleAdapter.toJson(writer, value_.finalPrice)
+    writer.name("mrp")
+    doubleAdapter.toJson(writer, value_.mrp)
     writer.name("stock_label")
     stringAdapter.toJson(writer, value_.stockLabel)
     writer.endObject()

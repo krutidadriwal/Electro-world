@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,6 +38,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.network.PriceListItem
@@ -57,7 +62,13 @@ fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
   var refreshTrigger by remember { mutableStateOf(0) }
   var nav by remember { mutableStateOf<PriceListNav>(PriceListNav.Categories) }
   var searchQuery by remember { mutableStateOf("") }
+  var selectedItem by remember { mutableStateOf<PriceListItem?>(null) }
   val scope = rememberCoroutineScope()
+
+  selectedItem?.let { item ->
+    CustomerPriceScreen(item = item, onBack = { selectedItem = null }, modifier = modifier)
+    return
+  }
 
   LaunchedEffect(refreshTrigger) {
     isLoading = true
@@ -151,7 +162,8 @@ fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
           is PriceListNav.Categories -> CategoriesLevel(
             allItems = allItems,
             searchQuery = searchQuery,
-            onCategorySelected = { nav = PriceListNav.Groups(it) }
+            onCategorySelected = { nav = PriceListNav.Groups(it) },
+            onItemSelected = { selectedItem = it }
           )
           is PriceListNav.Groups -> GroupsLevel(
             allItems = allItems,
@@ -162,7 +174,8 @@ fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
           is PriceListNav.Items -> ItemsLevel(
             allItems = allItems,
             category = current.category,
-            groupName = current.groupName
+            groupName = current.groupName,
+            onItemSelected = { selectedItem = it }
           )
         }
       }
@@ -186,13 +199,14 @@ private fun navParent(nav: PriceListNav): PriceListNav? = when (nav) {
 private fun CategoriesLevel(
   allItems: List<PriceListItem>,
   searchQuery: String,
-  onCategorySelected: (String) -> Unit
+  onCategorySelected: (String) -> Unit,
+  onItemSelected: (PriceListItem) -> Unit
 ) {
   if (searchQuery.isNotBlank()) {
     val matches = allItems.filter {
       it.itemName.contains(searchQuery, ignoreCase = true) || it.category.contains(searchQuery, ignoreCase = true)
     }
-    ItemRows(matches)
+    ItemRows(matches, onItemSelected)
     return
   }
 
@@ -233,25 +247,35 @@ private fun GroupsLevel(
 }
 
 @Composable
-private fun ItemsLevel(allItems: List<PriceListItem>, category: String, groupName: String) {
+private fun ItemsLevel(
+  allItems: List<PriceListItem>,
+  category: String,
+  groupName: String,
+  onItemSelected: (PriceListItem) -> Unit
+) {
   val itemsInGroup = allItems.filter { it.category == category && it.groupName == groupName }
-  ItemRows(itemsInGroup)
+  ItemRows(itemsInGroup, onItemSelected)
 }
 
 @Composable
-private fun ItemRows(items: List<PriceListItem>) {
+private fun ItemRows(items: List<PriceListItem>, onItemSelected: (PriceListItem) -> Unit) {
   if (items.isEmpty()) {
     EmptyState("No items match your search.")
     return
   }
   LazyColumn(contentPadding = PaddingValues(16.dp)) {
-    items(items) { item -> ItemRow(item) }
+    items(items) { item -> ItemRow(item, onClick = { onItemSelected(item) }) }
   }
 }
 
 @Composable
-private fun ItemRow(item: PriceListItem) {
-  Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+private fun ItemRow(item: PriceListItem, onClick: () -> Unit) {
+  Card(
+    modifier = Modifier
+      .fillMaxWidth()
+      .padding(bottom = 12.dp)
+      .clickable(onClick = onClick)
+  ) {
     Column(modifier = Modifier.padding(16.dp)) {
       Text(item.itemName, style = MaterialTheme.typography.bodyLarge)
       Text(
@@ -263,6 +287,85 @@ private fun ItemRow(item: PriceListItem) {
         "₹${formatPrice(item.finalPrice)}  ·  ${item.stockLabel}",
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.padding(top = 4.dp)
+      )
+    }
+  }
+}
+
+// Full-screen, customer-facing view: the salesperson hands their phone to the
+// customer, so this favors large, unambiguous type over information density.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CustomerPriceScreen(item: PriceListItem, onBack: () -> Unit, modifier: Modifier = Modifier) {
+  Scaffold(
+    topBar = {
+      TopAppBar(
+        title = {},
+        navigationIcon = {
+          IconButton(onClick = onBack) {
+            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+          }
+        }
+      )
+    },
+    modifier = modifier
+  ) { padding ->
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(padding)
+        .padding(24.dp),
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.Center
+    ) {
+      Text(
+        item.itemName,
+        style = MaterialTheme.typography.headlineSmall,
+        textAlign = TextAlign.Center
+      )
+      Text(
+        "${item.category} · ${item.groupName}",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.outline,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(top = 8.dp)
+      )
+
+      Spacer(modifier = Modifier.height(40.dp))
+
+      if (item.mrp > item.finalPrice) {
+        Text(
+          "MRP ₹${formatPrice(item.mrp)}",
+          style = MaterialTheme.typography.titleLarge,
+          color = MaterialTheme.colorScheme.outline,
+          textDecoration = TextDecoration.LineThrough
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+      }
+
+      Text(
+        "₹${formatPrice(item.finalPrice)}",
+        style = MaterialTheme.typography.displayMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary
+      )
+
+      if (item.mrp > item.finalPrice) {
+        val savings = item.mrp - item.finalPrice
+        Text(
+          "You save ₹${formatPrice(savings)}",
+          style = MaterialTheme.typography.titleMedium,
+          color = MaterialTheme.colorScheme.primary,
+          modifier = Modifier.padding(top = 12.dp)
+        )
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+
+      Text(
+        item.stockLabel,
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.outline
       )
     }
   }

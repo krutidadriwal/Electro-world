@@ -344,3 +344,42 @@ create table if not exists public.price_list_items (
 alter table public.price_list_items add column if not exists mrp numeric not null default 0;
 
 create index if not exists price_list_items_category_idx on public.price_list_items (category);
+
+-- Tracks the sales team's outreach on a customer's wishlisted item -- calling
+-- to quote a rate and gauge interest. Kept on the wishlist_items row itself
+-- (not a separate table) since the response belongs to that one wishlisted
+-- item, not the customer as a whole (a customer can have several wishlist
+-- entries in different states).
+do $$ begin
+  create type public.wishlist_response_status as enum (
+    'not_contacted',
+    'interested',
+    'not_interested',
+    'call_back_later',
+    'purchased',
+    'unreachable'
+  );
+exception
+  when duplicate_object then null;
+end $$;
+
+alter table public.wishlist_items add column if not exists status public.wishlist_response_status not null default 'not_contacted';
+alter table public.wishlist_items add column if not exists status_updated_at timestamptz;
+alter table public.wishlist_items add column if not exists status_updated_by uuid references public.staff_profiles(id);
+
+-- One row per tap of the Call button on a wishlist entry, for an audit trail
+-- of outreach. customer_phone/customer_name/staff_email are captured at call
+-- time (not just referenced by id) so the log stays readable even if the
+-- wishlist entry, user, or staff member is later removed -- set null rather
+-- than cascade-deleting the log itself.
+create table if not exists public.wishlist_call_logs (
+  id uuid primary key default gen_random_uuid(),
+  wishlist_item_id uuid references public.wishlist_items(id) on delete set null,
+  staff_id uuid references public.staff_profiles(id) on delete set null,
+  staff_email text not null,
+  customer_phone text not null,
+  customer_name text not null,
+  called_at timestamptz not null default now()
+);
+
+create index if not exists wishlist_call_logs_wishlist_item_idx on public.wishlist_call_logs (wishlist_item_id, called_at desc);

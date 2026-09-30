@@ -9,6 +9,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Sell
@@ -19,7 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 
-private enum class HomeTab { NOTIFICATIONS, PRICE_LIST, STAFF }
+private enum class HomeTab { NOTIFICATIONS, PRICE_LIST, WISHLIST, STAFF }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,20 +30,29 @@ fun HomeScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
   Scaffold(
     topBar = { TopAppBar(title = { Text("Electro World Staff") }) },
     bottomBar = {
-      if (isAdmin) {
-        NavigationBar {
-          NavigationBarItem(
-            selected = selectedTab == HomeTab.NOTIFICATIONS,
-            onClick = { selectedTab = HomeTab.NOTIFICATIONS },
-            icon = { Icon(Icons.Default.Notifications, contentDescription = "Notifications") },
-            label = { Text("Notifications") }
-          )
-          NavigationBarItem(
-            selected = selectedTab == HomeTab.PRICE_LIST,
-            onClick = { selectedTab = HomeTab.PRICE_LIST },
-            icon = { Icon(Icons.Default.Sell, contentDescription = "Price List") },
-            label = { Text("Price List") }
-          )
+      // Every signed-in staff member (not just admins) needs a way to reach
+      // Price List and Wishlist -- only the Staff management tab stays
+      // admin-only.
+      NavigationBar {
+        NavigationBarItem(
+          selected = selectedTab == HomeTab.NOTIFICATIONS,
+          onClick = { selectedTab = HomeTab.NOTIFICATIONS },
+          icon = { Icon(Icons.Default.Notifications, contentDescription = "Notifications") },
+          label = { Text("Notifications") }
+        )
+        NavigationBarItem(
+          selected = selectedTab == HomeTab.PRICE_LIST,
+          onClick = { selectedTab = HomeTab.PRICE_LIST },
+          icon = { Icon(Icons.Default.Sell, contentDescription = "Price List") },
+          label = { Text("Price List") }
+        )
+        NavigationBarItem(
+          selected = selectedTab == HomeTab.WISHLIST,
+          onClick = { selectedTab = HomeTab.WISHLIST },
+          icon = { Icon(Icons.Default.Favorite, contentDescription = "Wishlist") },
+          label = { Text("Wishlist") }
+        )
+        if (isAdmin) {
           NavigationBarItem(
             selected = selectedTab == HomeTab.STAFF,
             onClick = { selectedTab = HomeTab.STAFF },
@@ -57,6 +67,7 @@ fun HomeScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
     when (selectedTab) {
       HomeTab.NOTIFICATIONS -> NotificationsScreen(isAdmin = isAdmin, modifier = Modifier.padding(padding))
       HomeTab.PRICE_LIST -> PriceListScreen(isAdmin = isAdmin, modifier = Modifier.padding(padding))
+      HomeTab.WISHLIST -> WishlistScreen(modifier = Modifier.padding(padding))
       HomeTab.STAFF -> StaffScreen(modifier = Modifier.padding(padding))
     }
   }

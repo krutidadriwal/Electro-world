@@ -1,5 +1,6 @@
 package com.electroworld.staff.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -62,12 +64,24 @@ fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
   var refreshTrigger by remember { mutableStateOf(0) }
   var nav by remember { mutableStateOf<PriceListNav>(PriceListNav.Categories) }
   var searchQuery by remember { mutableStateOf("") }
+  var searchCategories by remember { mutableStateOf(true) }
+  var searchGroups by remember { mutableStateOf(true) }
+  var searchItems by remember { mutableStateOf(true) }
+  var hideOutOfStock by remember { mutableStateOf(false) }
   var selectedItem by remember { mutableStateOf<PriceListItem?>(null) }
   val scope = rememberCoroutineScope()
 
+  val visibleItems = if (hideOutOfStock) allItems.filterNot { isOutOfStock(it) } else allItems
+
   selectedItem?.let { item ->
+    BackHandler { selectedItem = null }
     CustomerPriceScreen(item = item, onBack = { selectedItem = null }, modifier = modifier)
     return
+  }
+
+  val parentNav = navParent(nav)
+  BackHandler(enabled = parentNav != null) {
+    if (parentNav != null) nav = parentNav
   }
 
   LaunchedEffect(refreshTrigger) {
@@ -99,28 +113,33 @@ fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
           }
         },
         actions = {
-          if (isAdmin) {
-            IconButton(
-              enabled = !isSyncing,
-              onClick = {
-                scope.launch {
-                  isSyncing = true
-                  errorMessage = null
-                  try {
-                    NetworkModule.priceListApi.sync()
-                    refreshTrigger++
-                  } catch (e: Exception) {
-                    errorMessage = "Sync failed. Please try again."
-                  } finally {
-                    isSyncing = false
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Hide 0 pcs", style = MaterialTheme.typography.labelSmall)
+            Checkbox(checked = hideOutOfStock, onCheckedChange = { hideOutOfStock = it })
+
+            if (isAdmin) {
+              IconButton(
+                enabled = !isSyncing,
+                onClick = {
+                  scope.launch {
+                    isSyncing = true
+                    errorMessage = null
+                    try {
+                      NetworkModule.priceListApi.sync()
+                      refreshTrigger++
+                    } catch (e: Exception) {
+                      errorMessage = "Sync failed. Please try again."
+                    } finally {
+                      isSyncing = false
+                    }
                   }
                 }
-              }
-            ) {
-              if (isSyncing) {
-                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-              } else {
-                Icon(Icons.Default.Sync, contentDescription = "Sync price list")
+              ) {
+                if (isSyncing) {
+                  CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                  Icon(Icons.Default.Sync, contentDescription = "Sync price list")
+                }
               }
             }
           }
@@ -138,12 +157,29 @@ fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
         OutlinedTextField(
           value = searchQuery,
           onValueChange = { searchQuery = it },
-          label = { Text(if (nav is PriceListNav.Groups) "Search groups" else "Search items or categories") },
+          label = { Text(if (nav is PriceListNav.Groups) "Search groups" else "Search price list") },
           leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
           singleLine = true,
-          modifier = Modifier.fillMaxWidth().padding(16.dp)
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
         )
       }
+
+      // Category and group names can collide (e.g. a category and a group
+      // both named "Speakers"), so a plain text match can't tell which one
+      // the customer meant -- these let the salesperson narrow the search to
+      // the type they're after instead of guessing from a flat result list.
+      if (nav is PriceListNav.Categories) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier.padding(horizontal = 8.dp)
+        ) {
+          SearchTypeCheckbox("Categories", searchCategories) { searchCategories = it }
+          SearchTypeCheckbox("Groups", searchGroups) { searchGroups = it }
+          SearchTypeCheckbox("Items", searchItems) { searchItems = it }
+        }
+      }
+
+      Spacer(modifier = Modifier.height(8.dp))
 
       errorMessage?.let {
         Text(
@@ -160,19 +196,23 @@ fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
       } else {
         when (val current = nav) {
           is PriceListNav.Categories -> CategoriesLevel(
-            allItems = allItems,
+            allItems = visibleItems,
             searchQuery = searchQuery,
+            searchCategories = searchCategories,
+            searchGroups = searchGroups,
+            searchItems = searchItems,
             onCategorySelected = { nav = PriceListNav.Groups(it) },
+            onGroupSelected = { category, group -> nav = PriceListNav.Items(category, group) },
             onItemSelected = { selectedItem = it }
           )
           is PriceListNav.Groups -> GroupsLevel(
-            allItems = allItems,
+            allItems = visibleItems,
             category = current.category,
             searchQuery = searchQuery,
             onGroupSelected = { nav = PriceListNav.Items(current.category, it) }
           )
           is PriceListNav.Items -> ItemsLevel(
-            allItems = allItems,
+            allItems = visibleItems,
             category = current.category,
             groupName = current.groupName,
             onItemSelected = { selectedItem = it }
@@ -199,14 +239,63 @@ private fun navParent(nav: PriceListNav): PriceListNav? = when (nav) {
 private fun CategoriesLevel(
   allItems: List<PriceListItem>,
   searchQuery: String,
+  searchCategories: Boolean,
+  searchGroups: Boolean,
+  searchItems: Boolean,
   onCategorySelected: (String) -> Unit,
+  onGroupSelected: (category: String, group: String) -> Unit,
   onItemSelected: (PriceListItem) -> Unit
 ) {
   if (searchQuery.isNotBlank()) {
-    val matches = allItems.filter {
-      it.itemName.contains(searchQuery, ignoreCase = true) || it.category.contains(searchQuery, ignoreCase = true)
+    val categoryMatches = if (searchCategories) {
+      allItems.map { it.category }.distinct()
+        .filter { it.contains(searchQuery, ignoreCase = true) }
+        .sorted()
+    } else {
+      emptyList()
     }
-    ItemRows(matches, onItemSelected)
+
+    // Group names are unique across the whole price list, so each group maps
+    // to exactly one category regardless of which category it's searched from.
+    val groupMatches = if (searchGroups) {
+      allItems.groupBy { it.groupName }
+        .filterKeys { it.contains(searchQuery, ignoreCase = true) }
+        .map { (group, itemsInGroup) -> Triple(group, itemsInGroup.first().category, itemsInGroup.size) }
+        .sortedBy { it.first }
+    } else {
+      emptyList()
+    }
+
+    val itemMatches = if (searchItems) {
+      allItems.filter { it.itemName.contains(searchQuery, ignoreCase = true) }
+    } else {
+      emptyList()
+    }
+
+    if (categoryMatches.isEmpty() && groupMatches.isEmpty() && itemMatches.isEmpty()) {
+      EmptyState("No matches found.")
+      return
+    }
+
+    LazyColumn(contentPadding = PaddingValues(16.dp)) {
+      if (categoryMatches.isNotEmpty()) {
+        item { SectionHeader("Categories") }
+        items(categoryMatches) { category ->
+          val count = allItems.count { it.category == category }
+          NavRow(title = category, subtitle = "$count items") { onCategorySelected(category) }
+        }
+      }
+      if (groupMatches.isNotEmpty()) {
+        item { SectionHeader("Groups") }
+        items(groupMatches) { (group, category, count) ->
+          NavRow(title = group, subtitle = "$category · $count items") { onGroupSelected(category, group) }
+        }
+      }
+      if (itemMatches.isNotEmpty()) {
+        item { SectionHeader("Items") }
+        items(itemMatches) { matchedItem -> ItemRow(matchedItem, onClick = { onItemSelected(matchedItem) }) }
+      }
+    }
     return
   }
 
@@ -283,11 +372,26 @@ private fun ItemRow(item: PriceListItem, onClick: () -> Unit) {
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.outline
       )
-      Text(
-        "₹${formatPrice(item.finalPrice)}  ·  ${item.stockLabel}",
-        style = MaterialTheme.typography.bodyMedium,
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(top = 4.dp)
-      )
+      ) {
+        if (item.mrp > item.finalPrice) {
+          Text(
+            "₹${formatPrice(item.mrp)}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.outline,
+            textDecoration = TextDecoration.LineThrough,
+            modifier = Modifier.padding(end = 8.dp)
+          )
+        }
+        Text("₹${formatPrice(item.finalPrice)}", style = MaterialTheme.typography.bodyMedium)
+        Text(
+          "  ·  ${item.stockLabel}",
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.outline
+        )
+      }
     }
   }
 }
@@ -359,14 +463,6 @@ private fun CustomerPriceScreen(item: PriceListItem, onBack: () -> Unit, modifie
           modifier = Modifier.padding(top = 12.dp)
         )
       }
-
-      Spacer(modifier = Modifier.height(24.dp))
-
-      Text(
-        item.stockLabel,
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.outline
-      )
     }
   }
 }
@@ -394,6 +490,27 @@ private fun NavRow(title: String, subtitle: String, onClick: () -> Unit) {
 }
 
 @Composable
+private fun SectionHeader(title: String) {
+  Text(
+    title,
+    style = MaterialTheme.typography.labelLarge,
+    color = MaterialTheme.colorScheme.primary,
+    modifier = Modifier.padding(bottom = 8.dp, top = 4.dp)
+  )
+}
+
+@Composable
+private fun SearchTypeCheckbox(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
+    modifier = Modifier.clickable { onCheckedChange(!checked) }
+  ) {
+    Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+    Text(label, style = MaterialTheme.typography.bodyMedium)
+  }
+}
+
+@Composable
 private fun EmptyState(message: String) {
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
     Text(message, color = MaterialTheme.colorScheme.outline)
@@ -403,4 +520,11 @@ private fun EmptyState(message: String) {
 private fun formatPrice(value: Double): String {
   val rounded = Math.round(value)
   return "%,d".format(rounded)
+}
+
+// stockLabel is a free-text field from the Tally export (e.g. "12 pcs", "0 pcs")
+// with no separate numeric quantity -- out of stock is read off its leading number.
+private fun isOutOfStock(item: PriceListItem): Boolean {
+  val leadingNumber = Regex("""^-?\d+""").find(item.stockLabel.trim())?.value
+  return leadingNumber == "0"
 }

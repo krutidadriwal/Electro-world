@@ -9,6 +9,14 @@ const { routeSegmentsAfter } = require('../../lib/routeSegments');
 const { syncPriceList } = require('../../lib/priceList');
 
 const VALID_ROLES = ['admin', 'employee'];
+const VALID_WISHLIST_STATUSES = [
+  'not_contacted',
+  'interested',
+  'not_interested',
+  'call_back_later',
+  'purchased',
+  'unreachable'
+];
 
 module.exports = async function handler(req, res) {
   // .../api/staff/<...> -- drop "api", "staff".
@@ -33,6 +41,12 @@ module.exports = async function handler(req, res) {
       return priceListList(req, res);
     case 'price-list-sync':
       return priceListSync(req, res);
+    case 'wishlist-list':
+      return wishlistList(req, res);
+    case 'wishlist-status':
+      return wishlistStatus(req, res);
+    case 'wishlist-call':
+      return wishlistCall(req, res);
     default:
       return res.status(404).json({ error: 'Not found' });
   }
@@ -208,6 +222,133 @@ async function priceListSync(req, res) {
       return res.status(err.status).json({ error: err.message });
     }
     console.error('sync price list error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Any signed-in staff member can browse the wishlist -- calling customers
+// about it is a sales-floor task, not an admin-only one.
+async function wishlistList(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    await requireStaff(req);
+
+    const pool = getPool();
+    const result = await pool.query(
+      `select
+         wi.id,
+         wi.phone as customer_phone,
+         u.name as customer_name,
+         wi.category_name,
+         wi.subcategory_name,
+         wi.status,
+         wi.created_at,
+         wi.status_updated_at,
+         (
+           select wcl.called_at from public.wishlist_call_logs wcl
+           where wcl.wishlist_item_id = wi.id
+           order by wcl.called_at desc
+           limit 1
+         ) as last_called_at
+       from public.wishlist_items wi
+       join public.users u on u.phone = wi.phone
+       order by wi.created_at desc`
+    );
+    return res.status(200).json({ items: result.rows });
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('list wishlist error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+async function wishlistStatus(req, res) {
+  if (req.method !== 'PATCH') {
+    res.setHeader('Allow', 'PATCH');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { wishlistItemId, status } = req.body ?? {};
+  if (typeof wishlistItemId !== 'string' || wishlistItemId.trim().length === 0) {
+    return res.status(400).json({ error: 'wishlistItemId is required' });
+  }
+  if (!VALID_WISHLIST_STATUSES.includes(status)) {
+    return res.status(400).json({ error: `status must be one of: ${VALID_WISHLIST_STATUSES.join(', ')}` });
+  }
+
+  try {
+    const staff = await requireStaff(req);
+
+    const pool = getPool();
+    const result = await pool.query(
+      `update public.wishlist_items
+       set status = $1, status_updated_at = now(), status_updated_by = $2
+       where id = $3
+       returning id, status, status_updated_at`,
+      [status, staff.id, wishlistItemId]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Wishlist item not found' });
+    }
+    return res.status(200).json(result.rows[0]);
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('update wishlist status error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Logs a tap of the Call button. The customer's phone/name are looked up
+// server-side from the wishlist item rather than trusted from the request,
+// so the log can't be spoofed with an arbitrary number/name pair.
+async function wishlistCall(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { wishlistItemId } = req.body ?? {};
+  if (typeof wishlistItemId !== 'string' || wishlistItemId.trim().length === 0) {
+    return res.status(400).json({ error: 'wishlistItemId is required' });
+  }
+
+  try {
+    const staff = await requireStaff(req);
+
+    const pool = getPool();
+    const itemResult = await pool.query(
+      `select wi.phone as customer_phone, u.name as customer_name
+       from public.wishlist_items wi
+       join public.users u on u.phone = wi.phone
+       where wi.id = $1`,
+      [wishlistItemId]
+    );
+    if (itemResult.rowCount === 0) {
+      return res.status(404).json({ error: 'Wishlist item not found' });
+    }
+    const { customer_phone: customerPhone, customer_name: customerName } = itemResult.rows[0];
+
+    const logResult = await pool.query(
+      `insert into public.wishlist_call_logs
+         (wishlist_item_id, staff_id, staff_email, customer_phone, customer_name)
+       values ($1, $2, $3, $4, $5)
+       returning id, called_at`,
+      [wishlistItemId, staff.id, staff.email, customerPhone, customerName]
+    );
+    return res.status(201).json(logResult.rows[0]);
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('log wishlist call error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

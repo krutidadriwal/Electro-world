@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.electroworld.staff.BuildConfig
 import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.network.SupabasePasswordLoginRequest
 import com.electroworld.staff.data.network.SupabaseRecoverRequest
@@ -166,7 +167,10 @@ private fun ForgotPasswordScreen(
           isLoading = true
           scope.launch {
             try {
-              NetworkModule.supabaseAuthApi.recover(SupabaseRecoverRequest(email.trim()))
+              NetworkModule.supabaseAuthApi.recover(
+                request = SupabaseRecoverRequest(email.trim()),
+                redirectTo = "${BuildConfig.SERVER_BASE_URL}/reset-password.html"
+              )
               sent = true
             } catch (e: Exception) {
               errorMessage = "Couldn't send the reset email. Please try again."

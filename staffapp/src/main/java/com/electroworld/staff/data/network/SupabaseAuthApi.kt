@@ -51,7 +51,12 @@ interface SupabaseAuthApi {
 
   // Triggers Supabase's built-in "reset password" email. Always succeeds
   // with 200 regardless of whether the email is registered, so the UI
-  // shows the same message either way.
+  // shows the same message either way. redirectTo must be in the Supabase
+  // project's Auth -> URL Configuration -> Redirect URLs allow list, or
+  // Supabase silently falls back to the project's (unrelated) Site URL.
   @POST("auth/v1/recover")
-  suspend fun recover(@Body request: SupabaseRecoverRequest)
+  suspend fun recover(
+    @Body request: SupabaseRecoverRequest,
+    @Query("redirect_to") redirectTo: String
+  )
 }

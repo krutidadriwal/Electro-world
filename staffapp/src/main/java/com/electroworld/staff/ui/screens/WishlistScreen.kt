@@ -18,12 +18,14 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -73,8 +75,20 @@ fun WishlistScreen(modifier: Modifier = Modifier) {
   var isLoading by remember { mutableStateOf(true) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
   var refreshTrigger by remember { mutableStateOf(0) }
+  var searchQuery by remember { mutableStateOf("") }
   val scope = rememberCoroutineScope()
   val context = LocalContext.current
+
+  val filteredItems = if (searchQuery.isBlank()) {
+    items
+  } else {
+    items.filter { item ->
+      item.customerName.contains(searchQuery, ignoreCase = true) ||
+        item.customerPhone.contains(searchQuery, ignoreCase = true) ||
+        item.categoryName.contains(searchQuery, ignoreCase = true) ||
+        (item.subcategoryName?.contains(searchQuery, ignoreCase = true) ?: false)
+    }
+  }
 
   LaunchedEffect(refreshTrigger) {
     isLoading = true
@@ -93,6 +107,15 @@ fun WishlistScreen(modifier: Modifier = Modifier) {
     modifier = modifier
   ) { padding ->
     Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+      OutlinedTextField(
+        value = searchQuery,
+        onValueChange = { searchQuery = it },
+        label = { Text("Search customer or item") },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth().padding(16.dp)
+      )
+
       errorMessage?.let {
         Text(
           it,
@@ -105,13 +128,16 @@ fun WishlistScreen(modifier: Modifier = Modifier) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
           CircularProgressIndicator()
         }
-      } else if (items.isEmpty()) {
+      } else if (filteredItems.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-          Text("No wishlist entries yet.", color = MaterialTheme.colorScheme.outline)
+          Text(
+            if (items.isEmpty()) "No wishlist entries yet." else "No matches found.",
+            color = MaterialTheme.colorScheme.outline
+          )
         }
       } else {
         LazyColumn(contentPadding = PaddingValues(16.dp)) {
-          items(items, key = { it.id }) { wishlistItem ->
+          items(filteredItems, key = { it.id }) { wishlistItem ->
             WishlistRow(
               item = wishlistItem,
               onStatusSelected = { newStatus ->

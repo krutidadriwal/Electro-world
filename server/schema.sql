@@ -342,6 +342,7 @@ create table if not exists public.price_list_items (
 );
 
 alter table public.price_list_items add column if not exists mrp numeric not null default 0;
+alter table public.price_list_items add column if not exists cost_price numeric not null default 0;
 
 create index if not exists price_list_items_category_idx on public.price_list_items (category);
 

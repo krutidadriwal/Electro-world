@@ -188,11 +188,16 @@ async function priceListList(req, res) {
   }
 
   try {
-    await requireStaff(req);
+    const staff = await requireStaff(req);
 
     const pool = getPool();
+    // cost_price is admin-only -- employees browsing the price list shouldn't
+    // see what items cost the business.
+    const columns = staff.role === 'admin'
+      ? 'category, group_name, item_name, final_price, mrp, cost_price, stock_label'
+      : 'category, group_name, item_name, final_price, mrp, stock_label';
     const result = await pool.query(
-      `select category, group_name, item_name, final_price, mrp, stock_label
+      `select ${columns}
        from public.price_list_items
        order by category, group_name, item_name`
     );

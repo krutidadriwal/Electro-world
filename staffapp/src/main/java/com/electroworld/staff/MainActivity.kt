@@ -31,6 +31,7 @@ class MainActivity : ComponentActivity() {
           val sessionManager = remember { SessionManager(context) }
           var isLoggedIn by remember { mutableStateOf(sessionManager.isLoggedIn) }
           var role by remember { mutableStateOf(sessionManager.role) }
+          var email by remember { mutableStateOf(sessionManager.email) }
           var isResolvingProfile by remember { mutableStateOf(false) }
 
           LaunchedEffect(isLoggedIn) {
@@ -40,6 +41,7 @@ class MainActivity : ComponentActivity() {
                 val me = NetworkModule.staffApi.me()
                 sessionManager.saveProfile(me.id, me.email, me.role)
                 role = me.role
+                email = me.email
               } catch (e: Exception) {
                 sessionManager.clearSession()
                 isLoggedIn = false
@@ -50,7 +52,17 @@ class MainActivity : ComponentActivity() {
           }
 
           if (isLoggedIn && !isResolvingProfile) {
-            HomeScreen(isAdmin = role == "admin")
+            HomeScreen(
+              isAdmin = role == "admin",
+              email = email,
+              role = role,
+              onLogout = {
+                sessionManager.clearSession()
+                isLoggedIn = false
+                role = ""
+                email = ""
+              }
+            )
           } else if (!isLoggedIn) {
             LoginScreen(
               onLoginSuccess = { accessToken, refreshToken ->

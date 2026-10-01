@@ -3,12 +3,14 @@ package com.electroworld.staff.ui.screens
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.People
@@ -24,11 +26,38 @@ private enum class HomeTab { NOTIFICATIONS, PRICE_LIST, WISHLIST, STAFF }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
+fun HomeScreen(
+  isAdmin: Boolean,
+  email: String,
+  role: String,
+  onLogout: () -> Unit,
+  modifier: Modifier = Modifier
+) {
   var selectedTab by remember { mutableStateOf(HomeTab.NOTIFICATIONS) }
+  var showProfile by remember { mutableStateOf(false) }
+
+  if (showProfile) {
+    ProfileScreen(
+      email = email,
+      role = role,
+      onBack = { showProfile = false },
+      onLogout = onLogout,
+      modifier = modifier
+    )
+    return
+  }
 
   Scaffold(
-    topBar = { TopAppBar(title = { Text("Electro World Staff") }) },
+    topBar = {
+      TopAppBar(
+        title = { Text("Electro World Staff") },
+        navigationIcon = {
+          IconButton(onClick = { showProfile = true }) {
+            Icon(Icons.Default.AccountCircle, contentDescription = "Profile")
+          }
+        }
+      )
+    },
     bottomBar = {
       // Every signed-in staff member (not just admins) needs a way to reach
       // Price List and Wishlist -- only the Staff management tab stays

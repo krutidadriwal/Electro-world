@@ -17,6 +17,11 @@ data class SupabaseRefreshRequest(
 )
 
 @JsonClass(generateAdapter = true)
+data class SupabaseRecoverRequest(
+  val email: String
+)
+
+@JsonClass(generateAdapter = true)
 data class SupabaseTokenResponse(
   @Suppress("PropertyName") val access_token: String,
   @Suppress("PropertyName") val refresh_token: String
@@ -43,4 +48,10 @@ interface SupabaseAuthApi {
     @Query("grant_type") grantType: String = "refresh_token",
     @Body request: SupabaseRefreshRequest
   ): SupabaseTokenResponse
+
+  // Triggers Supabase's built-in "reset password" email. Always succeeds
+  // with 200 regardless of whether the email is registered, so the UI
+  // shows the same message either way.
+  @POST("auth/v1/recover")
+  suspend fun recover(@Body request: SupabaseRecoverRequest)
 }

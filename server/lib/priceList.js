@@ -37,10 +37,10 @@ function extractNumber(record, key) {
   return match ? Number(match[1]) : null;
 }
 
-// Returns { itemName, category, groupName, finalPrice, mrp, stockLabel }[].
+// Returns { itemName, category, groupName, finalPrice, mrp, costPrice, stockLabel }[].
 // Records with no item name are skipped (nothing to display); a missing
-// final price or MRP defaults to 0 rather than dropping the item, since a
-// zero/unpriced item should still show up in the price list.
+// final price, MRP, or cost price defaults to 0 rather than dropping the
+// item, since a zero/unpriced item should still show up in the price list.
 function parsePriceListDocument(buffer) {
   const text = decodeText(buffer);
   const records = text.split(/(?="EWSRNO":)/g).slice(1);
@@ -55,6 +55,7 @@ function parsePriceListDocument(buffer) {
       groupName: extractString(record, 'EWGroup') || '',
       finalPrice: extractNumber(record, 'EWFINAL') ?? 0,
       mrp: extractNumber(record, 'EWMRP') ?? 0,
+      costPrice: extractNumber(record, 'EWCOST') ?? 0,
       stockLabel: extractString(record, 'EWCLSTK') || ''
     });
   }
@@ -85,12 +86,20 @@ async function syncPriceList() {
       const batch = items.slice(offset, offset + rowsPerStatement);
       const params = [];
       const rows = batch.map((item, i) => {
-        const base = i * 6;
-        params.push(item.category, item.groupName, item.itemName, item.finalPrice, item.mrp, item.stockLabel);
-        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`;
+        const base = i * 7;
+        params.push(
+          item.category,
+          item.groupName,
+          item.itemName,
+          item.finalPrice,
+          item.mrp,
+          item.costPrice,
+          item.stockLabel
+        );
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7})`;
       });
       await pool.query(
-        `insert into public.price_list_items (category, group_name, item_name, final_price, mrp, stock_label)
+        `insert into public.price_list_items (category, group_name, item_name, final_price, mrp, cost_price, stock_label)
          values ${rows.join(', ')}`,
         params
       );

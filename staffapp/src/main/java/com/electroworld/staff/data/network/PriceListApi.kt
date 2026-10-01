@@ -12,6 +12,9 @@ data class PriceListItem(
   @Json(name = "item_name") val itemName: String,
   @Json(name = "final_price") val finalPrice: Double,
   val mrp: Double,
+  // Only populated for admins -- the server omits this column entirely for
+  // employees, so it's absent rather than present-but-zero for them.
+  @Json(name = "cost_price") val costPrice: Double? = null,
   @Json(name = "stock_label") val stockLabel: String
 )
 

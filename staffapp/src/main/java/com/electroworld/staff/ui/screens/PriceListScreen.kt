@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -48,10 +49,13 @@ import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.network.PriceListItem
 import kotlinx.coroutines.launch
 
+// What the radio group is scoped to: which field the root list browses/groups
+// by, and which field a typed search query matches against.
+private enum class SearchScope { CATEGORY, GROUP, ITEM }
+
 private sealed class PriceListNav {
-  data object Categories : PriceListNav()
-  data class Groups(val category: String) : PriceListNav()
-  data class Items(val category: String, val groupName: String) : PriceListNav()
+  data object Root : PriceListNav()
+  data class Items(val title: String, val category: String?, val groupName: String?) : PriceListNav()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,14 +66,12 @@ fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
   var isSyncing by remember { mutableStateOf(false) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
   var refreshTrigger by remember { mutableStateOf(0) }
-  var nav by remember { mutableStateOf<PriceListNav>(PriceListNav.Categories) }
+  var nav by remember { mutableStateOf<PriceListNav>(PriceListNav.Root) }
+  var scope by remember { mutableStateOf(SearchScope.CATEGORY) }
   var searchQuery by remember { mutableStateOf("") }
-  var searchCategories by remember { mutableStateOf(true) }
-  var searchGroups by remember { mutableStateOf(true) }
-  var searchItems by remember { mutableStateOf(true) }
   var hideOutOfStock by remember { mutableStateOf(false) }
   var selectedItem by remember { mutableStateOf<PriceListItem?>(null) }
-  val scope = rememberCoroutineScope()
+  val coroutineScope = rememberCoroutineScope()
 
   val visibleItems = if (hideOutOfStock) allItems.filterNot { isOutOfStock(it) } else allItems
 
@@ -96,9 +98,10 @@ fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
     }
   }
 
-  // Each drill-down level searches its own scope (items vs. group names), so
-  // a query typed at one level shouldn't linger and silently filter the next.
-  LaunchedEffect(nav) { searchQuery = "" }
+  // Drilling into a category/group's items is a dead end with nothing left to
+  // search, so the query only makes sense back at the root -- clear it on the
+  // way in so it isn't silently stale when the user backs out.
+  LaunchedEffect(nav) { if (nav is PriceListNav.Items) searchQuery = "" }
 
   Scaffold(
     topBar = {
@@ -121,7 +124,7 @@ fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
               IconButton(
                 enabled = !isSyncing,
                 onClick = {
-                  scope.launch {
+                  coroutineScope.launch {
                     isSyncing = true
                     errorMessage = null
                     try {
@@ -149,34 +152,35 @@ fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
     modifier = modifier
   ) { padding ->
     Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-      // Only the root (categories) and groups levels get a search bar --
-      // root searches items/categories directly, groups searches group
-      // names within the selected category. The items level is reached by
-      // picking a specific group, which is already a small, browsable list.
-      if (nav !is PriceListNav.Items) {
-        OutlinedTextField(
-          value = searchQuery,
-          onValueChange = { searchQuery = it },
-          label = { Text(if (nav is PriceListNav.Groups) "Search groups" else "Search price list") },
-          leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-          singleLine = true,
-          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-        )
-      }
-
-      // Category and group names can collide (e.g. a category and a group
-      // both named "Speakers"), so a plain text match can't tell which one
-      // the customer meant -- these let the salesperson narrow the search to
-      // the type they're after instead of guessing from a flat result list.
-      if (nav is PriceListNav.Categories) {
+      // The radio group and search bar only make sense at the root -- once
+      // you've drilled into a specific category/group's items there's
+      // nothing left to scope or search within.
+      if (nav is PriceListNav.Root) {
         Row(
           verticalAlignment = Alignment.CenterVertically,
           modifier = Modifier.padding(horizontal = 8.dp)
         ) {
-          SearchTypeCheckbox("Categories", searchCategories) { searchCategories = it }
-          SearchTypeCheckbox("Groups", searchGroups) { searchGroups = it }
-          SearchTypeCheckbox("Items", searchItems) { searchItems = it }
+          ScopeRadioOption("Categories", scope == SearchScope.CATEGORY) { scope = SearchScope.CATEGORY }
+          ScopeRadioOption("Groups", scope == SearchScope.GROUP) { scope = SearchScope.GROUP }
+          ScopeRadioOption("Items", scope == SearchScope.ITEM) { scope = SearchScope.ITEM }
         }
+
+        OutlinedTextField(
+          value = searchQuery,
+          onValueChange = { searchQuery = it },
+          label = {
+            Text(
+              when (scope) {
+                SearchScope.CATEGORY -> "Search categories"
+                SearchScope.GROUP -> "Search groups"
+                SearchScope.ITEM -> "Search items"
+              }
+            )
+          },
+          leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+          singleLine = true,
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+        )
       }
 
       Spacer(modifier = Modifier.height(8.dp))
@@ -195,28 +199,23 @@ fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
         }
       } else {
         when (val current = nav) {
-          is PriceListNav.Categories -> CategoriesLevel(
+          is PriceListNav.Root -> RootLevel(
             allItems = visibleItems,
+            scope = scope,
             searchQuery = searchQuery,
-            searchCategories = searchCategories,
-            searchGroups = searchGroups,
-            searchItems = searchItems,
-            onCategorySelected = { nav = PriceListNav.Groups(it) },
-            onGroupSelected = { category, group -> nav = PriceListNav.Items(category, group) },
+            isAdmin = isAdmin,
+            onScopeChange = { scope = it },
+            onCategorySelected = { nav = PriceListNav.Items(title = it, category = it, groupName = null) },
+            onGroupSelected = { nav = PriceListNav.Items(title = it, category = null, groupName = it) },
             onItemSelected = { selectedItem = it }
           )
-          is PriceListNav.Groups -> GroupsLevel(
-            allItems = visibleItems,
-            category = current.category,
-            searchQuery = searchQuery,
-            onGroupSelected = { nav = PriceListNav.Items(current.category, it) }
-          )
-          is PriceListNav.Items -> ItemsLevel(
-            allItems = visibleItems,
-            category = current.category,
-            groupName = current.groupName,
-            onItemSelected = { selectedItem = it }
-          )
+          is PriceListNav.Items -> {
+            val itemsInScope = visibleItems.filter {
+              (current.category == null || it.category == current.category) &&
+                (current.groupName == null || it.groupName == current.groupName)
+            }
+            ItemRows(itemsInScope, isAdmin, onItemSelected = { selectedItem = it })
+          }
         }
       }
     }
@@ -224,141 +223,118 @@ fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
 }
 
 private fun navTitle(nav: PriceListNav): String = when (nav) {
-  is PriceListNav.Categories -> "Price List"
-  is PriceListNav.Groups -> nav.category
-  is PriceListNav.Items -> nav.groupName
+  is PriceListNav.Root -> "Price List"
+  is PriceListNav.Items -> nav.title
 }
 
 private fun navParent(nav: PriceListNav): PriceListNav? = when (nav) {
-  is PriceListNav.Categories -> null
-  is PriceListNav.Groups -> PriceListNav.Categories
-  is PriceListNav.Items -> PriceListNav.Groups(nav.category)
+  is PriceListNav.Root -> null
+  is PriceListNav.Items -> PriceListNav.Root
 }
 
 @Composable
-private fun CategoriesLevel(
+private fun RootLevel(
   allItems: List<PriceListItem>,
+  scope: SearchScope,
   searchQuery: String,
-  searchCategories: Boolean,
-  searchGroups: Boolean,
-  searchItems: Boolean,
+  isAdmin: Boolean,
+  onScopeChange: (SearchScope) -> Unit,
   onCategorySelected: (String) -> Unit,
-  onGroupSelected: (category: String, group: String) -> Unit,
+  onGroupSelected: (String) -> Unit,
   onItemSelected: (PriceListItem) -> Unit
 ) {
-  if (searchQuery.isNotBlank()) {
-    val categoryMatches = if (searchCategories) {
-      allItems.map { it.category }.distinct()
-        .filter { it.contains(searchQuery, ignoreCase = true) }
+  when (scope) {
+    SearchScope.CATEGORY -> {
+      val categories = allItems.map { it.category }.distinct()
+        .filter { searchQuery.isBlank() || it.contains(searchQuery, ignoreCase = true) }
         .sorted()
-    } else {
-      emptyList()
-    }
-
-    // Group names are unique across the whole price list, so each group maps
-    // to exactly one category regardless of which category it's searched from.
-    val groupMatches = if (searchGroups) {
-      allItems.groupBy { it.groupName }
-        .filterKeys { it.contains(searchQuery, ignoreCase = true) }
-        .map { (group, itemsInGroup) -> Triple(group, itemsInGroup.first().category, itemsInGroup.size) }
-        .sortedBy { it.first }
-    } else {
-      emptyList()
-    }
-
-    val itemMatches = if (searchItems) {
-      allItems.filter { it.itemName.contains(searchQuery, ignoreCase = true) }
-    } else {
-      emptyList()
-    }
-
-    if (categoryMatches.isEmpty() && groupMatches.isEmpty() && itemMatches.isEmpty()) {
-      EmptyState("No matches found.")
-      return
-    }
-
-    LazyColumn(contentPadding = PaddingValues(16.dp)) {
-      if (categoryMatches.isNotEmpty()) {
-        item { SectionHeader("Categories") }
-        items(categoryMatches) { category ->
+      if (categories.isEmpty()) {
+        NoMatchesState(query = searchQuery, currentScope = scope, onScopeChange = onScopeChange)
+        return
+      }
+      LazyColumn(contentPadding = PaddingValues(16.dp)) {
+        items(categories) { category ->
           val count = allItems.count { it.category == category }
           NavRow(title = category, subtitle = "$count items") { onCategorySelected(category) }
         }
       }
-      if (groupMatches.isNotEmpty()) {
-        item { SectionHeader("Groups") }
-        items(groupMatches) { (group, category, count) ->
-          NavRow(title = group, subtitle = "$category · $count items") { onGroupSelected(category, group) }
+    }
+    SearchScope.GROUP -> {
+      val groups = allItems.groupBy { it.groupName }
+        .filterKeys { searchQuery.isBlank() || it.contains(searchQuery, ignoreCase = true) }
+        .toSortedMap()
+      if (groups.isEmpty()) {
+        NoMatchesState(query = searchQuery, currentScope = scope, onScopeChange = onScopeChange)
+        return
+      }
+      LazyColumn(contentPadding = PaddingValues(16.dp)) {
+        items(groups.entries.toList()) { (group, itemsInGroup) ->
+          NavRow(
+            title = group,
+            subtitle = "${itemsInGroup.first().category} · ${itemsInGroup.size} items"
+          ) { onGroupSelected(group) }
         }
       }
-      if (itemMatches.isNotEmpty()) {
-        item { SectionHeader("Items") }
-        items(itemMatches) { matchedItem -> ItemRow(matchedItem, onClick = { onItemSelected(matchedItem) }) }
-      }
     }
-    return
+    SearchScope.ITEM -> {
+      val matches = allItems.filter { searchQuery.isBlank() || it.itemName.contains(searchQuery, ignoreCase = true) }
+      if (matches.isEmpty()) {
+        NoMatchesState(query = searchQuery, currentScope = scope, onScopeChange = onScopeChange)
+        return
+      }
+      ItemRows(matches, isAdmin, onItemSelected)
+    }
   }
+}
 
-  val categories = allItems.groupBy { it.category }.toSortedMap()
-  if (categories.isEmpty()) {
+// Shown when a search finds nothing under the currently selected radio
+// scope -- the match might still exist under a different scope (e.g. typing
+// an item name while "Categories" is selected), so this offers a one-tap way
+// to broaden the search instead of leaving the user stuck on an empty list.
+@Composable
+private fun NoMatchesState(query: String, currentScope: SearchScope, onScopeChange: (SearchScope) -> Unit) {
+  if (query.isBlank()) {
     EmptyState("No price list loaded yet.")
     return
   }
-  LazyColumn(contentPadding = PaddingValues(16.dp)) {
-    items(categories.entries.toList()) { (category, itemsInCategory) ->
-      NavRow(title = category, subtitle = "${itemsInCategory.size} items") { onCategorySelected(category) }
+  val otherScopes = SearchScope.values().filter { it != currentScope }
+  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
+      Text(
+        "No ${currentScope.label().lowercase()} match \"$query\".",
+        color = MaterialTheme.colorScheme.outline,
+        textAlign = TextAlign.Center
+      )
+      Spacer(modifier = Modifier.height(8.dp))
+      Text(
+        "Try switching to ${otherScopes.joinToString(" or ") { it.label() }} above.",
+        color = MaterialTheme.colorScheme.primary,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.clickable { onScopeChange(otherScopes.first()) }
+      )
     }
   }
 }
 
-@Composable
-private fun GroupsLevel(
-  allItems: List<PriceListItem>,
-  category: String,
-  searchQuery: String,
-  onGroupSelected: (String) -> Unit
-) {
-  val itemsInCategory = allItems.filter { it.category == category }
-  val groups = itemsInCategory
-    .groupBy { it.groupName }
-    .filterKeys { searchQuery.isBlank() || it.contains(searchQuery, ignoreCase = true) }
-    .toSortedMap()
-
-  if (groups.isEmpty()) {
-    EmptyState("No groups match your search.")
-    return
-  }
-  LazyColumn(contentPadding = PaddingValues(16.dp)) {
-    items(groups.entries.toList()) { (group, itemsInGroup) ->
-      NavRow(title = group, subtitle = "${itemsInGroup.size} items") { onGroupSelected(group) }
-    }
-  }
+private fun SearchScope.label(): String = when (this) {
+  SearchScope.CATEGORY -> "Categories"
+  SearchScope.GROUP -> "Groups"
+  SearchScope.ITEM -> "Items"
 }
 
 @Composable
-private fun ItemsLevel(
-  allItems: List<PriceListItem>,
-  category: String,
-  groupName: String,
-  onItemSelected: (PriceListItem) -> Unit
-) {
-  val itemsInGroup = allItems.filter { it.category == category && it.groupName == groupName }
-  ItemRows(itemsInGroup, onItemSelected)
-}
-
-@Composable
-private fun ItemRows(items: List<PriceListItem>, onItemSelected: (PriceListItem) -> Unit) {
+private fun ItemRows(items: List<PriceListItem>, isAdmin: Boolean, onItemSelected: (PriceListItem) -> Unit) {
   if (items.isEmpty()) {
     EmptyState("No items match your search.")
     return
   }
   LazyColumn(contentPadding = PaddingValues(16.dp)) {
-    items(items) { item -> ItemRow(item, onClick = { onItemSelected(item) }) }
+    items(items) { item -> ItemRow(item, isAdmin = isAdmin, onClick = { onItemSelected(item) }) }
   }
 }
 
 @Composable
-private fun ItemRow(item: PriceListItem, onClick: () -> Unit) {
+private fun ItemRow(item: PriceListItem, isAdmin: Boolean, onClick: () -> Unit) {
   Card(
     modifier = Modifier
       .fillMaxWidth()
@@ -390,6 +366,14 @@ private fun ItemRow(item: PriceListItem, onClick: () -> Unit) {
           "  ·  ${item.stockLabel}",
           style = MaterialTheme.typography.bodyMedium,
           color = MaterialTheme.colorScheme.outline
+        )
+      }
+      if (isAdmin && item.costPrice != null) {
+        Text(
+          "Cost ₹${formatPrice(item.costPrice)}",
+          style = MaterialTheme.typography.labelMedium,
+          color = MaterialTheme.colorScheme.tertiary,
+          modifier = Modifier.padding(top = 2.dp)
         )
       }
     }
@@ -490,22 +474,12 @@ private fun NavRow(title: String, subtitle: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SectionHeader(title: String) {
-  Text(
-    title,
-    style = MaterialTheme.typography.labelLarge,
-    color = MaterialTheme.colorScheme.primary,
-    modifier = Modifier.padding(bottom = 8.dp, top = 4.dp)
-  )
-}
-
-@Composable
-private fun SearchTypeCheckbox(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun ScopeRadioOption(label: String, selected: Boolean, onClick: () -> Unit) {
   Row(
     verticalAlignment = Alignment.CenterVertically,
-    modifier = Modifier.clickable { onCheckedChange(!checked) }
+    modifier = Modifier.clickable(onClick = onClick)
   ) {
-    Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+    RadioButton(selected = selected, onClick = onClick)
     Text(label, style = MaterialTheme.typography.bodyMedium)
   }
 }

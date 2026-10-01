@@ -11,24 +11,33 @@ import com.squareup.moshi.JsonWriter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.`internal`.Util
 import java.lang.NullPointerException
+import java.lang.reflect.Constructor
 import kotlin.Double
+import kotlin.Int
 import kotlin.String
 import kotlin.Suppress
 import kotlin.Unit
 import kotlin.collections.emptySet
+import kotlin.jvm.Volatile
 import kotlin.text.buildString
 
 public class PriceListItemJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<PriceListItem>() {
   private val options: JsonReader.Options = JsonReader.Options.of("category", "group_name",
-      "item_name", "final_price", "mrp", "stock_label")
+      "item_name", "final_price", "mrp", "cost_price", "stock_label")
 
   private val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java, emptySet(),
       "category")
 
   private val doubleAdapter: JsonAdapter<Double> = moshi.adapter(Double::class.java, emptySet(),
       "finalPrice")
+
+  private val nullableDoubleAdapter: JsonAdapter<Double?> =
+      moshi.adapter(Double::class.javaObjectType, emptySet(), "costPrice")
+
+  @Volatile
+  private var constructorRef: Constructor<PriceListItem>? = null
 
   public override fun toString(): String = buildString(35) {
       append("GeneratedJsonAdapter(").append("PriceListItem").append(')') }
@@ -39,7 +48,9 @@ public class PriceListItemJsonAdapter(
     var itemName: String? = null
     var finalPrice: Double? = null
     var mrp: Double? = null
+    var costPrice: Double? = null
     var stockLabel: String? = null
+    var mask0 = -1
     reader.beginObject()
     while (reader.hasNext()) {
       when (reader.selectName(options)) {
@@ -52,7 +63,12 @@ public class PriceListItemJsonAdapter(
         3 -> finalPrice = doubleAdapter.fromJson(reader) ?: throw Util.unexpectedNull("finalPrice",
             "final_price", reader)
         4 -> mrp = doubleAdapter.fromJson(reader) ?: throw Util.unexpectedNull("mrp", "mrp", reader)
-        5 -> stockLabel = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("stockLabel",
+        5 -> {
+          costPrice = nullableDoubleAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 5).inv()
+          mask0 = mask0 and 0xffffffdf.toInt()
+        }
+        6 -> stockLabel = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("stockLabel",
             "stock_label", reader)
         -1 -> {
           // Unknown name, skip it.
@@ -62,14 +78,38 @@ public class PriceListItemJsonAdapter(
       }
     }
     reader.endObject()
-    return PriceListItem(
-        category = category ?: throw Util.missingProperty("category", "category", reader),
-        groupName = groupName ?: throw Util.missingProperty("groupName", "group_name", reader),
-        itemName = itemName ?: throw Util.missingProperty("itemName", "item_name", reader),
-        finalPrice = finalPrice ?: throw Util.missingProperty("finalPrice", "final_price", reader),
-        mrp = mrp ?: throw Util.missingProperty("mrp", "mrp", reader),
-        stockLabel = stockLabel ?: throw Util.missingProperty("stockLabel", "stock_label", reader)
-    )
+    if (mask0 == 0xffffffdf.toInt()) {
+      // All parameters with defaults are set, invoke the constructor directly
+      return  PriceListItem(
+          category = category ?: throw Util.missingProperty("category", "category", reader),
+          groupName = groupName ?: throw Util.missingProperty("groupName", "group_name", reader),
+          itemName = itemName ?: throw Util.missingProperty("itemName", "item_name", reader),
+          finalPrice = finalPrice ?: throw Util.missingProperty("finalPrice", "final_price",
+              reader),
+          mrp = mrp ?: throw Util.missingProperty("mrp", "mrp", reader),
+          costPrice = costPrice,
+          stockLabel = stockLabel ?: throw Util.missingProperty("stockLabel", "stock_label", reader)
+      )
+    } else {
+      // Reflectively invoke the synthetic defaults constructor
+      @Suppress("UNCHECKED_CAST")
+      val localConstructor: Constructor<PriceListItem> = this.constructorRef ?:
+          PriceListItem::class.java.getDeclaredConstructor(String::class.java, String::class.java,
+          String::class.java, Double::class.javaPrimitiveType, Double::class.javaPrimitiveType,
+          Double::class.javaObjectType, String::class.java, Int::class.javaPrimitiveType,
+          Util.DEFAULT_CONSTRUCTOR_MARKER).also { this.constructorRef = it }
+      return localConstructor.newInstance(
+          category ?: throw Util.missingProperty("category", "category", reader),
+          groupName ?: throw Util.missingProperty("groupName", "group_name", reader),
+          itemName ?: throw Util.missingProperty("itemName", "item_name", reader),
+          finalPrice ?: throw Util.missingProperty("finalPrice", "final_price", reader),
+          mrp ?: throw Util.missingProperty("mrp", "mrp", reader),
+          costPrice,
+          stockLabel ?: throw Util.missingProperty("stockLabel", "stock_label", reader),
+          mask0,
+          /* DefaultConstructorMarker */ null
+      )
+    }
   }
 
   public override fun toJson(writer: JsonWriter, value_: PriceListItem?): Unit {
@@ -87,6 +127,8 @@ public class PriceListItemJsonAdapter(
     doubleAdapter.toJson(writer, value_.finalPrice)
     writer.name("mrp")
     doubleAdapter.toJson(writer, value_.mrp)
+    writer.name("cost_price")
+    nullableDoubleAdapter.toJson(writer, value_.costPrice)
     writer.name("stock_label")
     stringAdapter.toJson(writer, value_.stockLabel)
     writer.endObject()

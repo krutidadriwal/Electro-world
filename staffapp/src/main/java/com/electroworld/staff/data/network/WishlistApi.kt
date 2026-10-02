@@ -35,7 +35,9 @@ data class WishlistStatusRequest(
 data class WishlistStatusResponse(
   val id: String,
   val status: String,
-  @Json(name = "status_updated_at") val statusUpdatedAt: String
+  // Absent when status == "purchased" -- that response deletes the row
+  // instead of updating it, so there's no new status_updated_at to report.
+  @Json(name = "status_updated_at") val statusUpdatedAt: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -49,9 +51,25 @@ data class WishlistCallResponse(
   @Json(name = "called_at") val calledAt: String
 )
 
+@JsonClass(generateAdapter = true)
+data class WishlistAddRequest(
+  val phone: String,
+  val customerName: String,
+  val categoryIconKey: String,
+  val subcategoryId: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class WishlistAddResponse(
+  val added: Boolean
+)
+
 interface WishlistApi {
   @GET("api/staff/wishlist-list")
   suspend fun list(): WishlistResponse
+
+  @POST("api/staff/wishlist-add")
+  suspend fun add(@Body request: WishlistAddRequest): WishlistAddResponse
 
   @PATCH("api/staff/wishlist-status")
   suspend fun updateStatus(@Body request: WishlistStatusRequest): WishlistStatusResponse

@@ -172,6 +172,12 @@ private fun ForgotPasswordScreen(
                 redirectTo = "${BuildConfig.SERVER_BASE_URL}/reset-password.html"
               )
               sent = true
+            } catch (e: retrofit2.HttpException) {
+              errorMessage = if (e.code() == 429) {
+                "Too many reset attempts. Please wait a while before trying again."
+              } else {
+                "Couldn't send the reset email. Please try again."
+              }
             } catch (e: Exception) {
               errorMessage = "Couldn't send the reset email. Please try again."
             } finally {

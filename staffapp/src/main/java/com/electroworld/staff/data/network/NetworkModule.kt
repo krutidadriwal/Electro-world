@@ -105,4 +105,5 @@ object NetworkModule {
   val notificationsApi: NotificationsApi by lazy { serverRetrofit.create(NotificationsApi::class.java) }
   val priceListApi: PriceListApi by lazy { serverRetrofit.create(PriceListApi::class.java) }
   val wishlistApi: WishlistApi by lazy { serverRetrofit.create(WishlistApi::class.java) }
+  val catalogApi: CatalogApi by lazy { serverRetrofit.create(CatalogApi::class.java) }
 }

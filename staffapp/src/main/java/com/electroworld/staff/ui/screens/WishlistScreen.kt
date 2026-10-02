@@ -2,6 +2,7 @@ package com.electroworld.staff.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,23 +12,30 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,8 +48,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.electroworld.staff.data.network.Category
 import com.electroworld.staff.data.network.NetworkModule
+import com.electroworld.staff.data.network.Subcategory
 import com.electroworld.staff.data.network.WishlistItem
+import com.electroworld.staff.data.network.WishlistAddRequest
 import com.electroworld.staff.data.network.WishlistStatusRequest
 import com.electroworld.staff.data.network.WishlistCallRequest
 import kotlinx.coroutines.launch
@@ -76,19 +87,30 @@ fun WishlistScreen(modifier: Modifier = Modifier) {
   var errorMessage by remember { mutableStateOf<String?>(null) }
   var refreshTrigger by remember { mutableStateOf(0) }
   var searchQuery by remember { mutableStateOf("") }
+  var statusFilter by remember { mutableStateOf<String?>(null) }
+  var showAddDialog by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
   val context = LocalContext.current
 
-  val filteredItems = if (searchQuery.isBlank()) {
-    items
-  } else {
-    items.filter { item ->
-      item.customerName.contains(searchQuery, ignoreCase = true) ||
+  if (showAddDialog) {
+    AddToWishlistDialog(
+      onDismiss = { showAddDialog = false },
+      onAdded = {
+        showAddDialog = false
+        refreshTrigger++
+      }
+    )
+  }
+
+  val filteredItems = items
+    .filter { statusFilter == null || it.status == statusFilter }
+    .filter { item ->
+      searchQuery.isBlank() ||
+        item.customerName.contains(searchQuery, ignoreCase = true) ||
         item.customerPhone.contains(searchQuery, ignoreCase = true) ||
         item.categoryName.contains(searchQuery, ignoreCase = true) ||
         (item.subcategoryName?.contains(searchQuery, ignoreCase = true) ?: false)
     }
-  }
 
   LaunchedEffect(refreshTrigger) {
     isLoading = true
@@ -104,6 +126,11 @@ fun WishlistScreen(modifier: Modifier = Modifier) {
 
   Scaffold(
     topBar = { TopAppBar(title = { Text("Wishlist") }) },
+    floatingActionButton = {
+      FloatingActionButton(onClick = { showAddDialog = true }) {
+        Icon(Icons.Default.Add, contentDescription = "Add customer to wishlist")
+      }
+    },
     modifier = modifier
   ) { padding ->
     Column(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -115,6 +142,27 @@ fun WishlistScreen(modifier: Modifier = Modifier) {
         singleLine = true,
         modifier = Modifier.fillMaxWidth().padding(16.dp)
       )
+
+      LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+      ) {
+        item {
+          FilterChip(
+            selected = statusFilter == null,
+            onClick = { statusFilter = null },
+            label = { Text("All") }
+          )
+        }
+        items(WISHLIST_STATUSES) { status ->
+          FilterChip(
+            selected = statusFilter == status,
+            onClick = { statusFilter = if (statusFilter == status) null else status },
+            label = { Text(statusLabel(status)) }
+          )
+        }
+      }
 
       errorMessage?.let {
         Text(
@@ -172,6 +220,144 @@ fun WishlistScreen(modifier: Modifier = Modifier) {
   }
 }
 
+// Lets a salesperson log a walk-in customer's interest directly -- the
+// customer doesn't need the EW app or even an account yet (the server
+// creates a bare placeholder account for a new phone number); once they
+// later verify that number in the app, this wishlist entry is already there.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddToWishlistDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
+  var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
+  var isLoadingCategories by remember { mutableStateOf(true) }
+  var phone by remember { mutableStateOf("") }
+  var customerName by remember { mutableStateOf("") }
+  var selectedCategory by remember { mutableStateOf<Category?>(null) }
+  var selectedSubcategory by remember { mutableStateOf<Subcategory?>(null) }
+  var categoryMenuExpanded by remember { mutableStateOf(false) }
+  var subcategoryMenuExpanded by remember { mutableStateOf(false) }
+  var isSaving by remember { mutableStateOf(false) }
+  var errorMessage by remember { mutableStateOf<String?>(null) }
+  val scope = rememberCoroutineScope()
+
+  LaunchedEffect(Unit) {
+    try {
+      categories = NetworkModule.catalogApi.categories().categories
+    } catch (e: Exception) {
+      errorMessage = "Failed to load categories."
+    } finally {
+      isLoadingCategories = false
+    }
+  }
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text("Add to wishlist") },
+    text = {
+      Column {
+        OutlinedTextField(
+          value = phone,
+          onValueChange = { if (it.length <= 10 && it.all(Char::isDigit)) phone = it },
+          label = { Text("Customer phone (10 digits)") },
+          singleLine = true,
+          modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+          value = customerName,
+          onValueChange = { customerName = it },
+          label = { Text("Customer name") },
+          singleLine = true,
+          modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+        )
+
+        if (isLoadingCategories) {
+          CircularProgressIndicator(modifier = Modifier.padding(top = 16.dp))
+        } else {
+          Box(modifier = Modifier.padding(top = 8.dp)) {
+            OutlinedTextField(
+              value = selectedCategory?.name ?: "",
+              onValueChange = {},
+              readOnly = true,
+              label = { Text("Category") },
+              modifier = Modifier.fillMaxWidth().clickable { categoryMenuExpanded = true }
+            )
+            DropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
+              categories.forEach { category ->
+                DropdownMenuItem(
+                  text = { Text(category.name) },
+                  onClick = {
+                    selectedCategory = category
+                    selectedSubcategory = null
+                    categoryMenuExpanded = false
+                  }
+                )
+              }
+            }
+          }
+
+          val subcategories = selectedCategory?.subcategories.orEmpty()
+          if (subcategories.isNotEmpty()) {
+            Box(modifier = Modifier.padding(top = 8.dp)) {
+              OutlinedTextField(
+                value = selectedSubcategory?.name ?: "Any",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Subcategory (optional)") },
+                modifier = Modifier.fillMaxWidth().clickable { subcategoryMenuExpanded = true }
+              )
+              DropdownMenu(expanded = subcategoryMenuExpanded, onDismissRequest = { subcategoryMenuExpanded = false }) {
+                DropdownMenuItem(
+                  text = { Text("Any") },
+                  onClick = { selectedSubcategory = null; subcategoryMenuExpanded = false }
+                )
+                subcategories.forEach { subcategory ->
+                  DropdownMenuItem(
+                    text = { Text(subcategory.name) },
+                    onClick = { selectedSubcategory = subcategory; subcategoryMenuExpanded = false }
+                  )
+                }
+              }
+            }
+          }
+        }
+
+        errorMessage?.let {
+          Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
+        }
+      }
+    },
+    confirmButton = {
+      Button(
+        enabled = !isSaving && phone.length == 10 && customerName.isNotBlank() && selectedCategory != null,
+        onClick = {
+          val category = selectedCategory ?: return@Button
+          errorMessage = null
+          isSaving = true
+          scope.launch {
+            try {
+              NetworkModule.wishlistApi.add(
+                WishlistAddRequest(
+                  phone = phone,
+                  customerName = customerName.trim(),
+                  categoryIconKey = category.iconKey,
+                  subcategoryId = selectedSubcategory?.id
+                )
+              )
+              onAdded()
+            } catch (e: Exception) {
+              errorMessage = "Failed to add to wishlist. Please try again."
+            } finally {
+              isSaving = false
+            }
+          }
+        }
+      ) {
+        if (isSaving) CircularProgressIndicator(modifier = Modifier.padding(2.dp)) else Text("Add")
+      }
+    },
+    dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+  )
+}
+
 @Composable
 private fun WishlistRow(
   item: WishlistItem,
@@ -179,6 +365,26 @@ private fun WishlistRow(
   onCall: () -> Unit
 ) {
   var statusMenuExpanded by remember { mutableStateOf(false) }
+  var confirmingPurchase by remember { mutableStateOf(false) }
+
+  if (confirmingPurchase) {
+    AlertDialog(
+      onDismissRequest = { confirmingPurchase = false },
+      title = { Text("Mark as purchased?") },
+      text = { Text("This will remove ${item.customerName} from the wishlist.") },
+      confirmButton = {
+        androidx.compose.material3.TextButton(
+          onClick = {
+            confirmingPurchase = false
+            onStatusSelected("purchased")
+          }
+        ) { Text("Remove") }
+      },
+      dismissButton = {
+        androidx.compose.material3.TextButton(onClick = { confirmingPurchase = false }) { Text("Cancel") }
+      }
+    )
+  }
 
   Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
     Column(modifier = Modifier.padding(16.dp)) {
@@ -233,7 +439,13 @@ private fun WishlistRow(
               text = { Text(statusLabel(status)) },
               onClick = {
                 statusMenuExpanded = false
-                if (status != item.status) onStatusSelected(status)
+                if (status != item.status) {
+                  if (status == "purchased") {
+                    confirmingPurchase = true
+                  } else {
+                    onStatusSelected(status)
+                  }
+                }
               }
             )
           }

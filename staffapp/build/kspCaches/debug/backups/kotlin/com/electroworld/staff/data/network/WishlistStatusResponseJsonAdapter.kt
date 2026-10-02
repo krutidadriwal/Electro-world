@@ -11,10 +11,13 @@ import com.squareup.moshi.JsonWriter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.`internal`.Util
 import java.lang.NullPointerException
+import java.lang.reflect.Constructor
+import kotlin.Int
 import kotlin.String
 import kotlin.Suppress
 import kotlin.Unit
 import kotlin.collections.emptySet
+import kotlin.jvm.Volatile
 import kotlin.text.buildString
 
 public class WishlistStatusResponseJsonAdapter(
@@ -26,6 +29,12 @@ public class WishlistStatusResponseJsonAdapter(
   private val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java, emptySet(),
       "id")
 
+  private val nullableStringAdapter: JsonAdapter<String?> = moshi.adapter(String::class.java,
+      emptySet(), "statusUpdatedAt")
+
+  @Volatile
+  private var constructorRef: Constructor<WishlistStatusResponse>? = null
+
   public override fun toString(): String = buildString(44) {
       append("GeneratedJsonAdapter(").append("WishlistStatusResponse").append(')') }
 
@@ -33,14 +42,18 @@ public class WishlistStatusResponseJsonAdapter(
     var id: String? = null
     var status: String? = null
     var statusUpdatedAt: String? = null
+    var mask0 = -1
     reader.beginObject()
     while (reader.hasNext()) {
       when (reader.selectName(options)) {
         0 -> id = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("id", "id", reader)
         1 -> status = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("status",
             "status", reader)
-        2 -> statusUpdatedAt = stringAdapter.fromJson(reader) ?:
-            throw Util.unexpectedNull("statusUpdatedAt", "status_updated_at", reader)
+        2 -> {
+          statusUpdatedAt = nullableStringAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 2).inv()
+          mask0 = mask0 and 0xfffffffb.toInt()
+        }
         -1 -> {
           // Unknown name, skip it.
           reader.skipName()
@@ -49,12 +62,28 @@ public class WishlistStatusResponseJsonAdapter(
       }
     }
     reader.endObject()
-    return WishlistStatusResponse(
-        id = id ?: throw Util.missingProperty("id", "id", reader),
-        status = status ?: throw Util.missingProperty("status", "status", reader),
-        statusUpdatedAt = statusUpdatedAt ?: throw Util.missingProperty("statusUpdatedAt",
-            "status_updated_at", reader)
-    )
+    if (mask0 == 0xfffffffb.toInt()) {
+      // All parameters with defaults are set, invoke the constructor directly
+      return  WishlistStatusResponse(
+          id = id ?: throw Util.missingProperty("id", "id", reader),
+          status = status ?: throw Util.missingProperty("status", "status", reader),
+          statusUpdatedAt = statusUpdatedAt
+      )
+    } else {
+      // Reflectively invoke the synthetic defaults constructor
+      @Suppress("UNCHECKED_CAST")
+      val localConstructor: Constructor<WishlistStatusResponse> = this.constructorRef ?:
+          WishlistStatusResponse::class.java.getDeclaredConstructor(String::class.java,
+          String::class.java, String::class.java, Int::class.javaPrimitiveType,
+          Util.DEFAULT_CONSTRUCTOR_MARKER).also { this.constructorRef = it }
+      return localConstructor.newInstance(
+          id ?: throw Util.missingProperty("id", "id", reader),
+          status ?: throw Util.missingProperty("status", "status", reader),
+          statusUpdatedAt,
+          mask0,
+          /* DefaultConstructorMarker */ null
+      )
+    }
   }
 
   public override fun toJson(writer: JsonWriter, value_: WishlistStatusResponse?): Unit {
@@ -67,7 +96,7 @@ public class WishlistStatusResponseJsonAdapter(
     writer.name("status")
     stringAdapter.toJson(writer, value_.status)
     writer.name("status_updated_at")
-    stringAdapter.toJson(writer, value_.statusUpdatedAt)
+    nullableStringAdapter.toJson(writer, value_.statusUpdatedAt)
     writer.endObject()
   }
 }

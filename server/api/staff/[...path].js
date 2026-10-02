@@ -7,6 +7,7 @@ const { getSupabaseAdmin } = require('../../lib/supabaseAdmin');
 const { requireStaff, requireAdmin, StaffAuthError } = require('../../lib/staffAuth');
 const { routeSegmentsAfter } = require('../../lib/routeSegments');
 const { syncPriceList } = require('../../lib/priceList');
+const { normalizePhone } = require('../../lib/phone');
 
 const VALID_ROLES = ['admin', 'employee'];
 const VALID_WISHLIST_STATUSES = [
@@ -43,6 +44,8 @@ module.exports = async function handler(req, res) {
       return priceListSync(req, res);
     case 'wishlist-list':
       return wishlistList(req, res);
+    case 'wishlist-add':
+      return wishlistAdd(req, res);
     case 'wishlist-status':
       return wishlistStatus(req, res);
     case 'wishlist-call':
@@ -273,6 +276,93 @@ async function wishlistList(req, res) {
   }
 }
 
+// Lets a salesperson log a walk-in customer's interest directly, without the
+// customer needing the EW app (or even an account) yet. If the phone isn't
+// in public.users at all, a bare placeholder row is created for it (name
+// only, no PIN) -- wishlist_items.phone has a not-null FK to users, so this
+// is required either way. That placeholder is exactly what /api/auth's
+// "forgot PIN" flow already expects for a phone with no PIN set yet, so once
+// this customer verifies that phone number in the app, they can set a PIN
+// on this same row and immediately see the wishlist entry staff added.
+async function wishlistAdd(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { phone, countryCode, customerName, categoryIconKey, subcategoryId } = req.body ?? {};
+  const normalizedPhone = normalizePhone(phone, countryCode);
+  if (!normalizedPhone) {
+    return res.status(400).json({ error: 'phone must be a 10-digit number' });
+  }
+  if (typeof categoryIconKey !== 'string' || categoryIconKey.trim().length === 0) {
+    return res.status(400).json({ error: 'categoryIconKey is required' });
+  }
+  const trimmedName = typeof customerName === 'string' ? customerName.trim() : '';
+
+  try {
+    await requireStaff(req);
+
+    const pool = getPool();
+
+    const categoryResult = await pool.query(
+      `select icon_key, name from public.categories where icon_key = $1`,
+      [categoryIconKey]
+    );
+    if (categoryResult.rowCount === 0) {
+      return res.status(400).json({ error: 'categoryIconKey does not match a known category' });
+    }
+    const category = categoryResult.rows[0];
+
+    let subcategory = null;
+    if (typeof subcategoryId === 'string' && subcategoryId.trim().length > 0) {
+      const subcategoryResult = await pool.query(
+        `select id, name from public.subcategories where id = $1 and category_icon_key = $2`,
+        [subcategoryId, categoryIconKey]
+      );
+      if (subcategoryResult.rowCount === 0) {
+        return res.status(400).json({ error: 'subcategoryId does not belong to categoryIconKey' });
+      }
+      subcategory = subcategoryResult.rows[0];
+    }
+
+    const existingUser = await pool.query('select phone from public.users where phone = $1', [normalizedPhone]);
+    if (existingUser.rowCount === 0) {
+      if (!trimmedName) {
+        return res.status(400).json({ error: 'customerName is required for a phone with no existing account' });
+      }
+      await pool.query(
+        `insert into public.users (phone, name) values ($1, $2)`,
+        [normalizedPhone, trimmedName]
+      );
+    }
+
+    const insertResult = subcategory
+      ? await pool.query(
+          `insert into public.wishlist_items (phone, category_icon_key, category_name, subcategory_id, subcategory_name)
+           values ($1, $2, $3, $4, $5)
+           on conflict (phone, category_icon_key, subcategory_id) where subcategory_id is not null do nothing
+           returning id`,
+          [normalizedPhone, category.icon_key, category.name, subcategory.id, subcategory.name]
+        )
+      : await pool.query(
+          `insert into public.wishlist_items (phone, category_icon_key, category_name)
+           values ($1, $2, $3)
+           on conflict (phone, category_icon_key) where subcategory_id is null do nothing
+           returning id`,
+          [normalizedPhone, category.icon_key, category.name]
+        );
+
+    return res.status(200).json({ added: insertResult.rowCount > 0 });
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('add wishlist error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
 async function wishlistStatus(req, res) {
   if (req.method !== 'PATCH') {
     res.setHeader('Allow', 'PATCH');
@@ -291,6 +381,22 @@ async function wishlistStatus(req, res) {
     const staff = await requireStaff(req);
 
     const pool = getPool();
+
+    // A purchase ends the wishlist entry's reason for existing -- rather than
+    // leave a "purchased" row behind, it's deleted outright, both as a
+    // signal to staff (gone from the list = done) and to the customer (this
+    // table is also what their own app's wishlist reads from).
+    if (status === 'purchased') {
+      const result = await pool.query(
+        `delete from public.wishlist_items where id = $1 returning id`,
+        [wishlistItemId]
+      );
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: 'Wishlist item not found' });
+      }
+      return res.status(200).json({ id: result.rows[0].id, status: 'purchased', deleted: true });
+    }
+
     const result = await pool.query(
       `update public.wishlist_items
        set status = $1, status_updated_at = now(), status_updated_by = $2

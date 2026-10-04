@@ -11,10 +11,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Sell
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,7 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 
-private enum class HomeTab { NOTIFICATIONS, PRICE_LIST, WISHLIST, STAFF }
+private enum class HomeTab { NOTIFICATIONS, PRICE_LIST, WISHLIST, COMPLAINTS, INSTALLATIONS, STAFF }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,6 +83,18 @@ fun HomeScreen(
           icon = { Icon(Icons.Default.Favorite, contentDescription = "Wishlist") },
           label = { Text("Wishlist") }
         )
+        NavigationBarItem(
+          selected = selectedTab == HomeTab.COMPLAINTS,
+          onClick = { selectedTab = HomeTab.COMPLAINTS },
+          icon = { Icon(Icons.Default.Warning, contentDescription = "Complaints") },
+          label = { Text("Complaints") }
+        )
+        NavigationBarItem(
+          selected = selectedTab == HomeTab.INSTALLATIONS,
+          onClick = { selectedTab = HomeTab.INSTALLATIONS },
+          icon = { Icon(Icons.Default.Build, contentDescription = "Installations") },
+          label = { Text("Installs") }
+        )
         if (isAdmin) {
           NavigationBarItem(
             selected = selectedTab == HomeTab.STAFF,
@@ -97,6 +111,8 @@ fun HomeScreen(
       HomeTab.NOTIFICATIONS -> NotificationsScreen(isAdmin = isAdmin, modifier = Modifier.padding(padding))
       HomeTab.PRICE_LIST -> PriceListScreen(isAdmin = isAdmin, modifier = Modifier.padding(padding))
       HomeTab.WISHLIST -> WishlistScreen(modifier = Modifier.padding(padding))
+      HomeTab.COMPLAINTS -> ComplaintsScreen(modifier = Modifier.padding(padding))
+      HomeTab.INSTALLATIONS -> InstallationsScreen(modifier = Modifier.padding(padding))
       HomeTab.STAFF -> StaffScreen(modifier = Modifier.padding(padding))
     }
   }

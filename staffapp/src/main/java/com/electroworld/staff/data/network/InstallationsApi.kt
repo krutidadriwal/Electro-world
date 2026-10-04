@@ -1,0 +1,52 @@
+package com.electroworld.staff.data.network
+
+import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
+import retrofit2.http.Body
+import retrofit2.http.GET
+import retrofit2.http.PATCH
+
+@JsonClass(generateAdapter = true)
+data class InstallationItem(
+  val id: String,
+  @Json(name = "customer_phone") val customerPhone: String,
+  @Json(name = "customer_name") val customerName: String,
+  @Json(name = "category_name") val categoryName: String,
+  @Json(name = "item_name") val itemName: String,
+  @Json(name = "wants_demo") val wantsDemo: Boolean,
+  @Json(name = "wants_installation") val wantsInstallation: Boolean,
+  val address: String,
+  @Json(name = "contact_phone") val contactPhone: String?,
+  @Json(name = "invoice_file_name") val invoiceFileName: String?,
+  val status: String,
+  @Json(name = "created_at") val createdAt: String,
+  @Json(name = "updated_at") val updatedAt: String,
+  @Json(name = "resolved_at") val resolvedAt: String?
+)
+
+@JsonClass(generateAdapter = true)
+data class InstallationsResponse(
+  val items: List<InstallationItem>
+)
+
+@JsonClass(generateAdapter = true)
+data class InstallationStatusRequest(
+  val installationId: String,
+  val status: String
+)
+
+@JsonClass(generateAdapter = true)
+data class InstallationStatusResponse(
+  val id: String,
+  val status: String,
+  @Json(name = "updated_at") val updatedAt: String,
+  @Json(name = "resolved_at") val resolvedAt: String?
+)
+
+interface InstallationsApi {
+  @GET("api/staff/installations-list")
+  suspend fun list(): InstallationsResponse
+
+  @PATCH("api/staff/installations-status")
+  suspend fun updateStatus(@Body request: InstallationStatusRequest): InstallationStatusResponse
+}

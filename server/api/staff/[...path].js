@@ -12,12 +12,22 @@ const { normalizePhone } = require('../../lib/phone');
 const VALID_ROLES = ['admin', 'employee'];
 const VALID_WISHLIST_STATUSES = [
   'not_contacted',
-  'interested',
-  'not_interested',
+  'unreachable',
+  'invalid_number',
   'call_back_later',
+  'sent_details_whatsapp',
+  'store_visit_scheduled',
+  'interested_comparing_prices',
+  'interested_waiting_emi',
+  'interested_waiting_stock',
+  'interested_waiting_offer',
   'purchased',
-  'unreachable'
+  'pending_delivery',
+  'bought_elsewhere',
+  'dropped_plan',
+  'not_interested'
 ];
+const VALID_SERVICE_REQUEST_STATUSES = ['open', 'in_progress', 'resolved', 'closed'];
 
 module.exports = async function handler(req, res) {
   // .../api/staff/<...> -- drop "api", "staff".
@@ -50,6 +60,14 @@ module.exports = async function handler(req, res) {
       return wishlistStatus(req, res);
     case 'wishlist-call':
       return wishlistCall(req, res);
+    case 'complaints-list':
+      return complaintsList(req, res);
+    case 'complaints-status':
+      return complaintsStatus(req, res);
+    case 'installations-list':
+      return installationsList(req, res);
+    case 'installations-status':
+      return installationsStatus(req, res);
     default:
       return res.status(404).json({ error: 'Not found' });
   }
@@ -460,6 +478,167 @@ async function wishlistCall(req, res) {
       return res.status(err.status).json({ error: err.message });
     }
     console.error('log wishlist call error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Any signed-in staff member can review/triage complaints -- not an
+// admin-only action, same reasoning as wishlistList above.
+async function complaintsList(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    await requireStaff(req);
+
+    const pool = getPool();
+    const result = await pool.query(
+      `select
+         c.id,
+         c.phone as customer_phone,
+         u.name as customer_name,
+         c.category_name,
+         c.subcategory_name,
+         c.description,
+         c.address,
+         c.contact_phone,
+         c.invoice_file_name,
+         c.status,
+         c.created_at,
+         c.updated_at,
+         c.resolved_at
+       from public.complaints c
+       join public.users u on u.phone = c.phone
+       order by c.created_at desc`
+    );
+    return res.status(200).json({ items: result.rows });
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('list complaints error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+async function complaintsStatus(req, res) {
+  if (req.method !== 'PATCH') {
+    res.setHeader('Allow', 'PATCH');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { complaintId, status } = req.body ?? {};
+  if (typeof complaintId !== 'string' || complaintId.trim().length === 0) {
+    return res.status(400).json({ error: 'complaintId is required' });
+  }
+  if (!VALID_SERVICE_REQUEST_STATUSES.includes(status)) {
+    return res.status(400).json({ error: `status must be one of: ${VALID_SERVICE_REQUEST_STATUSES.join(', ')}` });
+  }
+
+  try {
+    await requireStaff(req);
+
+    const pool = getPool();
+    const resolved = status === 'resolved' || status === 'closed';
+    const result = await pool.query(
+      `update public.complaints
+       set status = $1, updated_at = now(), resolved_at = case when $2 then now() else null end
+       where id = $3
+       returning id, status, updated_at, resolved_at`,
+      [status, resolved, complaintId]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Complaint not found' });
+    }
+    return res.status(200).json(result.rows[0]);
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('update complaint status error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Any signed-in staff member can review/triage installation & demo
+// requests -- not an admin-only action, same reasoning as wishlistList above.
+async function installationsList(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    await requireStaff(req);
+
+    const pool = getPool();
+    const result = await pool.query(
+      `select
+         i.id,
+         i.phone as customer_phone,
+         u.name as customer_name,
+         i.category_name,
+         i.item_name,
+         i.wants_demo,
+         i.wants_installation,
+         i.address,
+         i.contact_phone,
+         i.invoice_file_name,
+         i.status,
+         i.created_at,
+         i.updated_at,
+         i.resolved_at
+       from public.installations i
+       join public.users u on u.phone = i.phone
+       order by i.created_at desc`
+    );
+    return res.status(200).json({ items: result.rows });
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('list installations error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+async function installationsStatus(req, res) {
+  if (req.method !== 'PATCH') {
+    res.setHeader('Allow', 'PATCH');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { installationId, status } = req.body ?? {};
+  if (typeof installationId !== 'string' || installationId.trim().length === 0) {
+    return res.status(400).json({ error: 'installationId is required' });
+  }
+  if (!VALID_SERVICE_REQUEST_STATUSES.includes(status)) {
+    return res.status(400).json({ error: `status must be one of: ${VALID_SERVICE_REQUEST_STATUSES.join(', ')}` });
+  }
+
+  try {
+    await requireStaff(req);
+
+    const pool = getPool();
+    const resolved = status === 'resolved' || status === 'closed';
+    const result = await pool.query(
+      `update public.installations
+       set status = $1, updated_at = now(), resolved_at = case when $2 then now() else null end
+       where id = $3
+       returning id, status, updated_at, resolved_at`,
+      [status, resolved, installationId]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Installation request not found' });
+    }
+    return res.status(200).json(result.rows[0]);
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('update installation status error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

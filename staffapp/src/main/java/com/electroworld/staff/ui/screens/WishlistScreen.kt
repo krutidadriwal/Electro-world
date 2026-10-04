@@ -10,10 +10,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -27,7 +29,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -62,20 +63,38 @@ import java.util.TimeZone
 
 private val WISHLIST_STATUSES = listOf(
   "not_contacted",
-  "interested",
-  "not_interested",
+  "unreachable",
+  "invalid_number",
   "call_back_later",
+  "sent_details_whatsapp",
+  "store_visit_scheduled",
+  "interested_comparing_prices",
+  "interested_waiting_emi",
+  "interested_waiting_stock",
+  "interested_waiting_offer",
   "purchased",
-  "unreachable"
+  "pending_delivery",
+  "bought_elsewhere",
+  "dropped_plan",
+  "not_interested"
 )
 
 private fun statusLabel(status: String): String = when (status) {
   "not_contacted" -> "Not Contacted"
-  "interested" -> "Interested"
-  "not_interested" -> "Not Interested"
+  "unreachable" -> "Unreachable (No answer/Switched off)"
+  "invalid_number" -> "Invalid/Wrong Number"
   "call_back_later" -> "Call Back Later"
-  "purchased" -> "Purchased"
-  "unreachable" -> "Unreachable"
+  "sent_details_whatsapp" -> "Sent Details (WhatsApp)"
+  "store_visit_scheduled" -> "Store Visit Scheduled"
+  "interested_comparing_prices" -> "Interested - Comparing Prices"
+  "interested_waiting_emi" -> "Interested - Waiting for EMI/Finance"
+  "interested_waiting_stock" -> "Interested - Waiting for Stock"
+  "interested_waiting_offer" -> "Interested - Waiting for Sale/Offer"
+  "purchased" -> "Purchased (Deal Closed)"
+  "pending_delivery" -> "Pending Delivery/Installation"
+  "bought_elsewhere" -> "Bought Elsewhere (Competitor/Online)"
+  "dropped_plan" -> "Dropped Plan (Postponed/Cancelled)"
+  "not_interested" -> "Not Interested"
   else -> status
 }
 
@@ -143,24 +162,35 @@ fun WishlistScreen(modifier: Modifier = Modifier) {
         modifier = Modifier.fillMaxWidth().padding(16.dp)
       )
 
-      LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-      ) {
-        item {
-          FilterChip(
-            selected = statusFilter == null,
-            onClick = { statusFilter = null },
-            label = { Text("All") }
+      var statusFilterMenuExpanded by remember { mutableStateOf(false) }
+      Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        OutlinedTextField(
+          value = statusFilter?.let { statusLabel(it) } ?: "All",
+          onValueChange = {},
+          readOnly = true,
+          label = { Text("Filter by status") },
+          trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
+          modifier = Modifier.fillMaxWidth()
+        )
+        // A readOnly OutlinedTextField's own touch handling (cursor/focus)
+        // swallows taps before a clickable attached directly to it ever
+        // fires -- an invisible overlay on top intercepts the tap first.
+        Box(
+          modifier = Modifier
+            .matchParentSize()
+            .clickable { statusFilterMenuExpanded = true }
+        )
+        DropdownMenu(expanded = statusFilterMenuExpanded, onDismissRequest = { statusFilterMenuExpanded = false }) {
+          DropdownMenuItem(
+            text = { Text("All") },
+            onClick = { statusFilter = null; statusFilterMenuExpanded = false }
           )
-        }
-        items(WISHLIST_STATUSES) { status ->
-          FilterChip(
-            selected = statusFilter == status,
-            onClick = { statusFilter = if (statusFilter == status) null else status },
-            label = { Text(statusLabel(status)) }
-          )
+          WISHLIST_STATUSES.forEach { status ->
+            DropdownMenuItem(
+              text = { Text(statusLabel(status)) },
+              onClick = { statusFilter = status; statusFilterMenuExpanded = false }
+            )
+          }
         }
       }
 
@@ -237,13 +267,15 @@ private fun AddToWishlistDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
   var subcategoryMenuExpanded by remember { mutableStateOf(false) }
   var isSaving by remember { mutableStateOf(false) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
+  var categoriesLoadTrigger by remember { mutableStateOf(0) }
   val scope = rememberCoroutineScope()
 
-  LaunchedEffect(Unit) {
+  LaunchedEffect(categoriesLoadTrigger) {
+    isLoadingCategories = true
     try {
       categories = NetworkModule.catalogApi.categories().categories
     } catch (e: Exception) {
-      errorMessage = "Failed to load categories."
+      categories = emptyList()
     } finally {
       isLoadingCategories = false
     }
@@ -253,7 +285,16 @@ private fun AddToWishlistDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
     onDismissRequest = onDismiss,
     title = { Text("Add to wishlist") },
     text = {
-      Column {
+      // AlertDialog's text slot doesn't scroll on its own and this form has
+      // enough fields to overflow its capped height on smaller screens --
+      // without this, fields past the fold (the category picker included)
+      // render but are simply unreachable, which looks like the picker never
+      // loaded at all.
+      Column(
+        modifier = Modifier
+          .heightIn(max = 560.dp)
+          .verticalScroll(rememberScrollState())
+      ) {
         OutlinedTextField(
           value = phone,
           onValueChange = { if (it.length <= 10 && it.all(Char::isDigit)) phone = it },
@@ -271,6 +312,14 @@ private fun AddToWishlistDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
 
         if (isLoadingCategories) {
           CircularProgressIndicator(modifier = Modifier.padding(top = 16.dp))
+        } else if (categories.isEmpty()) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(top = 16.dp)
+          ) {
+            Text("Couldn't load categories.", color = MaterialTheme.colorScheme.error)
+            TextButton(onClick = { categoriesLoadTrigger++ }) { Text("Retry") }
+          }
         } else {
           Box(modifier = Modifier.padding(top = 8.dp)) {
             OutlinedTextField(
@@ -278,7 +327,12 @@ private fun AddToWishlistDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
               onValueChange = {},
               readOnly = true,
               label = { Text("Category") },
-              modifier = Modifier.fillMaxWidth().clickable { categoryMenuExpanded = true }
+              modifier = Modifier.fillMaxWidth()
+            )
+            Box(
+              modifier = Modifier
+                .matchParentSize()
+                .clickable { categoryMenuExpanded = true }
             )
             DropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
               categories.forEach { category ->
@@ -302,7 +356,12 @@ private fun AddToWishlistDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Subcategory (optional)") },
-                modifier = Modifier.fillMaxWidth().clickable { subcategoryMenuExpanded = true }
+                modifier = Modifier.fillMaxWidth()
+              )
+              Box(
+                modifier = Modifier
+                  .matchParentSize()
+                  .clickable { subcategoryMenuExpanded = true }
               )
               DropdownMenu(expanded = subcategoryMenuExpanded, onDismissRequest = { subcategoryMenuExpanded = false }) {
                 DropdownMenuItem(

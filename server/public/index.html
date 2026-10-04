@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Electro World — Coming Soon</title>
+<meta name="description" content="The Electro World app launches soon. Register your number to be notified on day one." />
+<link rel="icon" type="image/png" href="/images/favicon.png" />
+<style>
+  :root {
+    color-scheme: dark;
+    --gold: #D4A359;
+    --gold-light: #F2D19A;
+    --gold-dark: #7F5B2F;
+    --bg: #1E2022;
+    --surface: #2C2D2F;
+    --surface-variant: #3A3C3E;
+    --text: #EEEEEE;
+    --text-secondary: #AAAAAA;
+    --success: #81C784;
+    --error: #E57373;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 16px 24px;
+  }
+  .wrap {
+    width: 100%;
+    max-width: 480px;
+    text-align: center;
+  }
+  .logo {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 20px;
+  }
+  h1 {
+    font-size: 26px;
+    margin: 0 0 8px;
+    background: linear-gradient(90deg, var(--gold-light), var(--gold));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  p.subtitle {
+    margin: 0 0 32px;
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .countdown {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 36px;
+  }
+  .unit {
+    background: var(--surface);
+    border: 1px solid var(--surface-variant);
+    border-radius: 12px;
+    padding: 14px 6px;
+    width: 72px;
+  }
+  .unit .value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gold-light);
+    font-variant-numeric: tabular-nums;
+  }
+  .unit .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+  .live-banner {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--gold-dark);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 36px;
+    font-size: 15px;
+    color: var(--gold-light);
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--surface-variant);
+    border-radius: 16px;
+    padding: 24px 20px;
+    text-align: left;
+  }
+  .card h2 {
+    font-size: 17px;
+    margin: 0 0 4px;
+    color: var(--text);
+  }
+  .card p.card-subtitle {
+    margin: 0 0 18px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text-secondary);
+  }
+  .phone-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .phone-row .code {
+    flex: 0 0 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-variant);
+    border: 1px solid var(--surface-variant);
+    border-radius: 8px;
+    font-size: 15px;
+    color: var(--text);
+  }
+  input[type="tel"], input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 11px 12px;
+    border: 1px solid var(--surface-variant);
+    border-radius: 8px;
+    font-size: 15px;
+    background: var(--bg);
+    color: var(--text);
+  }
+  input::placeholder { color: var(--text-secondary); }
+  input[type="text"] { margin-bottom: 18px; }
+  button {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--gold), var(--gold-dark));
+    color: #1a1a1a;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  button:disabled {
+    background: var(--surface-variant);
+    color: var(--text-secondary);
+    cursor: default;
+  }
+  .message {
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin-top: 12px;
+    text-align: center;
+  }
+  .message.error { color: var(--error); }
+  .message.success { color: var(--success); }
+  footer {
+    margin-top: 32px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <img class="logo" src="/images/ew-logo.png" alt="Electro World" />
+    <h1>The Electro World App is Almost Here</h1>
+    <p class="subtitle">Faster ordering, live order tracking and exclusive deals — launching soon. Register below and we'll let you know the moment it's live.</p>
+
+    <div class="countdown" id="countdown">
+      <div class="unit"><div class="value" id="d">00</div><div class="label">Days</div></div>
+      <div class="unit"><div class="value" id="h">00</div><div class="label">Hrs</div></div>
+      <div class="unit"><div class="value" id="m">00</div><div class="label">Min</div></div>
+      <div class="unit"><div class="value" id="s">00</div><div class="label">Sec</div></div>
+    </div>
+
+    <div class="live-banner" id="liveBanner">We're live! Taking you to the app&hellip;</div>
+
+    <div class="card">
+      <h2>Reserve your spot</h2>
+      <p class="card-subtitle">Optional — name and number stay with us and are only used to notify you at launch.</p>
+      <form id="waitlistForm">
+        <label for="phone">Phone number</label>
+        <div class="phone-row">
+          <div class="code">+91</div>
+          <input type="tel" id="phone" inputmode="numeric" maxlength="10" placeholder="10-digit number" autocomplete="tel-national" />
+        </div>
+        <label for="name">Name (optional)</label>
+        <input type="text" id="name" placeholder="Your name" autocomplete="name" />
+        <button id="submitBtn" type="submit">Notify me at launch</button>
+        <div class="message" id="formMessage"></div>
+      </form>
+    </div>
+
+    <footer>&copy; <span id="year"></span> Electro World</footer>
+  </div>
+
+  <script>
+    // ---- Configuration ----------------------------------------------------
+    // Countdown target: 00:00 on 10 Oct, IST (Asia/Kolkata, UTC+5:30).
+    var LAUNCH_AT = new Date("2026-10-10T00:00:00+05:30");
+    // Replace with the real Play Store listing once published. Until this is
+    // changed from the placeholder, the page shows the "we're live" banner
+    // instead of redirecting.
+    var PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.aistudio.electroworld.zpqxvd";
+
+    var SUPABASE_URL = "https://hniubfjndpmftnuqtrjw.supabase.co";
+    var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaXViZmpuZHBtZnRudXF0cmp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxMTczNjIsImV4cCI6MjA5OTY5MzM2Mn0.taWZwNv4Zy9Uy6xgL3mTMe_fyY7dV-02rheObG8nDrI";
+    // ------------------------------------------------------------------------
+
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+    function pad(n) { return String(n).padStart(2, "0"); }
+
+    function tick() {
+      var diff = LAUNCH_AT.getTime() - Date.now();
+      if (diff <= 0) {
+        document.getElementById("countdown").style.display = "none";
+        document.getElementById("liveBanner").style.display = "block";
+        clearInterval(timer);
+        window.location.replace(PLAY_STORE_URL);
+        return;
+      }
+      var totalSeconds = Math.floor(diff / 1000);
+      var days = Math.floor(totalSeconds / 86400);
+      var hours = Math.floor((totalSeconds % 86400) / 3600);
+      var minutes = Math.floor((totalSeconds % 3600) / 60);
+      var seconds = totalSeconds % 60;
+      document.getElementById("d").textContent = pad(days);
+      document.getElementById("h").textContent = pad(hours);
+      document.getElementById("m").textContent = pad(minutes);
+      document.getElementById("s").textContent = pad(seconds);
+    }
+    tick();
+    var timer = setInterval(tick, 1000);
+
+    var PHONE_REGEX = /^\d{10}$/;
+
+    document.getElementById("waitlistForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var phoneEl = document.getElementById("phone");
+      var nameEl = document.getElementById("name");
+      var msgEl = document.getElementById("formMessage");
+      var btn = document.getElementById("submitBtn");
+      msgEl.className = "message";
+      msgEl.textContent = "";
+
+      var phone = phoneEl.value.trim();
+      var name = nameEl.value.trim();
+
+      if (!PHONE_REGEX.test(phone)) {
+        msgEl.className = "message error";
+        msgEl.textContent = "Enter a valid 10-digit phone number.";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Submitting...";
+
+      fetch(SUPABASE_URL + "/rest/v1/waitlist", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: "Bearer " + SUPABASE_ANON_KEY,
+          Prefer: "resolution=ignore-duplicates"
+        },
+        body: JSON.stringify({
+          phone: "+91" + phone,
+          name: name || null
+        })
+      })
+        .then(function (res) {
+          if (!res.ok) {
+            throw new Error("Could not save your details. Please try again.");
+          }
+          msgEl.className = "message success";
+          msgEl.textContent = "You're on the list! We'll notify you the moment the app is live.";
+          phoneEl.value = "";
+          nameEl.value = "";
+          btn.textContent = "Notify me at launch";
+          btn.disabled = false;
+        })
+        .catch(function (err) {
+          msgEl.className = "message error";
+          msgEl.textContent = err.message || "Something went wrong. Please try again.";
+          btn.textContent = "Notify me at launch";
+          btn.disabled = false;
+        });
+    });
+  </script>
+</body>
+</html>

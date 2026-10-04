@@ -364,6 +364,21 @@ exception
   when duplicate_object then null;
 end $$;
 
+-- Expanded from the original 6-value set to match the sales team's actual
+-- call-outcome taxonomy. 'interested' is left in place (Postgres can't drop
+-- an enum value) even though it's no longer offered in the UI -- any
+-- historical rows still carrying it just display their raw value.
+alter type public.wishlist_response_status add value if not exists 'invalid_number';
+alter type public.wishlist_response_status add value if not exists 'sent_details_whatsapp';
+alter type public.wishlist_response_status add value if not exists 'store_visit_scheduled';
+alter type public.wishlist_response_status add value if not exists 'interested_comparing_prices';
+alter type public.wishlist_response_status add value if not exists 'interested_waiting_emi';
+alter type public.wishlist_response_status add value if not exists 'interested_waiting_stock';
+alter type public.wishlist_response_status add value if not exists 'interested_waiting_offer';
+alter type public.wishlist_response_status add value if not exists 'pending_delivery';
+alter type public.wishlist_response_status add value if not exists 'bought_elsewhere';
+alter type public.wishlist_response_status add value if not exists 'dropped_plan';
+
 alter table public.wishlist_items add column if not exists status public.wishlist_response_status not null default 'not_contacted';
 alter table public.wishlist_items add column if not exists status_updated_at timestamptz;
 alter table public.wishlist_items add column if not exists status_updated_by uuid references public.staff_profiles(id);
@@ -382,5 +397,24 @@ create table if not exists public.wishlist_call_logs (
   customer_name text not null,
   called_at timestamptz not null default now()
 );
+
+-- Pre-launch landing page sign-ups (server/public/index.html). Inserted
+-- directly from the browser via the Supabase REST API with the anon key --
+-- RLS below allows anon insert only, no select/update/delete, so the page
+-- can take sign-ups without exposing the list or needing a new API function
+-- (see the Vercel Hobby 12-function cap note in lib/db.js's callers).
+create table if not exists public.waitlist (
+  phone text primary key,          -- E.164 format, e.g. +919876543210
+  name text,                       -- optional
+  created_at timestamptz not null default now()
+);
+
+alter table public.waitlist enable row level security;
+
+drop policy if exists "waitlist anon insert" on public.waitlist;
+create policy "waitlist anon insert" on public.waitlist
+  for insert
+  to anon
+  with check (true);
 
 create index if not exists wishlist_call_logs_wishlist_item_idx on public.wishlist_call_logs (wishlist_item_id, called_at desc);

@@ -169,7 +169,12 @@ private fun AddStaffDialog(onDismiss: () -> Unit, onCreated: () -> Unit) {
             onValueChange = {},
             readOnly = true,
             label = { Text("Role") },
-            modifier = Modifier.fillMaxWidth().clickable { roleMenuExpanded = true }
+            modifier = Modifier.fillMaxWidth()
+          )
+          Box(
+            modifier = Modifier
+              .matchParentSize()
+              .clickable { roleMenuExpanded = true }
           )
           DropdownMenu(expanded = roleMenuExpanded, onDismissRequest = { roleMenuExpanded = false }) {
             listOf("admin", "employee").forEach { option ->

@@ -21,6 +21,7 @@
     --error: #E57373;
   }
   * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0;
     min-height: 100vh;
@@ -30,7 +31,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 40px 16px 24px;
+    padding: 32px 16px 24px;
+  }
+  main.content { width: 100%; display: flex; justify-content: center; }
+  footer {
+    width: 100%;
+    margin-top: auto;
+    padding-top: 32px;
+    font-size: 12px;
+    text-align: center;
+    color: var(--text-secondary);
   }
   .wrap {
     width: 100%;
@@ -39,12 +49,13 @@
   }
   .logo {
     width: 72px;
-    height: 72px;
+    height: auto;
     margin-bottom: 20px;
   }
   h1 {
-    font-size: 26px;
+    font-size: clamp(24px, 6vw, 30px);
     margin: 0 0 8px;
+    line-height: 1.25;
     background: linear-gradient(90deg, var(--gold-light), var(--gold));
     -webkit-background-clip: text;
     background-clip: text;
@@ -59,18 +70,20 @@
   .countdown {
     display: flex;
     justify-content: center;
-    gap: 10px;
+    gap: clamp(6px, 2vw, 10px);
     margin-bottom: 36px;
   }
   .unit {
     background: var(--surface);
     border: 1px solid var(--surface-variant);
     border-radius: 12px;
-    padding: 14px 6px;
-    width: 72px;
+    padding: 14px 4px;
+    flex: 1 1 0;
+    max-width: 72px;
+    text-align: center;
   }
   .unit .value {
-    font-size: 28px;
+    font-size: clamp(20px, 5.5vw, 28px);
     font-weight: 700;
     color: var(--gold-light);
     font-variant-numeric: tabular-nums;
@@ -168,27 +181,46 @@
   }
   .message.error { color: var(--error); }
   .message.success { color: var(--success); }
-  footer {
-    margin-top: 32px;
-    font-size: 12px;
-    color: var(--text-secondary);
+
+  @media (min-width: 760px) {
+    body { padding: 64px 32px; }
+    .wrap {
+      max-width: 920px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      align-items: center;
+      gap: 56px;
+      text-align: left;
+    }
+    .hero { text-align: left; }
+    .logo { margin-left: 0; }
+    .countdown { justify-content: flex-start; }
+    .unit { max-width: 76px; }
+    .live-banner { text-align: left; }
+  }
+
+  @media (min-width: 1100px) {
+    .wrap { max-width: 1040px; gap: 72px; }
   }
 </style>
 </head>
 <body>
+  <main class="content">
   <div class="wrap">
-    <img class="logo" src="/images/ew-logo.png" alt="Electro World" />
-    <h1>The Electro World App is Almost Here</h1>
-    <p class="subtitle">Faster ordering, live order tracking and exclusive deals — launching soon. Register below and we'll let you know the moment it's live.</p>
+    <div class="hero">
+      <img class="logo" src="/images/ew-logo.png" alt="Electro World" />
+      <h1>The Electro World App is Almost Here</h1>
+      <p class="subtitle">Faster ordering, live order tracking and exclusive deals — launching soon. Register below and we'll let you know the moment it's live.</p>
 
-    <div class="countdown" id="countdown">
-      <div class="unit"><div class="value" id="d">00</div><div class="label">Days</div></div>
-      <div class="unit"><div class="value" id="h">00</div><div class="label">Hrs</div></div>
-      <div class="unit"><div class="value" id="m">00</div><div class="label">Min</div></div>
-      <div class="unit"><div class="value" id="s">00</div><div class="label">Sec</div></div>
+      <div class="countdown" id="countdown">
+        <div class="unit"><div class="value" id="d">00</div><div class="label">Days</div></div>
+        <div class="unit"><div class="value" id="h">00</div><div class="label">Hrs</div></div>
+        <div class="unit"><div class="value" id="m">00</div><div class="label">Min</div></div>
+        <div class="unit"><div class="value" id="s">00</div><div class="label">Sec</div></div>
+      </div>
+
+      <div class="live-banner" id="liveBanner">We're live! Taking you to the app&hellip;</div>
     </div>
-
-    <div class="live-banner" id="liveBanner">We're live! Taking you to the app&hellip;</div>
 
     <div class="card">
       <h2>Reserve your spot</h2>
@@ -199,15 +231,16 @@
           <div class="code">+91</div>
           <input type="tel" id="phone" inputmode="numeric" maxlength="10" placeholder="10-digit number" autocomplete="tel-national" />
         </div>
-        <label for="name">Name (optional)</label>
+        <label for="name">Name</label>
         <input type="text" id="name" placeholder="Your name" autocomplete="name" />
         <button id="submitBtn" type="submit">Notify me at launch</button>
         <div class="message" id="formMessage"></div>
       </form>
     </div>
-
-    <footer>&copy; <span id="year"></span> Electro World</footer>
   </div>
+  </main>
+
+  <footer>&copy; <span id="year"></span> Electro World</footer>
 
   <script>
     // ---- Configuration ----------------------------------------------------

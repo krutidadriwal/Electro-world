@@ -8,6 +8,7 @@ const { requireStaff, requireAdmin, StaffAuthError } = require('../../lib/staffA
 const { routeSegmentsAfter } = require('../../lib/routeSegments');
 const { syncPriceList } = require('../../lib/priceList');
 const { normalizePhone } = require('../../lib/phone');
+const { sendToTokens } = require('../../lib/fcm');
 
 const VALID_ROLES = ['admin', 'employee'];
 const VALID_WISHLIST_STATUSES = [
@@ -70,6 +71,8 @@ module.exports = async function handler(req, res) {
       return installationsStatus(req, res);
     case 'invoice-requests-list':
       return invoiceRequestsList(req, res);
+    case 'invoice-requests-status':
+      return invoiceRequestsStatus(req, res);
     case 'device-token':
       return staffDeviceToken(req, res);
     default:
@@ -680,6 +683,84 @@ async function invoiceRequestsList(req, res) {
       return res.status(err.status).json({ error: err.message });
     }
     console.error('list invoice requests error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Admin-only, like invoiceRequestsList. "Closed" isn't a status that sticks
+// around to be filtered on later -- it means the request is done, so the row
+// is deleted outright (same pattern as wishlist's "purchased"), and the
+// customer who asked for it is pushed a heads-up that their invoice is
+// ready, via the CUSTOMER app's FCM project (lib/fcm.js), not the staff
+// app's (lib/staffFcm.js) -- this notification is for them, not staff.
+// "Open" is the only other option exposed in the staff app's dropdown, which
+// just reverts status/resolved_at without deleting anything.
+async function invoiceRequestsStatus(req, res) {
+  if (req.method !== 'PATCH') {
+    res.setHeader('Allow', 'PATCH');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { invoiceRequestId, status } = req.body ?? {};
+  if (typeof invoiceRequestId !== 'string' || invoiceRequestId.trim().length === 0) {
+    return res.status(400).json({ error: 'invoiceRequestId is required' });
+  }
+  if (status !== 'open' && status !== 'closed') {
+    return res.status(400).json({ error: 'status must be one of: open, closed' });
+  }
+
+  try {
+    await requireAdmin(req);
+
+    const pool = getPool();
+
+    if (status === 'closed') {
+      const result = await pool.query(
+        `delete from public.invoice_requests where id = $1 returning phone`,
+        [invoiceRequestId]
+      );
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: 'Invoice request not found' });
+      }
+      const { phone } = result.rows[0];
+
+      try {
+        const tokensResult = await pool.query('select fcm_token from public.device_tokens where phone = $1', [phone]);
+        const tokens = tokensResult.rows.map((row) => row.fcm_token);
+        if (tokens.length > 0) {
+          const { deadTokens } = await sendToTokens(tokens, {
+            title: 'Electro World',
+            body: 'Your requested invoice has been uploaded. Check the app to view/download it.'
+          });
+          if (deadTokens.length > 0) {
+            await pool.query('delete from public.device_tokens where fcm_token = any($1)', [deadTokens]);
+          }
+        }
+      } catch (pushErr) {
+        // The request is already deleted -- a push failure shouldn't fail
+        // the whole action, just get logged for follow-up.
+        console.error('invoice ready push error', pushErr);
+      }
+
+      return res.status(200).json({ id: invoiceRequestId, status: 'closed', deleted: true });
+    }
+
+    const result = await pool.query(
+      `update public.invoice_requests
+       set status = 'open', updated_at = now(), resolved_at = null
+       where id = $1
+       returning id, status, updated_at, resolved_at`,
+      [invoiceRequestId]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Invoice request not found' });
+    }
+    return res.status(200).json(result.rows[0]);
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('update invoice request status error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

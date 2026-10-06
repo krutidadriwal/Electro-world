@@ -55,8 +55,14 @@ async function sendToTokens(tokens, payload) {
       android: { priority: 'high' }
     });
     response.responses.forEach((result, index) => {
-      if (!result.success && result.error?.code === 'messaging/registration-token-not-registered') {
+      if (result.success) return;
+      if (result.error?.code === 'messaging/registration-token-not-registered') {
         deadTokens.push(batch[index]);
+      } else {
+        // Anything else (e.g. a sender/project mismatch) previously failed
+        // silently -- logged here so a bad token or credential shows up
+        // instead of just "no notification arrived".
+        console.error('staff FCM send failed', result.error?.code, result.error?.message);
       }
     });
   }

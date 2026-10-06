@@ -1,10 +1,15 @@
 package com.electroworld.staff
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -15,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import com.electroworld.staff.data.SessionManager
 import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.notifications.registerStaffFcmToken
@@ -42,6 +48,24 @@ class MainActivity : ComponentActivity() {
           var role by remember { mutableStateOf(sessionManager.role) }
           var email by remember { mutableStateOf(sessionManager.email) }
           var isResolvingProfile by remember { mutableStateOf(false) }
+
+          // Android 13+ (API 33) requires this permission to actually be
+          // granted at runtime -- declaring it in the manifest alone does
+          // nothing; without this, every push the server sends is silently
+          // enqueued-then-blocked by the OS (confirmed via `adb shell dumpsys
+          // notification`: numBlocked rising while numPostedByApp stayed 0),
+          // with no error anywhere, including inside onMessageReceived.
+          val notificationPermissionLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+          ) { /* no-op either way -- the in-app Notifications tab still works without tray pushes */ }
+
+          LaunchedEffect(Unit) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+              ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
+              notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+          }
 
           LaunchedEffect(isLoggedIn) {
             if (isLoggedIn && role.isBlank()) {

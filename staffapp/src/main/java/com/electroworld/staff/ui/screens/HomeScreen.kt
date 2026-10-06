@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
@@ -26,7 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 
-private enum class HomeTab { ALERTS, PRICE_LIST, WISHLIST, COMPLAINTS, INSTALLATIONS, BROADCAST, STAFF }
+private enum class HomeTab { ALERTS, PRICE_LIST, WISHLIST, COMPLAINTS, INSTALLATIONS, INVOICE_REQUESTS, BROADCAST, STAFF }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,6 +72,7 @@ fun HomeScreen(
         installationsInitialFilter = filter
         selectedTab = HomeTab.INSTALLATIONS
       }
+      "invoice_requests" -> selectedTab = HomeTab.INVOICE_REQUESTS
       else -> selectedTab = HomeTab.ALERTS
     }
   }
@@ -141,6 +143,12 @@ fun HomeScreen(
         )
         if (isAdmin) {
           NavigationBarItem(
+            selected = selectedTab == HomeTab.INVOICE_REQUESTS,
+            onClick = { selectedTab = HomeTab.INVOICE_REQUESTS },
+            icon = { Icon(Icons.Default.Receipt, contentDescription = "Invoice Requests") },
+            label = { Text("Invoices") }
+          )
+          NavigationBarItem(
             selected = selectedTab == HomeTab.BROADCAST,
             onClick = { selectedTab = HomeTab.BROADCAST },
             icon = { Icon(Icons.Default.Campaign, contentDescription = "Broadcast") },
@@ -167,6 +175,7 @@ fun HomeScreen(
       HomeTab.WISHLIST -> WishlistScreen(initialStatusFilter = wishlistInitialFilter, modifier = Modifier.padding(padding))
       HomeTab.COMPLAINTS -> ComplaintsScreen(initialStatusFilter = complaintsInitialFilter, modifier = Modifier.padding(padding))
       HomeTab.INSTALLATIONS -> InstallationsScreen(initialStatusFilter = installationsInitialFilter, modifier = Modifier.padding(padding))
+      HomeTab.INVOICE_REQUESTS -> InvoiceRequestsScreen(modifier = Modifier.padding(padding))
       HomeTab.BROADCAST -> NotificationsScreen(isAdmin = isAdmin, modifier = Modifier.padding(padding))
       HomeTab.STAFF -> StaffScreen(modifier = Modifier.padding(padding))
     }

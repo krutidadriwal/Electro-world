@@ -7,6 +7,7 @@
 
 const { getPool } = require('../lib/db');
 const { normalizePhone } = require('../lib/phone');
+const { notifyStaff } = require('../lib/staffNotify');
 
 module.exports = async function handler(req, res) {
   switch (req.query.resource) {
@@ -131,6 +132,16 @@ async function complaintsPost(req, res) {
         typeof contactPhone === 'string' && contactPhone.trim().length > 0 ? contactPhone.trim() : null
       ]
     );
+    const countResult = await pool.query(
+      `select count(*)::int as count from public.complaints where status = 'open'`
+    );
+    const pendingCount = countResult.rows[0].count;
+    await notifyStaff({
+      title: 'Electro World Staff',
+      body: `${pendingCount} open complaint${pendingCount === 1 ? '' : 's'}`,
+      target: 'complaints:open'
+    });
+
     return res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('create complaint error', err);
@@ -250,6 +261,16 @@ async function installationsPost(req, res) {
         typeof contactPhone === 'string' && contactPhone.trim().length > 0 ? contactPhone.trim() : null
       ]
     );
+    const countResult = await pool.query(
+      `select count(*)::int as count from public.installations where status = 'open'`
+    );
+    const pendingCount = countResult.rows[0].count;
+    await notifyStaff({
+      title: 'Electro World Staff',
+      body: `${pendingCount} open installation request${pendingCount === 1 ? '' : 's'}`,
+      target: 'installations:open'
+    });
+
     return res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('create installation error', err);
@@ -315,6 +336,17 @@ async function invoiceRequestsPost(req, res) {
        returning id, description, status, created_at, updated_at, resolved_at`,
       [normalizedPhone, description.trim()]
     );
+    const countResult = await pool.query(
+      `select count(*)::int as count from public.invoice_requests where status = 'open'`
+    );
+    const pendingCount = countResult.rows[0].count;
+    await notifyStaff({
+      adminOnly: true,
+      title: 'Electro World Staff',
+      body: `${pendingCount} pending invoice request${pendingCount === 1 ? '' : 's'}`,
+      target: 'invoice_requests:open'
+    });
+
     return res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('create invoice request error', err);

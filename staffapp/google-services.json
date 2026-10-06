@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "185029813474",
+    "project_id": "electro-world-staff",
+    "storage_bucket": "electro-world-staff.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:185029813474:android:5eda0cc22bdc007dd8eabb",
+        "android_client_info": {
+          "package_name": "com.aistudio.electroworld.staff"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqDVjGcVz2JJ763bbTsdA7stWW5vXlXmE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

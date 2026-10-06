@@ -33,6 +33,11 @@ data class UpdateStaffRoleRequest(
   val role: String
 )
 
+@JsonClass(generateAdapter = true)
+data class RegisterStaffDeviceTokenRequest(
+  val fcmToken: String
+)
+
 interface StaffApi {
   @GET("api/staff/me")
   suspend fun me(): StaffMember
@@ -45,4 +50,7 @@ interface StaffApi {
 
   @PATCH("api/staff/role")
   suspend fun updateRole(@Body request: UpdateStaffRoleRequest): StaffMember
+
+  @POST("api/staff/device-token")
+  suspend fun registerDeviceToken(@Body request: RegisterStaffDeviceTokenRequest)
 }

@@ -1,9 +1,12 @@
+import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.android)
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.secrets)
+  alias(libs.plugins.google.services)
 }
 
 android {
@@ -58,7 +61,19 @@ secrets {
   defaultPropertiesFileName = ".env.example"
 }
 
+// Its own Firebase project ("electro-world-staff"), separate from :app's
+// ("ew-app-gondia") -- the server sends to it via its own service account
+// (STAFF_FIREBASE_SERVICE_ACCOUNT_JSON, see server/lib/staffFcm.js), not
+// the customer app's. Needs its own google-services.json dropped into staffapp/ --
+// WARN (not the default error) so the build doesn't break before that file
+// exists.
+googleServices {
+  missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN
+}
+
 dependencies {
+  implementation(platform(libs.firebase.bom))
+  implementation(libs.firebase.messaging)
   implementation(platform(libs.androidx.compose.bom))
   implementation(libs.androidx.activity.compose)
   implementation(libs.androidx.compose.material.icons.core)

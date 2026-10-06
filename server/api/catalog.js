@@ -6,6 +6,7 @@
 
 const { getPool } = require('../lib/db');
 const { normalizePhone } = require('../lib/phone');
+const { notifyStaff } = require('../lib/staffNotify');
 
 module.exports = async function handler(req, res) {
   if (req.query.resource === 'wishlist') {
@@ -165,6 +166,22 @@ async function wishlistPost(req, res) {
     } catch (err) {
       await pool.query('rollback');
       throw err;
+    }
+
+    const added = subcategories.length > 0 || categoryStarred === true;
+    if (added) {
+      const countResult = await pool.query(
+        `select count(*)::int as count from public.wishlist_items where status = 'not_contacted'`
+      );
+      const pendingCount = countResult.rows[0].count;
+      // Awaited (not fire-and-forget): on Vercel, a serverless invocation can
+      // be frozen the instant the response is sent, so an un-awaited async
+      // call here could simply never run.
+      await notifyStaff({
+        title: 'Electro World Staff',
+        body: `${pendingCount} new wishlist request${pendingCount === 1 ? '' : 's'}`,
+        target: 'wishlist:not_contacted'
+      });
     }
 
     const result = await pool.query(

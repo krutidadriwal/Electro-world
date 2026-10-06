@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:1-26:12
-INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:1-26:12
-INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:1-26:12
-INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:1-26:12
+ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:1-36:12
+INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:1-36:12
+INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:1-36:12
+INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:1-36:12
 MERGED from [androidx.compose.material3:material3-android:1.3.0] C:\Users\kruti\.gradle\caches\8.13\transforms\0b6b242cb5c2d94006b99fd9fd3fb5be\transformed\material3-release\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.compose.material:material-android:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\adfc9af3245be10d41e75ca24994f637\transformed\material-release\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.material:material-ripple-android:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\d9f2fd5a0a4417ad5431f25c76bd2c45\transformed\material-ripple-release\AndroidManifest.xml:2:1-7:12
@@ -20,19 +20,44 @@ MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.7.0] C:\Users\krut
 MERGED from [androidx.compose.ui:ui-tooling-android:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\914d6b4e5340d39f3e472e3bd11bea89\transformed\ui-tooling-release\AndroidManifest.xml:17:1-28:12
 MERGED from [androidx.compose.ui:ui-graphics-android:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\d6b7b25db50e89a7b400afcb4e382764\transformed\ui-graphics-release\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.ui:ui-test-manifest:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\81a26d1d7543f2ebbb9564d86b8fa32e\transformed\ui-test-manifest-1.7.0\AndroidManifest.xml:17:1-28:12
-MERGED from [androidx.activity:activity:1.10.1] C:\Users\kruti\.gradle\caches\8.13\transforms\877a34463b1ba24ecb871f820abd3ee4\transformed\activity-1.10.1\AndroidManifest.xml:17:1-22:12
+MERGED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:17:1-66:12
+MERGED from [com.google.android.gms:play-services-cloud-messaging:17.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\b4d5b4a97d985d41e1895ef58ec90d8f\transformed\play-services-cloud-messaging-17.4.0\AndroidManifest.xml:2:1-13:12
+MERGED from [com.google.android.gms:play-services-base:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\9fd226de86b458ea56ca355d622228bf\transformed\play-services-base-18.9.0\AndroidManifest.xml:16:1-24:12
+MERGED from [com.google.firebase:firebase-iid-interop:17.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\f748db875886c1a94b92fab3ce074247\transformed\firebase-iid-interop-17.1.0\AndroidManifest.xml:2:1-10:12
+MERGED from [com.google.firebase:firebase-measurement-connector:19.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\b632de7df03cc4ffaa786069443b2552\transformed\firebase-measurement-connector-19.0.0\AndroidManifest.xml:17:1-25:12
+MERGED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:2:1-24:12
+MERGED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:15:1-41:12
+MERGED from [com.google.firebase:firebase-installations-interop:17.3.0] C:\Users\kruti\.gradle\caches\8.13\transforms\df1caa4f78f3f69af63c865ecaf030d1\transformed\firebase-installations-interop-17.3.0\AndroidManifest.xml:15:1-19:12
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.7.1] C:\Users\kruti\.gradle\caches\8.13\transforms\da63fe6481a2605bc1ccde3138767f90\transformed\runtime-saveable-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-android:1.7.1] C:\Users\kruti\.gradle\caches\8.13\transforms\a04498a472c04f1c559896b33c1c1267\transformed\runtime-release\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\55ac61303429a6f35f48e189b9bc04f9\transformed\customview-poolingcontainer-1.0.0\AndroidManifest.xml:17:1-23:12
 MERGED from [androidx.core:core-ktx:1.18.0] C:\Users\kruti\.gradle\caches\8.13\transforms\854fed58d52ad6ef6060bebf53591028\transformed\core-ktx-1.18.0\AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.android.gms:play-services-stats:17.0.2] C:\Users\kruti\.gradle\caches\8.13\transforms\deea9f9aacd17b774ba0f1ee7a28dca2\transformed\play-services-stats-17.0.2\AndroidManifest.xml:2:1-9:12
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\8caa99fe7fda6c35d52080ff989f6685\transformed\legacy-support-core-utils-1.0.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.autofill:autofill:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\0f0f72fb48f923bb5029354a526a4575\transformed\autofill-1.0.0\AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.graphics:graphics-path:1.0.1] C:\Users\kruti\.gradle\caches\8.13\transforms\fa03cff382e1ba3ffafd0e1262d42f08\transformed\graphics-path-1.0.1\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\6bace709c3d16d78bb5548aade6794d6\transformed\viewpager-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\2b0470f89b2bdf74a640f600bdb4565a\transformed\loader-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.customview:customview:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ee8b331e6b3489deddaf649223f0d2d3\transformed\customview-1.0.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\kruti\.gradle\caches\8.13\transforms\030f30c55eaf05cec369f066c22116ca\transformed\emoji2-1.3.0\AndroidManifest.xml:17:1-35:12
 MERGED from [androidx.core:core:1.18.0] C:\Users\kruti\.gradle\caches\8.13\transforms\7189c4f270454c571f3e77e1cb70214a\transformed\core-1.18.0\AndroidManifest.xml:17:1-30:12
 MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] C:\Users\kruti\.gradle\caches\8.13\transforms\2905f058048c8a8a846f11e541458b3d\transformed\savedstate-ktx-1.2.1\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.savedstate:savedstate:1.2.1] C:\Users\kruti\.gradle\caches\8.13\transforms\fcb597a998e1ffbdb010911c74c1bc54\transformed\savedstate-1.2.1\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\182e4b73694945631485dcd19bee9b52\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\11ec2c2304941e1b5c93f47775975666\transformed\lifecycle-livedata-core-ktx-2.8.7\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\8a5e7c9801e1ad4a1867354e051b44f8\transformed\lifecycle-livedata-2.8.7\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\b9616a36fe6a083ff44533eaaae921c6\transformed\lifecycle-livedata-core-2.8.7\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\bc09a11c63358dd5269fd9e53b75ded9\transformed\lifecycle-viewmodel-2.8.7\AndroidManifest.xml:2:1-5:12
 MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\cbbab32ac6d071cbc3fb7e913706a36d\transformed\lifecycle-viewmodel-release\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\c763de68d0ba2d9ff04a02b13cf82bf4\transformed\lifecycle-runtime-release\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.datastore:datastore-core-android:1.1.7] C:\Users\kruti\.gradle\caches\8.13\transforms\7c4f4e96890652fcf835aa19bcdf2308\transformed\datastore-core-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.datastore:datastore-preferences-core-android:1.1.7] C:\Users\kruti\.gradle\caches\8.13\transforms\c5b277bfc2573993a57e1671dc1f4476\transformed\datastore-preferences-core-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.datastore:datastore-android:1.1.7] C:\Users\kruti\.gradle\caches\8.13\transforms\f119dc8f441555316c17305144994bb5\transformed\datastore-release\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.datastore:datastore-preferences-android:1.1.7] C:\Users\kruti\.gradle\caches\8.13\transforms\72f1abbc95b0cface658d28c018bb4cc\transformed\datastore-preferences-release\AndroidManifest.xml:17:1-22:12
+MERGED from [com.google.android.gms:play-services-tasks:18.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\27bc643bd5b8926f4cff7e91db34d46d\transformed\play-services-tasks-18.4.0\AndroidManifest.xml:2:1-6:12
+MERGED from [com.google.android.gms:play-services-basement:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\c9351f2b9664fd13301ce83e8c659923\transformed\play-services-basement-18.9.0\AndroidManifest.xml:16:1-26:12
+MERGED from [androidx.fragment:fragment:1.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\61ccf27160b4e308b0bfd945dda276cd\transformed\fragment-1.1.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.activity:activity:1.10.1] C:\Users\kruti\.gradle\caches\8.13\transforms\877a34463b1ba24ecb871f820abd3ee4\transformed\activity-1.10.1\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\71b68468ca89761e1ece235bee9830fd\transformed\lifecycle-viewmodel-savedstate-2.8.7\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\bc37c1fb1d481e295524613b3e28c623\transformed\lifecycle-viewmodel-ktx-2.8.7\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\4978b701a6a2bfd57c43beba47064c2d\transformed\lifecycle-runtime-ktx-release\AndroidManifest.xml:2:1-7:12
@@ -43,13 +68,20 @@ MERGED from [androidx.compose.material:material-icons-core-android:1.7.0] C:\Use
 MERGED from [androidx.compose.ui:ui-android:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\6f13e7c6bcdf5d89ee58edcfc517926f\transformed\ui-release\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.activity:activity-ktx:1.10.1] C:\Users\kruti\.gradle\caches\8.13\transforms\b0e36c28f7357841d054c8f28a4b430c\transformed\activity-ktx-1.10.1\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.activity:activity-compose:1.10.1] C:\Users\kruti\.gradle\caches\8.13\transforms\ff33cd94aba46b777d203f9b496b5db9\transformed\activity-compose-1.10.1\AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.runtime:runtime-saveable-android:1.7.1] C:\Users\kruti\.gradle\caches\8.13\transforms\da63fe6481a2605bc1ccde3138767f90\transformed\runtime-saveable-release\AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.runtime:runtime-android:1.7.1] C:\Users\kruti\.gradle\caches\8.13\transforms\a04498a472c04f1c559896b33c1c1267\transformed\runtime-release\AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.firebase:firebase-components:19.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\0d06bf7c4ca2524ded7233eab24db67a\transformed\firebase-components-19.0.0\AndroidManifest.xml:15:1-20:12
+MERGED from [com.google.firebase:firebase-datatransport:18.2.0] C:\Users\kruti\.gradle\caches\8.13\transforms\92b561be9b978ece049c9613170c819a\transformed\firebase-datatransport-18.2.0\AndroidManifest.xml:15:1-31:12
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\eab13d5e8e9903e8a4da01c233a8ac32\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:15:1-37:12
+MERGED from [com.google.firebase:firebase-encoders-json:18.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\0328b88db3343ec6b26f57c020b65e4e\transformed\firebase-encoders-json-18.0.0\AndroidManifest.xml:15:1-23:12
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\08003b8d17b5f7585dfb5b5bb84d7e33\transformed\transport-runtime-3.1.9\AndroidManifest.xml:15:1-41:12
+MERGED from [com.google.android.datatransport:transport-api:3.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\c0ea7952ff091c3db0402b3e77b736e8\transformed\transport-api-3.1.0\AndroidManifest.xml:15:1-20:12
 MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\c49d63e492ac4af628acfa7815617898\transformed\interpolator-1.0.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\8c8b9997293e365d91182e27ac48d73a\transformed\profileinstaller-1.4.0\AndroidManifest.xml:17:1-55:12
 MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\e5f903962b909acfd83c991438c36ee0\transformed\startup-runtime-1.1.1\AndroidManifest.xml:17:1-33:12
 MERGED from [androidx.tracing:tracing:1.2.0] C:\Users\kruti\.gradle\caches\8.13\transforms\d7ef5d431951e8564fc62af6636bb73f\transformed\tracing-1.2.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\13f370f17cfe596735ec0696f61fd1de\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:17:1-27:12
+MERGED from [androidx.documentfile:documentfile:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\715cdba685db31008096a87b12fa9f60\transformed\documentfile-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\8e65322acf930a33fa6806528c7a8f8d\transformed\localbroadcastmanager-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.print:print:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\234dc4eb7c111e6d1ba704f0ea6bc01f\transformed\print-1.0.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ea15e66f0b236ba11cc091be1abb2791\transformed\core-runtime-2.2.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.annotation:annotation-experimental:1.4.1] C:\Users\kruti\.gradle\caches\8.13\transforms\37e664e502aff72cba24cfbe9483bb71\transformed\annotation-experimental-1.4.1\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.core:core-viewtree:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\d03e7dbd63cc1cd112e1f40eebdca970\transformed\core-viewtree-1.0.0\AndroidManifest.xml:2:1-7:12
@@ -63,21 +95,57 @@ MERGED from [androidx.core:core-viewtree:1.0.0] C:\Users\kruti\.gradle\caches\8.
 		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:11-69
 uses-permission#android.permission.INTERNET
 ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:4:5-67
+MERGED from [com.google.android.gms:play-services-cloud-messaging:17.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\b4d5b4a97d985d41e1895ef58ec90d8f\transformed\play-services-cloud-messaging-17.4.0\AndroidManifest.xml:8:5-67
+MERGED from [com.google.android.gms:play-services-cloud-messaging:17.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\b4d5b4a97d985d41e1895ef58ec90d8f\transformed\play-services-cloud-messaging-17.4.0\AndroidManifest.xml:8:5-67
+MERGED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:8:5-67
+MERGED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:8:5-67
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\eab13d5e8e9903e8a4da01c233a8ac32\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:25:5-67
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\eab13d5e8e9903e8a4da01c233a8ac32\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:25:5-67
 	android:name
 		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:4:22-64
+uses-permission#android.permission.POST_NOTIFICATIONS
+ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:5:5-77
+MERGED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:23:5-77
+MERGED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:23:5-77
+	android:name
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:5:22-74
 application
-ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:6:5-24:19
-INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:6:5-24:19
+ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:7:5-34:19
+INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:7:5-34:19
 MERGED from [androidx.compose.ui:ui-tooling-android:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\914d6b4e5340d39f3e472e3bd11bea89\transformed\ui-tooling-release\AndroidManifest.xml:22:5-26:19
 MERGED from [androidx.compose.ui:ui-tooling-android:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\914d6b4e5340d39f3e472e3bd11bea89\transformed\ui-tooling-release\AndroidManifest.xml:22:5-26:19
 MERGED from [androidx.compose.ui:ui-test-manifest:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\81a26d1d7543f2ebbb9564d86b8fa32e\transformed\ui-test-manifest-1.7.0\AndroidManifest.xml:22:5-26:19
 MERGED from [androidx.compose.ui:ui-test-manifest:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\81a26d1d7543f2ebbb9564d86b8fa32e\transformed\ui-test-manifest-1.7.0\AndroidManifest.xml:22:5-26:19
+MERGED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:28:5-64:19
+MERGED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:28:5-64:19
+MERGED from [com.google.android.gms:play-services-base:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\9fd226de86b458ea56ca355d622228bf\transformed\play-services-base-18.9.0\AndroidManifest.xml:19:5-23:19
+MERGED from [com.google.android.gms:play-services-base:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\9fd226de86b458ea56ca355d622228bf\transformed\play-services-base-18.9.0\AndroidManifest.xml:19:5-23:19
+MERGED from [com.google.firebase:firebase-iid-interop:17.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\f748db875886c1a94b92fab3ce074247\transformed\firebase-iid-interop-17.1.0\AndroidManifest.xml:7:5-8:19
+MERGED from [com.google.firebase:firebase-iid-interop:17.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\f748db875886c1a94b92fab3ce074247\transformed\firebase-iid-interop-17.1.0\AndroidManifest.xml:7:5-8:19
+MERGED from [com.google.firebase:firebase-measurement-connector:19.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\b632de7df03cc4ffaa786069443b2552\transformed\firebase-measurement-connector-19.0.0\AndroidManifest.xml:22:5-23:19
+MERGED from [com.google.firebase:firebase-measurement-connector:19.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\b632de7df03cc4ffaa786069443b2552\transformed\firebase-measurement-connector-19.0.0\AndroidManifest.xml:22:5-23:19
+MERGED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:11:5-22:19
+MERGED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:11:5-22:19
+MERGED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:22:5-39:19
+MERGED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:22:5-39:19
+MERGED from [com.google.android.gms:play-services-stats:17.0.2] C:\Users\kruti\.gradle\caches\8.13\transforms\deea9f9aacd17b774ba0f1ee7a28dca2\transformed\play-services-stats-17.0.2\AndroidManifest.xml:7:5-20
+MERGED from [com.google.android.gms:play-services-stats:17.0.2] C:\Users\kruti\.gradle\caches\8.13\transforms\deea9f9aacd17b774ba0f1ee7a28dca2\transformed\play-services-stats-17.0.2\AndroidManifest.xml:7:5-20
 MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\kruti\.gradle\caches\8.13\transforms\030f30c55eaf05cec369f066c22116ca\transformed\emoji2-1.3.0\AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\kruti\.gradle\caches\8.13\transforms\030f30c55eaf05cec369f066c22116ca\transformed\emoji2-1.3.0\AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.core:core:1.18.0] C:\Users\kruti\.gradle\caches\8.13\transforms\7189c4f270454c571f3e77e1cb70214a\transformed\core-1.18.0\AndroidManifest.xml:28:5-89
 MERGED from [androidx.core:core:1.18.0] C:\Users\kruti\.gradle\caches\8.13\transforms\7189c4f270454c571f3e77e1cb70214a\transformed\core-1.18.0\AndroidManifest.xml:28:5-89
 MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\182e4b73694945631485dcd19bee9b52\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\182e4b73694945631485dcd19bee9b52\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:23:5-33:19
+MERGED from [com.google.android.gms:play-services-tasks:18.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\27bc643bd5b8926f4cff7e91db34d46d\transformed\play-services-tasks-18.4.0\AndroidManifest.xml:5:5-20
+MERGED from [com.google.android.gms:play-services-tasks:18.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\27bc643bd5b8926f4cff7e91db34d46d\transformed\play-services-tasks-18.4.0\AndroidManifest.xml:5:5-20
+MERGED from [com.google.android.gms:play-services-basement:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\c9351f2b9664fd13301ce83e8c659923\transformed\play-services-basement-18.9.0\AndroidManifest.xml:20:5-24:19
+MERGED from [com.google.android.gms:play-services-basement:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\c9351f2b9664fd13301ce83e8c659923\transformed\play-services-basement-18.9.0\AndroidManifest.xml:20:5-24:19
+MERGED from [com.google.firebase:firebase-datatransport:18.2.0] C:\Users\kruti\.gradle\caches\8.13\transforms\92b561be9b978ece049c9613170c819a\transformed\firebase-datatransport-18.2.0\AndroidManifest.xml:21:5-29:19
+MERGED from [com.google.firebase:firebase-datatransport:18.2.0] C:\Users\kruti\.gradle\caches\8.13\transforms\92b561be9b978ece049c9613170c819a\transformed\firebase-datatransport-18.2.0\AndroidManifest.xml:21:5-29:19
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\eab13d5e8e9903e8a4da01c233a8ac32\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:27:5-35:19
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\eab13d5e8e9903e8a4da01c233a8ac32\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:27:5-35:19
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\08003b8d17b5f7585dfb5b5bb84d7e33\transformed\transport-runtime-3.1.9\AndroidManifest.xml:25:5-39:19
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\08003b8d17b5f7585dfb5b5bb84d7e33\transformed\transport-runtime-3.1.9\AndroidManifest.xml:25:5-39:19
 MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\8c8b9997293e365d91182e27ac48d73a\transformed\profileinstaller-1.4.0\AndroidManifest.xml:23:5-53:19
 MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\8c8b9997293e365d91182e27ac48d73a\transformed\profileinstaller-1.4.0\AndroidManifest.xml:23:5-53:19
 MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\e5f903962b909acfd83c991438c36ee0\transformed\startup-runtime-1.1.1\AndroidManifest.xml:25:5-31:19
@@ -89,37 +157,51 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\kr
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.18.0] C:\Users\kruti\.gradle\caches\8.13\transforms\7189c4f270454c571f3e77e1cb70214a\transformed\core-1.18.0\AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:10:9-35
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:11:9-35
 	android:label
-		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:9:9-41
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:10:9-41
 	android:icon
-		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:8:9-58
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:9:9-58
 	android:allowBackup
-		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:7:9-35
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:8:9-35
 	android:theme
-		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:11:9-46
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:12:9-46
 activity#com.electroworld.staff.MainActivity
-ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:12:9-23:20
+ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:13:9-25:20
 	android:label
-		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:15:13-45
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:16:13-45
+	android:launchMode
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:17:13-43
 	android:windowSoftInputMode
-		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:17:13-55
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:19:13-55
 	android:exported
-		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:14:13-36
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:15:13-36
 	android:theme
-		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:16:13-50
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:18:13-50
 	android:name
-		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:13:13-41
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:14:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:18:13-22:29
+ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:20:13-24:29
 action#android.intent.action.MAIN
-ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:19:17-69
+ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:21:17-69
 	android:name
-		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:19:25-66
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:21:25-66
 category#android.intent.category.LAUNCHER
-ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:21:17-77
+ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:23:17-77
 	android:name
-		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:21:27-74
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:23:27-74
+service#com.electroworld.staff.data.notifications.StaffFirebaseMessagingService
+ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:27:9-33:19
+	android:exported
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:29:13-37
+	android:name
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:28:13-77
+intent-filter#action:name:com.google.firebase.MESSAGING_EVENT
+ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:30:13-32:29
+action#com.google.firebase.MESSAGING_EVENT
+ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:31:17-78
+	android:name
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:31:25-75
 uses-sdk
 INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml
@@ -156,16 +238,44 @@ MERGED from [androidx.compose.ui:ui-graphics-android:1.7.0] C:\Users\kruti\.grad
 MERGED from [androidx.compose.ui:ui-graphics-android:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\d6b7b25db50e89a7b400afcb4e382764\transformed\ui-graphics-release\AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.ui:ui-test-manifest:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\81a26d1d7543f2ebbb9564d86b8fa32e\transformed\ui-test-manifest-1.7.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.compose.ui:ui-test-manifest:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\81a26d1d7543f2ebbb9564d86b8fa32e\transformed\ui-test-manifest-1.7.0\AndroidManifest.xml:20:5-44
-MERGED from [androidx.activity:activity:1.10.1] C:\Users\kruti\.gradle\caches\8.13\transforms\877a34463b1ba24ecb871f820abd3ee4\transformed\activity-1.10.1\AndroidManifest.xml:20:5-44
-MERGED from [androidx.activity:activity:1.10.1] C:\Users\kruti\.gradle\caches\8.13\transforms\877a34463b1ba24ecb871f820abd3ee4\transformed\activity-1.10.1\AndroidManifest.xml:20:5-44
+MERGED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:20:5-44
+MERGED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.gms:play-services-cloud-messaging:17.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\b4d5b4a97d985d41e1895ef58ec90d8f\transformed\play-services-cloud-messaging-17.4.0\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-cloud-messaging:17.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\b4d5b4a97d985d41e1895ef58ec90d8f\transformed\play-services-cloud-messaging-17.4.0\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-base:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\9fd226de86b458ea56ca355d622228bf\transformed\play-services-base-18.9.0\AndroidManifest.xml:18:5-43
+MERGED from [com.google.android.gms:play-services-base:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\9fd226de86b458ea56ca355d622228bf\transformed\play-services-base-18.9.0\AndroidManifest.xml:18:5-43
+MERGED from [com.google.firebase:firebase-iid-interop:17.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\f748db875886c1a94b92fab3ce074247\transformed\firebase-iid-interop-17.1.0\AndroidManifest.xml:5:5-44
+MERGED from [com.google.firebase:firebase-iid-interop:17.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\f748db875886c1a94b92fab3ce074247\transformed\firebase-iid-interop-17.1.0\AndroidManifest.xml:5:5-44
+MERGED from [com.google.firebase:firebase-measurement-connector:19.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\b632de7df03cc4ffaa786069443b2552\transformed\firebase-measurement-connector-19.0.0\AndroidManifest.xml:20:5-44
+MERGED from [com.google.firebase:firebase-measurement-connector:19.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\b632de7df03cc4ffaa786069443b2552\transformed\firebase-measurement-connector-19.0.0\AndroidManifest.xml:20:5-44
+MERGED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:5:5-44
+MERGED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:5:5-44
+MERGED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:19:5-44
+MERGED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:19:5-44
+MERGED from [com.google.firebase:firebase-installations-interop:17.3.0] C:\Users\kruti\.gradle\caches\8.13\transforms\df1caa4f78f3f69af63c865ecaf030d1\transformed\firebase-installations-interop-17.3.0\AndroidManifest.xml:17:5-44
+MERGED from [com.google.firebase:firebase-installations-interop:17.3.0] C:\Users\kruti\.gradle\caches\8.13\transforms\df1caa4f78f3f69af63c865ecaf030d1\transformed\firebase-installations-interop-17.3.0\AndroidManifest.xml:17:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.7.1] C:\Users\kruti\.gradle\caches\8.13\transforms\da63fe6481a2605bc1ccde3138767f90\transformed\runtime-saveable-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.7.1] C:\Users\kruti\.gradle\caches\8.13\transforms\da63fe6481a2605bc1ccde3138767f90\transformed\runtime-saveable-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.7.1] C:\Users\kruti\.gradle\caches\8.13\transforms\a04498a472c04f1c559896b33c1c1267\transformed\runtime-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.7.1] C:\Users\kruti\.gradle\caches\8.13\transforms\a04498a472c04f1c559896b33c1c1267\transformed\runtime-release\AndroidManifest.xml:5:5-44
 MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\55ac61303429a6f35f48e189b9bc04f9\transformed\customview-poolingcontainer-1.0.0\AndroidManifest.xml:20:5-21:38
 MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\55ac61303429a6f35f48e189b9bc04f9\transformed\customview-poolingcontainer-1.0.0\AndroidManifest.xml:20:5-21:38
 MERGED from [androidx.core:core-ktx:1.18.0] C:\Users\kruti\.gradle\caches\8.13\transforms\854fed58d52ad6ef6060bebf53591028\transformed\core-ktx-1.18.0\AndroidManifest.xml:5:5-44
 MERGED from [androidx.core:core-ktx:1.18.0] C:\Users\kruti\.gradle\caches\8.13\transforms\854fed58d52ad6ef6060bebf53591028\transformed\core-ktx-1.18.0\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-stats:17.0.2] C:\Users\kruti\.gradle\caches\8.13\transforms\deea9f9aacd17b774ba0f1ee7a28dca2\transformed\play-services-stats-17.0.2\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-stats:17.0.2] C:\Users\kruti\.gradle\caches\8.13\transforms\deea9f9aacd17b774ba0f1ee7a28dca2\transformed\play-services-stats-17.0.2\AndroidManifest.xml:5:5-44
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\8caa99fe7fda6c35d52080ff989f6685\transformed\legacy-support-core-utils-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\8caa99fe7fda6c35d52080ff989f6685\transformed\legacy-support-core-utils-1.0.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.autofill:autofill:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\0f0f72fb48f923bb5029354a526a4575\transformed\autofill-1.0.0\AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.autofill:autofill:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\0f0f72fb48f923bb5029354a526a4575\transformed\autofill-1.0.0\AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.graphics:graphics-path:1.0.1] C:\Users\kruti\.gradle\caches\8.13\transforms\fa03cff382e1ba3ffafd0e1262d42f08\transformed\graphics-path-1.0.1\AndroidManifest.xml:5:5-44
 MERGED from [androidx.graphics:graphics-path:1.0.1] C:\Users\kruti\.gradle\caches\8.13\transforms\fa03cff382e1ba3ffafd0e1262d42f08\transformed\graphics-path-1.0.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\6bace709c3d16d78bb5548aade6794d6\transformed\viewpager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\6bace709c3d16d78bb5548aade6794d6\transformed\viewpager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\2b0470f89b2bdf74a640f600bdb4565a\transformed\loader-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\2b0470f89b2bdf74a640f600bdb4565a\transformed\loader-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ee8b331e6b3489deddaf649223f0d2d3\transformed\customview-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ee8b331e6b3489deddaf649223f0d2d3\transformed\customview-1.0.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\kruti\.gradle\caches\8.13\transforms\030f30c55eaf05cec369f066c22116ca\transformed\emoji2-1.3.0\AndroidManifest.xml:21:5-44
 MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\kruti\.gradle\caches\8.13\transforms\030f30c55eaf05cec369f066c22116ca\transformed\emoji2-1.3.0\AndroidManifest.xml:21:5-44
 MERGED from [androidx.core:core:1.18.0] C:\Users\kruti\.gradle\caches\8.13\transforms\7189c4f270454c571f3e77e1cb70214a\transformed\core-1.18.0\AndroidManifest.xml:20:5-44
@@ -176,12 +286,34 @@ MERGED from [androidx.savedstate:savedstate:1.2.1] C:\Users\kruti\.gradle\caches
 MERGED from [androidx.savedstate:savedstate:1.2.1] C:\Users\kruti\.gradle\caches\8.13\transforms\fcb597a998e1ffbdb010911c74c1bc54\transformed\savedstate-1.2.1\AndroidManifest.xml:20:5-44
 MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\182e4b73694945631485dcd19bee9b52\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:21:5-44
 MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\182e4b73694945631485dcd19bee9b52\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\11ec2c2304941e1b5c93f47775975666\transformed\lifecycle-livedata-core-ktx-2.8.7\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\11ec2c2304941e1b5c93f47775975666\transformed\lifecycle-livedata-core-ktx-2.8.7\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\8a5e7c9801e1ad4a1867354e051b44f8\transformed\lifecycle-livedata-2.8.7\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\8a5e7c9801e1ad4a1867354e051b44f8\transformed\lifecycle-livedata-2.8.7\AndroidManifest.xml:20:5-44
 MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\b9616a36fe6a083ff44533eaaae921c6\transformed\lifecycle-livedata-core-2.8.7\AndroidManifest.xml:20:5-44
 MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\b9616a36fe6a083ff44533eaaae921c6\transformed\lifecycle-livedata-core-2.8.7\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\bc09a11c63358dd5269fd9e53b75ded9\transformed\lifecycle-viewmodel-2.8.7\AndroidManifest.xml:4:5-43
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\bc09a11c63358dd5269fd9e53b75ded9\transformed\lifecycle-viewmodel-2.8.7\AndroidManifest.xml:4:5-43
 MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\cbbab32ac6d071cbc3fb7e913706a36d\transformed\lifecycle-viewmodel-release\AndroidManifest.xml:20:5-44
 MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\cbbab32ac6d071cbc3fb7e913706a36d\transformed\lifecycle-viewmodel-release\AndroidManifest.xml:20:5-44
 MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\c763de68d0ba2d9ff04a02b13cf82bf4\transformed\lifecycle-runtime-release\AndroidManifest.xml:20:5-44
 MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\c763de68d0ba2d9ff04a02b13cf82bf4\transformed\lifecycle-runtime-release\AndroidManifest.xml:20:5-44
+MERGED from [androidx.datastore:datastore-core-android:1.1.7] C:\Users\kruti\.gradle\caches\8.13\transforms\7c4f4e96890652fcf835aa19bcdf2308\transformed\datastore-core-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.datastore:datastore-core-android:1.1.7] C:\Users\kruti\.gradle\caches\8.13\transforms\7c4f4e96890652fcf835aa19bcdf2308\transformed\datastore-core-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.datastore:datastore-preferences-core-android:1.1.7] C:\Users\kruti\.gradle\caches\8.13\transforms\c5b277bfc2573993a57e1671dc1f4476\transformed\datastore-preferences-core-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.datastore:datastore-preferences-core-android:1.1.7] C:\Users\kruti\.gradle\caches\8.13\transforms\c5b277bfc2573993a57e1671dc1f4476\transformed\datastore-preferences-core-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.datastore:datastore-android:1.1.7] C:\Users\kruti\.gradle\caches\8.13\transforms\f119dc8f441555316c17305144994bb5\transformed\datastore-release\AndroidManifest.xml:20:5-44
+MERGED from [androidx.datastore:datastore-android:1.1.7] C:\Users\kruti\.gradle\caches\8.13\transforms\f119dc8f441555316c17305144994bb5\transformed\datastore-release\AndroidManifest.xml:20:5-44
+MERGED from [androidx.datastore:datastore-preferences-android:1.1.7] C:\Users\kruti\.gradle\caches\8.13\transforms\72f1abbc95b0cface658d28c018bb4cc\transformed\datastore-preferences-release\AndroidManifest.xml:20:5-44
+MERGED from [androidx.datastore:datastore-preferences-android:1.1.7] C:\Users\kruti\.gradle\caches\8.13\transforms\72f1abbc95b0cface658d28c018bb4cc\transformed\datastore-preferences-release\AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.gms:play-services-tasks:18.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\27bc643bd5b8926f4cff7e91db34d46d\transformed\play-services-tasks-18.4.0\AndroidManifest.xml:4:5-43
+MERGED from [com.google.android.gms:play-services-tasks:18.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\27bc643bd5b8926f4cff7e91db34d46d\transformed\play-services-tasks-18.4.0\AndroidManifest.xml:4:5-43
+MERGED from [com.google.android.gms:play-services-basement:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\c9351f2b9664fd13301ce83e8c659923\transformed\play-services-basement-18.9.0\AndroidManifest.xml:18:5-43
+MERGED from [com.google.android.gms:play-services-basement:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\c9351f2b9664fd13301ce83e8c659923\transformed\play-services-basement-18.9.0\AndroidManifest.xml:18:5-43
+MERGED from [androidx.fragment:fragment:1.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\61ccf27160b4e308b0bfd945dda276cd\transformed\fragment-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.fragment:fragment:1.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\61ccf27160b4e308b0bfd945dda276cd\transformed\fragment-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.activity:activity:1.10.1] C:\Users\kruti\.gradle\caches\8.13\transforms\877a34463b1ba24ecb871f820abd3ee4\transformed\activity-1.10.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.10.1] C:\Users\kruti\.gradle\caches\8.13\transforms\877a34463b1ba24ecb871f820abd3ee4\transformed\activity-1.10.1\AndroidManifest.xml:20:5-44
 MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\71b68468ca89761e1ece235bee9830fd\transformed\lifecycle-viewmodel-savedstate-2.8.7\AndroidManifest.xml:20:5-44
 MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\71b68468ca89761e1ece235bee9830fd\transformed\lifecycle-viewmodel-savedstate-2.8.7\AndroidManifest.xml:20:5-44
 MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\bc37c1fb1d481e295524613b3e28c623\transformed\lifecycle-viewmodel-ktx-2.8.7\AndroidManifest.xml:5:5-44
@@ -202,10 +334,18 @@ MERGED from [androidx.activity:activity-ktx:1.10.1] C:\Users\kruti\.gradle\cache
 MERGED from [androidx.activity:activity-ktx:1.10.1] C:\Users\kruti\.gradle\caches\8.13\transforms\b0e36c28f7357841d054c8f28a4b430c\transformed\activity-ktx-1.10.1\AndroidManifest.xml:5:5-44
 MERGED from [androidx.activity:activity-compose:1.10.1] C:\Users\kruti\.gradle\caches\8.13\transforms\ff33cd94aba46b777d203f9b496b5db9\transformed\activity-compose-1.10.1\AndroidManifest.xml:5:5-44
 MERGED from [androidx.activity:activity-compose:1.10.1] C:\Users\kruti\.gradle\caches\8.13\transforms\ff33cd94aba46b777d203f9b496b5db9\transformed\activity-compose-1.10.1\AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.runtime:runtime-saveable-android:1.7.1] C:\Users\kruti\.gradle\caches\8.13\transforms\da63fe6481a2605bc1ccde3138767f90\transformed\runtime-saveable-release\AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.runtime:runtime-saveable-android:1.7.1] C:\Users\kruti\.gradle\caches\8.13\transforms\da63fe6481a2605bc1ccde3138767f90\transformed\runtime-saveable-release\AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.runtime:runtime-android:1.7.1] C:\Users\kruti\.gradle\caches\8.13\transforms\a04498a472c04f1c559896b33c1c1267\transformed\runtime-release\AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.runtime:runtime-android:1.7.1] C:\Users\kruti\.gradle\caches\8.13\transforms\a04498a472c04f1c559896b33c1c1267\transformed\runtime-release\AndroidManifest.xml:5:5-44
+MERGED from [com.google.firebase:firebase-components:19.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\0d06bf7c4ca2524ded7233eab24db67a\transformed\firebase-components-19.0.0\AndroidManifest.xml:18:5-44
+MERGED from [com.google.firebase:firebase-components:19.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\0d06bf7c4ca2524ded7233eab24db67a\transformed\firebase-components-19.0.0\AndroidManifest.xml:18:5-44
+MERGED from [com.google.firebase:firebase-datatransport:18.2.0] C:\Users\kruti\.gradle\caches\8.13\transforms\92b561be9b978ece049c9613170c819a\transformed\firebase-datatransport-18.2.0\AndroidManifest.xml:18:5-44
+MERGED from [com.google.firebase:firebase-datatransport:18.2.0] C:\Users\kruti\.gradle\caches\8.13\transforms\92b561be9b978ece049c9613170c819a\transformed\firebase-datatransport-18.2.0\AndroidManifest.xml:18:5-44
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\eab13d5e8e9903e8a4da01c233a8ac32\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:18:5-20:41
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\eab13d5e8e9903e8a4da01c233a8ac32\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:18:5-20:41
+MERGED from [com.google.firebase:firebase-encoders-json:18.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\0328b88db3343ec6b26f57c020b65e4e\transformed\firebase-encoders-json-18.0.0\AndroidManifest.xml:19:5-21:41
+MERGED from [com.google.firebase:firebase-encoders-json:18.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\0328b88db3343ec6b26f57c020b65e4e\transformed\firebase-encoders-json-18.0.0\AndroidManifest.xml:19:5-21:41
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\08003b8d17b5f7585dfb5b5bb84d7e33\transformed\transport-runtime-3.1.9\AndroidManifest.xml:18:5-20:41
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\08003b8d17b5f7585dfb5b5bb84d7e33\transformed\transport-runtime-3.1.9\AndroidManifest.xml:18:5-20:41
+MERGED from [com.google.android.datatransport:transport-api:3.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\c0ea7952ff091c3db0402b3e77b736e8\transformed\transport-api-3.1.0\AndroidManifest.xml:18:5-44
+MERGED from [com.google.android.datatransport:transport-api:3.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\c0ea7952ff091c3db0402b3e77b736e8\transformed\transport-api-3.1.0\AndroidManifest.xml:18:5-44
 MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\c49d63e492ac4af628acfa7815617898\transformed\interpolator-1.0.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\c49d63e492ac4af628acfa7815617898\transformed\interpolator-1.0.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\8c8b9997293e365d91182e27ac48d73a\transformed\profileinstaller-1.4.0\AndroidManifest.xml:21:5-44
@@ -216,6 +356,12 @@ MERGED from [androidx.tracing:tracing:1.2.0] C:\Users\kruti\.gradle\caches\8.13\
 MERGED from [androidx.tracing:tracing:1.2.0] C:\Users\kruti\.gradle\caches\8.13\transforms\d7ef5d431951e8564fc62af6636bb73f\transformed\tracing-1.2.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\13f370f17cfe596735ec0696f61fd1de\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\13f370f17cfe596735ec0696f61fd1de\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.documentfile:documentfile:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\715cdba685db31008096a87b12fa9f60\transformed\documentfile-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.documentfile:documentfile:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\715cdba685db31008096a87b12fa9f60\transformed\documentfile-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\8e65322acf930a33fa6806528c7a8f8d\transformed\localbroadcastmanager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\8e65322acf930a33fa6806528c7a8f8d\transformed\localbroadcastmanager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.print:print:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\234dc4eb7c111e6d1ba704f0ea6bc01f\transformed\print-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.print:print:1.0.0] C:\Users\kruti\.gradle\caches\8.13\transforms\234dc4eb7c111e6d1ba704f0ea6bc01f\transformed\print-1.0.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ea15e66f0b236ba11cc091be1abb2791\transformed\core-runtime-2.2.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ea15e66f0b236ba11cc091be1abb2791\transformed\core-runtime-2.2.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.annotation:annotation-experimental:1.4.1] C:\Users\kruti\.gradle\caches\8.13\transforms\37e664e502aff72cba24cfbe9483bb71\transformed\annotation-experimental-1.4.1\AndroidManifest.xml:5:5-44
@@ -238,6 +384,124 @@ ADDED from [androidx.compose.ui:ui-test-manifest:1.7.0] C:\Users\kruti\.gradle\c
 		ADDED from [androidx.compose.ui:ui-test-manifest:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\81a26d1d7543f2ebbb9564d86b8fa32e\transformed\ui-test-manifest-1.7.0\AndroidManifest.xml:25:13-36
 	android:name
 		ADDED from [androidx.compose.ui:ui-test-manifest:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\81a26d1d7543f2ebbb9564d86b8fa32e\transformed\ui-test-manifest-1.7.0\AndroidManifest.xml:24:13-63
+uses-permission#android.permission.ACCESS_NETWORK_STATE
+ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:22:5-79
+MERGED from [com.google.android.gms:play-services-cloud-messaging:17.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\b4d5b4a97d985d41e1895ef58ec90d8f\transformed\play-services-cloud-messaging-17.4.0\AndroidManifest.xml:7:5-79
+MERGED from [com.google.android.gms:play-services-cloud-messaging:17.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\b4d5b4a97d985d41e1895ef58ec90d8f\transformed\play-services-cloud-messaging-17.4.0\AndroidManifest.xml:7:5-79
+MERGED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:7:5-79
+MERGED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:7:5-79
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\eab13d5e8e9903e8a4da01c233a8ac32\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:24:5-79
+MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\eab13d5e8e9903e8a4da01c233a8ac32\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:24:5-79
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\08003b8d17b5f7585dfb5b5bb84d7e33\transformed\transport-runtime-3.1.9\AndroidManifest.xml:22:5-79
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\08003b8d17b5f7585dfb5b5bb84d7e33\transformed\transport-runtime-3.1.9\AndroidManifest.xml:22:5-79
+	android:name
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:22:22-76
+uses-permission#android.permission.WAKE_LOCK
+ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:24:5-68
+MERGED from [com.google.android.gms:play-services-cloud-messaging:17.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\b4d5b4a97d985d41e1895ef58ec90d8f\transformed\play-services-cloud-messaging-17.4.0\AndroidManifest.xml:9:5-68
+MERGED from [com.google.android.gms:play-services-cloud-messaging:17.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\b4d5b4a97d985d41e1895ef58ec90d8f\transformed\play-services-cloud-messaging-17.4.0\AndroidManifest.xml:9:5-68
+	android:name
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:24:22-65
+uses-permission#com.google.android.c2dm.permission.RECEIVE
+ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:26:5-82
+MERGED from [com.google.android.gms:play-services-cloud-messaging:17.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\b4d5b4a97d985d41e1895ef58ec90d8f\transformed\play-services-cloud-messaging-17.4.0\AndroidManifest.xml:11:5-82
+MERGED from [com.google.android.gms:play-services-cloud-messaging:17.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\b4d5b4a97d985d41e1895ef58ec90d8f\transformed\play-services-cloud-messaging-17.4.0\AndroidManifest.xml:11:5-82
+	android:name
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:26:22-79
+receiver#com.google.firebase.iid.FirebaseInstanceIdReceiver
+ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:29:9-40:20
+	android:exported
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:31:13-36
+	android:permission
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:32:13-73
+	android:name
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:30:13-78
+intent-filter#action:name:com.google.android.c2dm.intent.RECEIVE
+ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:33:13-35:29
+action#com.google.android.c2dm.intent.RECEIVE
+ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:34:17-81
+	android:name
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:34:25-78
+meta-data#com.google.android.gms.cloudmessaging.FINISHED_AFTER_HANDLED
+ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:37:13-39:40
+	android:value
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:39:17-37
+	android:name
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:38:17-92
+service#com.google.firebase.messaging.FirebaseMessagingService
+ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:46:9-53:19
+	android:exported
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:49:13-37
+	android:directBootAware
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:48:13-43
+	android:name
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:47:13-82
+service#com.google.firebase.components.ComponentDiscoveryService
+ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:54:9-63:19
+MERGED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:12:9-21:19
+MERGED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:12:9-21:19
+MERGED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:30:9-38:19
+MERGED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:30:9-38:19
+MERGED from [com.google.firebase:firebase-datatransport:18.2.0] C:\Users\kruti\.gradle\caches\8.13\transforms\92b561be9b978ece049c9613170c819a\transformed\firebase-datatransport-18.2.0\AndroidManifest.xml:22:9-28:19
+MERGED from [com.google.firebase:firebase-datatransport:18.2.0] C:\Users\kruti\.gradle\caches\8.13\transforms\92b561be9b978ece049c9613170c819a\transformed\firebase-datatransport-18.2.0\AndroidManifest.xml:22:9-28:19
+	android:exported
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:56:13-37
+	tools:targetApi
+		ADDED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:34:13-32
+	android:directBootAware
+		ADDED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:32:13-43
+	android:name
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:55:13-84
+meta-data#com.google.firebase.components:com.google.firebase.messaging.FirebaseMessagingKtxRegistrar
+ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:57:13-59:85
+	android:value
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:59:17-82
+	android:name
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:58:17-122
+meta-data#com.google.firebase.components:com.google.firebase.messaging.FirebaseMessagingRegistrar
+ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:60:13-62:85
+	android:value
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:62:17-82
+	android:name
+		ADDED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\ae6b2ad6a863d8f492fe66ca22d3318d\transformed\firebase-messaging-25.1.0\AndroidManifest.xml:61:17-119
+activity#com.google.android.gms.common.api.GoogleApiActivity
+ADDED from [com.google.android.gms:play-services-base:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\9fd226de86b458ea56ca355d622228bf\transformed\play-services-base-18.9.0\AndroidManifest.xml:20:9-22:45
+	android:exported
+		ADDED from [com.google.android.gms:play-services-base:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\9fd226de86b458ea56ca355d622228bf\transformed\play-services-base-18.9.0\AndroidManifest.xml:22:19-43
+	android:theme
+		ADDED from [com.google.android.gms:play-services-base:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\9fd226de86b458ea56ca355d622228bf\transformed\play-services-base-18.9.0\AndroidManifest.xml:21:19-78
+	android:name
+		ADDED from [com.google.android.gms:play-services-base:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\9fd226de86b458ea56ca355d622228bf\transformed\play-services-base-18.9.0\AndroidManifest.xml:20:19-85
+meta-data#com.google.firebase.components:com.google.firebase.installations.FirebaseInstallationsKtxRegistrar
+ADDED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:15:13-17:85
+	android:value
+		ADDED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:17:17-82
+	android:name
+		ADDED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:16:17-130
+meta-data#com.google.firebase.components:com.google.firebase.installations.FirebaseInstallationsRegistrar
+ADDED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:18:13-20:85
+	android:value
+		ADDED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:20:17-82
+	android:name
+		ADDED from [com.google.firebase:firebase-installations:19.1.1] C:\Users\kruti\.gradle\caches\8.13\transforms\78f6cda8f1f5d186ebb3aac84b3b8a58\transformed\firebase-installations-19.1.1\AndroidManifest.xml:19:17-127
+provider#com.google.firebase.provider.FirebaseInitProvider
+ADDED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:23:9-28:39
+	android:authorities
+		ADDED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:25:13-72
+	android:exported
+		ADDED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:27:13-37
+	android:directBootAware
+		ADDED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:26:13-43
+	android:initOrder
+		ADDED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:28:13-36
+	android:name
+		ADDED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:24:13-77
+meta-data#com.google.firebase.components:com.google.firebase.FirebaseCommonKtxRegistrar
+ADDED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:35:13-37:85
+	android:value
+		ADDED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:37:17-82
+	android:name
+		ADDED from [com.google.firebase:firebase-common:22.1.0] C:\Users\kruti\.gradle\caches\8.13\transforms\13e757ab91ac8b74a76b7a1165daecc2\transformed\firebase-common-22.1.0\AndroidManifest.xml:36:17-109
 provider#androidx.startup.InitializationProvider
 ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\kruti\.gradle\caches\8.13\transforms\030f30c55eaf05cec369f066c22116ca\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
 MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\182e4b73694945631485dcd19bee9b52\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:24:9-32:20
@@ -286,6 +550,46 @@ ADDED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\kruti\.gradle\c
 		ADDED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\182e4b73694945631485dcd19bee9b52\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:31:17-49
 	android:name
 		ADDED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\kruti\.gradle\caches\8.13\transforms\182e4b73694945631485dcd19bee9b52\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:30:17-78
+meta-data#com.google.android.gms.version
+ADDED from [com.google.android.gms:play-services-basement:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\c9351f2b9664fd13301ce83e8c659923\transformed\play-services-basement-18.9.0\AndroidManifest.xml:21:9-23:69
+	android:value
+		ADDED from [com.google.android.gms:play-services-basement:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\c9351f2b9664fd13301ce83e8c659923\transformed\play-services-basement-18.9.0\AndroidManifest.xml:23:13-66
+	android:name
+		ADDED from [com.google.android.gms:play-services-basement:18.9.0] C:\Users\kruti\.gradle\caches\8.13\transforms\c9351f2b9664fd13301ce83e8c659923\transformed\play-services-basement-18.9.0\AndroidManifest.xml:22:13-58
+meta-data#com.google.firebase.components:com.google.firebase.datatransport.TransportRegistrar
+ADDED from [com.google.firebase:firebase-datatransport:18.2.0] C:\Users\kruti\.gradle\caches\8.13\transforms\92b561be9b978ece049c9613170c819a\transformed\firebase-datatransport-18.2.0\AndroidManifest.xml:25:13-27:85
+	android:value
+		ADDED from [com.google.firebase:firebase-datatransport:18.2.0] C:\Users\kruti\.gradle\caches\8.13\transforms\92b561be9b978ece049c9613170c819a\transformed\firebase-datatransport-18.2.0\AndroidManifest.xml:27:17-82
+	android:name
+		ADDED from [com.google.firebase:firebase-datatransport:18.2.0] C:\Users\kruti\.gradle\caches\8.13\transforms\92b561be9b978ece049c9613170c819a\transformed\firebase-datatransport-18.2.0\AndroidManifest.xml:26:17-115
+service#com.google.android.datatransport.runtime.backends.TransportBackendDiscovery
+ADDED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\eab13d5e8e9903e8a4da01c233a8ac32\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:28:9-34:19
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\08003b8d17b5f7585dfb5b5bb84d7e33\transformed\transport-runtime-3.1.9\AndroidManifest.xml:36:9-38:40
+MERGED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\08003b8d17b5f7585dfb5b5bb84d7e33\transformed\transport-runtime-3.1.9\AndroidManifest.xml:36:9-38:40
+	android:exported
+		ADDED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\eab13d5e8e9903e8a4da01c233a8ac32\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:30:13-37
+	android:name
+		ADDED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\eab13d5e8e9903e8a4da01c233a8ac32\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:29:13-103
+meta-data#backend:com.google.android.datatransport.cct.CctBackendFactory
+ADDED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\eab13d5e8e9903e8a4da01c233a8ac32\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:31:13-33:39
+	android:value
+		ADDED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\eab13d5e8e9903e8a4da01c233a8ac32\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:33:17-36
+	android:name
+		ADDED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\eab13d5e8e9903e8a4da01c233a8ac32\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:32:17-94
+service#com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService
+ADDED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\08003b8d17b5f7585dfb5b5bb84d7e33\transformed\transport-runtime-3.1.9\AndroidManifest.xml:26:9-30:19
+	android:exported
+		ADDED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\08003b8d17b5f7585dfb5b5bb84d7e33\transformed\transport-runtime-3.1.9\AndroidManifest.xml:28:13-37
+	android:permission
+		ADDED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\08003b8d17b5f7585dfb5b5bb84d7e33\transformed\transport-runtime-3.1.9\AndroidManifest.xml:29:13-69
+	android:name
+		ADDED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\08003b8d17b5f7585dfb5b5bb84d7e33\transformed\transport-runtime-3.1.9\AndroidManifest.xml:27:13-117
+receiver#com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver
+ADDED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\08003b8d17b5f7585dfb5b5bb84d7e33\transformed\transport-runtime-3.1.9\AndroidManifest.xml:32:9-34:40
+	android:exported
+		ADDED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\08003b8d17b5f7585dfb5b5bb84d7e33\transformed\transport-runtime-3.1.9\AndroidManifest.xml:34:13-37
+	android:name
+		ADDED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\kruti\.gradle\caches\8.13\transforms\08003b8d17b5f7585dfb5b5bb84d7e33\transformed\transport-runtime-3.1.9\AndroidManifest.xml:33:13-132
 meta-data#androidx.profileinstaller.ProfileInstallerInitializer
 ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\kruti\.gradle\caches\8.13\transforms\8c8b9997293e365d91182e27ac48d73a\transformed\profileinstaller-1.4.0\AndroidManifest.xml:29:13-31:52
 	android:value

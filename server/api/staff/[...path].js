@@ -68,6 +68,10 @@ module.exports = async function handler(req, res) {
       return installationsList(req, res);
     case 'installations-status':
       return installationsStatus(req, res);
+    case 'invoice-requests-list':
+      return invoiceRequestsList(req, res);
+    case 'device-token':
+      return staffDeviceToken(req, res);
     default:
       return res.status(404).json({ error: 'Not found' });
   }
@@ -639,6 +643,77 @@ async function installationsStatus(req, res) {
       return res.status(err.status).json({ error: err.message });
     }
     console.error('update installation status error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Admin-only, unlike complaintsList/installationsList/wishlistList -- a
+// request to re-send an invoice touches billing/accounts territory, not
+// general sales-floor triage.
+async function invoiceRequestsList(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    await requireAdmin(req);
+
+    const pool = getPool();
+    const result = await pool.query(
+      `select
+         ir.id,
+         ir.phone as customer_phone,
+         u.name as customer_name,
+         ir.description,
+         ir.status,
+         ir.created_at,
+         ir.updated_at,
+         ir.resolved_at
+       from public.invoice_requests ir
+       join public.users u on u.phone = ir.phone
+       order by ir.created_at desc`
+    );
+    return res.status(200).json({ items: result.rows });
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('list invoice requests error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Registers/refreshes this device's FCM token for the staff app's own alert
+// channel (new wishlist/complaint/installation/invoice-request pushes) --
+// separate from the customer app's public.device_tokens.
+async function staffDeviceToken(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { fcmToken } = req.body ?? {};
+  if (typeof fcmToken !== 'string' || fcmToken.trim().length === 0) {
+    return res.status(400).json({ error: 'fcmToken is required' });
+  }
+
+  try {
+    const staff = await requireStaff(req);
+
+    const pool = getPool();
+    await pool.query(
+      `insert into public.staff_device_tokens (staff_id, fcm_token)
+       values ($1, $2)
+       on conflict (fcm_token) do update set staff_id = excluded.staff_id, updated_at = now()`,
+      [staff.id, fcmToken.trim()]
+    );
+    return res.status(204).end();
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('register staff device token error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

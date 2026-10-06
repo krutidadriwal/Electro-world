@@ -65,13 +65,13 @@ private fun serviceStatusLabel(status: String): String = when (status) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ComplaintsScreen(modifier: Modifier = Modifier) {
+fun ComplaintsScreen(initialStatusFilter: String? = null, modifier: Modifier = Modifier) {
   var items by remember { mutableStateOf<List<ComplaintItem>>(emptyList()) }
   var isLoading by remember { mutableStateOf(true) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
   var refreshTrigger by remember { mutableStateOf(0) }
   var searchQuery by remember { mutableStateOf("") }
-  var statusFilter by remember { mutableStateOf<String?>(null) }
+  var statusFilter by remember { mutableStateOf(initialStatusFilter) }
   var selectedItem by remember { mutableStateOf<ComplaintItem?>(null) }
   val scope = rememberCoroutineScope()
   val context = LocalContext.current

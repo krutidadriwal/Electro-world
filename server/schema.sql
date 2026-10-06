@@ -398,6 +398,22 @@ create table if not exists public.wishlist_call_logs (
   called_at timestamptz not null default now()
 );
 
+-- FCM tokens for the staff app's own push channel (new wishlist/complaint/
+-- installation/invoice-request alerts) -- separate from public.device_tokens,
+-- which is the customer app's (phone-keyed, not staff-keyed). Registered
+-- under the staff app's own Firebase project ("electro-world-staff", distinct
+-- from the customer app's "ew-app-gondia"), so sending to these tokens uses
+-- its own service account -- see server/lib/staffFcm.js and the
+-- STAFF_FIREBASE_SERVICE_ACCOUNT_JSON env var, not lib/fcm.js's.
+create table if not exists public.staff_device_tokens (
+  id uuid primary key default gen_random_uuid(),
+  staff_id uuid not null references public.staff_profiles(id) on delete cascade,
+  fcm_token text not null unique,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists staff_device_tokens_staff_idx on public.staff_device_tokens (staff_id);
+
 -- Pre-launch landing page sign-ups (server/public/index.html). Inserted
 -- directly from the browser via the Supabase REST API with the anon key --
 -- RLS below allows anon insert only, no select/update/delete, so the page

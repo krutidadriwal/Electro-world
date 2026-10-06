@@ -46,7 +46,12 @@ const BATCH_SIZE = 500;
 // tray id (needed to cancel a tray entry when read in-app, for badge-count
 // accuracy), and image rendering. Data-only messages always reach
 // onMessageReceived, foreground or not.
-async function sendToTokens(tokens, { title, body, imageUrl, notificationId }) {
+// payload's keys become the data message's keys as-is (stringified) -- title/
+// body/imageUrl/notificationId are the customer app's convention, the staff
+// app's alerts also pass `target` (see lib/staffNotify.js) for tap-to-
+// navigate. Any undefined/null entries are dropped (FCM data values must all
+// be strings).
+async function sendToTokens(tokens, payload) {
   if (tokens.length === 0) {
     return { deadTokens: [] };
   }
@@ -54,7 +59,7 @@ async function sendToTokens(tokens, { title, body, imageUrl, notificationId }) {
   const messaging = getMessaging();
   const deadTokens = [];
   const data = Object.fromEntries(
-    Object.entries({ title, body, imageUrl, notificationId })
+    Object.entries(payload)
       .filter(([, value]) => value !== undefined && value !== null)
       .map(([key, value]) => [key, String(value)])
   );

@@ -1,5 +1,6 @@
 package com.electroworld.staff
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,13 +17,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.electroworld.staff.data.SessionManager
 import com.electroworld.staff.data.network.NetworkModule
+import com.electroworld.staff.data.notifications.registerStaffFcmToken
 import com.electroworld.staff.ui.screens.HomeScreen
 import com.electroworld.staff.ui.screens.LoginScreen
 
 class MainActivity : ComponentActivity() {
+  // Held outside Compose state-hoisting (set in onCreate/onNewIntent, read
+  // inside setContent) so a tapped push notification's target survives both
+  // a cold start and -- via singleTop + onNewIntent, see the manifest --
+  // being re-delivered to an already-running instance.
+  private val notificationTarget = mutableStateOf<String?>(null)
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     NetworkModule.init(applicationContext)
+    notificationTarget.value = intent?.getStringExtra(EXTRA_NOTIFICATION_TARGET)
     enableEdgeToEdge()
     setContent {
       MaterialTheme {
@@ -49,6 +58,9 @@ class MainActivity : ComponentActivity() {
                 isResolvingProfile = false
               }
             }
+            if (isLoggedIn) {
+              registerStaffFcmToken(NetworkModule.staffApi)
+            }
           }
 
           if (isLoggedIn && !isResolvingProfile) {
@@ -56,6 +68,8 @@ class MainActivity : ComponentActivity() {
               isAdmin = role == "admin",
               email = email,
               role = role,
+              notificationTarget = notificationTarget.value,
+              onNotificationTargetConsumed = { notificationTarget.value = null },
               onLogout = {
                 sessionManager.clearSession()
                 isLoggedIn = false
@@ -74,5 +88,15 @@ class MainActivity : ComponentActivity() {
         }
       }
     }
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    notificationTarget.value = intent.getStringExtra(EXTRA_NOTIFICATION_TARGET)
+  }
+
+  companion object {
+    const val EXTRA_NOTIFICATION_TARGET = "notification_target"
   }
 }

@@ -137,7 +137,7 @@ async function complaintsPost(req, res) {
     );
     const pendingCount = countResult.rows[0].count;
     await notifyStaff({
-      title: 'Electro World Staff',
+      title: 'EW Ops Hub',
       body: `${pendingCount} open complaint${pendingCount === 1 ? '' : 's'}`,
       target: 'complaints:open'
     });
@@ -266,7 +266,7 @@ async function installationsPost(req, res) {
     );
     const pendingCount = countResult.rows[0].count;
     await notifyStaff({
-      title: 'Electro World Staff',
+      title: 'EW Ops Hub',
       body: `${pendingCount} open installation request${pendingCount === 1 ? '' : 's'}`,
       target: 'installations:open'
     });
@@ -342,7 +342,7 @@ async function invoiceRequestsPost(req, res) {
     const pendingCount = countResult.rows[0].count;
     await notifyStaff({
       adminOnly: true,
-      title: 'Electro World Staff',
+      title: 'EW Ops Hub',
       body: `${pendingCount} pending invoice request${pendingCount === 1 ? '' : 's'}`,
       target: 'invoice_requests:open'
     });

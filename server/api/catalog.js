@@ -178,7 +178,7 @@ async function wishlistPost(req, res) {
       // be frozen the instant the response is sent, so an un-awaited async
       // call here could simply never run.
       await notifyStaff({
-        title: 'Electro World Staff',
+        title: 'EW Ops Hub',
         body: `${pendingCount} new wishlist request${pendingCount === 1 ? '' : 's'}`,
         target: 'wishlist:not_contacted'
       });

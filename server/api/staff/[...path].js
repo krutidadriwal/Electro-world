@@ -63,10 +63,14 @@ module.exports = async function handler(req, res) {
       return wishlistCall(req, res);
     case 'complaints-list':
       return complaintsList(req, res);
+    case 'complaints-add':
+      return complaintsAdd(req, res);
     case 'complaints-status':
       return complaintsStatus(req, res);
     case 'installations-list':
       return installationsList(req, res);
+    case 'installations-add':
+      return installationsAdd(req, res);
     case 'installations-status':
       return installationsStatus(req, res);
     case 'invoice-requests-list':
@@ -75,6 +79,8 @@ module.exports = async function handler(req, res) {
       return invoiceRequestsStatus(req, res);
     case 'device-token':
       return staffDeviceToken(req, res);
+    case 'customer-lookup':
+      return customerLookup(req, res);
     default:
       return res.status(404).json({ error: 'Not found' });
   }
@@ -530,6 +536,91 @@ async function complaintsList(req, res) {
   }
 }
 
+// Lets a salesperson log a walk-in/phone-in complaint directly, same
+// no-account-needed pattern as wishlistAdd above (a bare placeholder
+// public.users row is created if the phone isn't registered yet).
+async function complaintsAdd(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { phone, countryCode, customerName, categoryIconKey, subcategoryId, description, address, contactPhone } = req.body ?? {};
+  const normalizedPhone = normalizePhone(phone, countryCode);
+  if (!normalizedPhone) {
+    return res.status(400).json({ error: 'phone must be a 10-digit number' });
+  }
+  if (typeof categoryIconKey !== 'string' || categoryIconKey.trim().length === 0) {
+    return res.status(400).json({ error: 'categoryIconKey is required' });
+  }
+  if (typeof description !== 'string' || description.trim().length === 0) {
+    return res.status(400).json({ error: 'description is required' });
+  }
+  if (typeof address !== 'string' || address.trim().length === 0) {
+    return res.status(400).json({ error: 'address is required' });
+  }
+  const trimmedName = typeof customerName === 'string' ? customerName.trim() : '';
+
+  try {
+    await requireStaff(req);
+
+    const pool = getPool();
+
+    const categoryResult = await pool.query(
+      `select icon_key, name from public.categories where icon_key = $1`,
+      [categoryIconKey]
+    );
+    if (categoryResult.rowCount === 0) {
+      return res.status(400).json({ error: 'categoryIconKey does not match a known category' });
+    }
+    const category = categoryResult.rows[0];
+
+    let subcategory = null;
+    if (typeof subcategoryId === 'string' && subcategoryId.trim().length > 0) {
+      const subcategoryResult = await pool.query(
+        `select id, name from public.subcategories where id = $1 and category_icon_key = $2`,
+        [subcategoryId, categoryIconKey]
+      );
+      if (subcategoryResult.rowCount === 0) {
+        return res.status(400).json({ error: 'subcategoryId does not belong to categoryIconKey' });
+      }
+      subcategory = subcategoryResult.rows[0];
+    }
+
+    const existingUser = await pool.query('select phone from public.users where phone = $1', [normalizedPhone]);
+    if (existingUser.rowCount === 0) {
+      if (!trimmedName) {
+        return res.status(400).json({ error: 'customerName is required for a phone with no existing account' });
+      }
+      await pool.query(`insert into public.users (phone, name) values ($1, $2)`, [normalizedPhone, trimmedName]);
+    }
+
+    const result = await pool.query(
+      `insert into public.complaints
+         (phone, category_icon_key, category_name, subcategory_id, subcategory_name, description, address, contact_phone)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
+       returning id`,
+      [
+        normalizedPhone,
+        category.icon_key,
+        category.name,
+        subcategory ? subcategory.id : null,
+        subcategory ? subcategory.name : null,
+        description.trim(),
+        address.trim(),
+        typeof contactPhone === 'string' && contactPhone.trim().length > 0 ? contactPhone.trim() : null
+      ]
+    );
+    return res.status(201).json({ id: result.rows[0].id });
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('staff add complaint error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
 async function complaintsStatus(req, res) {
   if (req.method !== 'PATCH') {
     res.setHeader('Allow', 'PATCH');
@@ -607,6 +698,100 @@ async function installationsList(req, res) {
       return res.status(err.status).json({ error: err.message });
     }
     console.error('list installations error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Lets a salesperson log a walk-in/phone-in installation/demo request
+// directly, same no-account-needed pattern as wishlistAdd above.
+async function installationsAdd(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const {
+    phone,
+    countryCode,
+    customerName,
+    categoryIconKey,
+    itemName,
+    wantsDemo,
+    wantsInstallation,
+    address,
+    contactPhone
+  } = req.body ?? {};
+
+  const normalizedPhone = normalizePhone(phone, countryCode);
+  if (!normalizedPhone) {
+    return res.status(400).json({ error: 'phone must be a 10-digit number' });
+  }
+  if (typeof categoryIconKey !== 'string' || categoryIconKey.trim().length === 0) {
+    return res.status(400).json({ error: 'categoryIconKey is required' });
+  }
+  if (typeof itemName !== 'string' || itemName.trim().length === 0) {
+    return res.status(400).json({ error: 'itemName is required' });
+  }
+  if (typeof address !== 'string' || address.trim().length === 0) {
+    return res.status(400).json({ error: 'address is required' });
+  }
+  const demo = wantsDemo === true;
+  const installation = wantsInstallation === true;
+  if (!demo && !installation) {
+    return res.status(400).json({ error: 'At least one of wantsDemo or wantsInstallation must be true' });
+  }
+  const trimmedName = typeof customerName === 'string' ? customerName.trim() : '';
+
+  try {
+    await requireStaff(req);
+
+    const pool = getPool();
+
+    const categoryResult = await pool.query(
+      `select icon_key, name, can_install, can_demo from public.categories where icon_key = $1`,
+      [categoryIconKey]
+    );
+    if (categoryResult.rowCount === 0) {
+      return res.status(400).json({ error: 'categoryIconKey does not match a known category' });
+    }
+    const category = categoryResult.rows[0];
+    if (installation && !category.can_install) {
+      return res.status(400).json({ error: 'Installation is not available for this category' });
+    }
+    if (demo && !category.can_demo) {
+      return res.status(400).json({ error: 'Demo is not available for this category' });
+    }
+
+    const existingUser = await pool.query('select phone from public.users where phone = $1', [normalizedPhone]);
+    if (existingUser.rowCount === 0) {
+      if (!trimmedName) {
+        return res.status(400).json({ error: 'customerName is required for a phone with no existing account' });
+      }
+      await pool.query(`insert into public.users (phone, name) values ($1, $2)`, [normalizedPhone, trimmedName]);
+    }
+
+    const result = await pool.query(
+      `insert into public.installations
+         (phone, category_icon_key, category_name, item_name, wants_demo, wants_installation, address, contact_phone)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
+       returning id`,
+      [
+        normalizedPhone,
+        category.icon_key,
+        category.name,
+        itemName.trim(),
+        demo,
+        installation,
+        address.trim(),
+        typeof contactPhone === 'string' && contactPhone.trim().length > 0 ? contactPhone.trim() : null
+      ]
+    );
+    return res.status(201).json({ id: result.rows[0].id });
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('staff add installation error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
@@ -795,6 +980,41 @@ async function staffDeviceToken(req, res) {
       return res.status(err.status).json({ error: err.message });
     }
     console.error('register staff device token error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Used by the Wishlist/Complaints/Installations "add" dialogs to auto-fill
+// the customer name field once a full 10-digit phone is entered, instead of
+// staff re-typing a name that's already on file. 404 (not 200 with a null
+// name) when there's no account yet, so the client can tell "no match" apart
+// from "matched, empty name" unambiguously.
+async function customerLookup(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { phone, countryCode } = req.query;
+  const normalizedPhone = normalizePhone(phone, countryCode);
+  if (!normalizedPhone) {
+    return res.status(400).json({ error: 'phone must be a 10-digit number' });
+  }
+
+  try {
+    await requireStaff(req);
+
+    const pool = getPool();
+    const result = await pool.query('select name from public.users where phone = $1', [normalizedPhone]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'No account for this phone number' });
+    }
+    return res.status(200).json({ name: result.rows[0].name });
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('customer lookup error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

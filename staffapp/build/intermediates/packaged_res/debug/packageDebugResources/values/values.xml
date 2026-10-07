@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Electro World Staff</string>
+    <string name="app_name">EW Ops Hub</string>
     <string name="gcm_defaultSenderId" translatable="false">185029813474</string>
     <string name="google_api_key" translatable="false">AIzaSyAqDVjGcVz2JJ763bbTsdA7stWW5vXlXmE</string>
     <string name="google_app_id" translatable="false">1:185029813474:android:5eda0cc22bdc007dd8eabb</string>

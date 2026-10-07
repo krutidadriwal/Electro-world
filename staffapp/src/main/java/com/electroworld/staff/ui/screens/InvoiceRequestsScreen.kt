@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Search
@@ -65,7 +66,7 @@ private fun invoiceStatusLabel(status: String): String = when (status) {
 // is, by construction, still open.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InvoiceRequestsScreen(modifier: Modifier = Modifier) {
+fun InvoiceRequestsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
   var items by remember { mutableStateOf<List<InvoiceRequestItem>>(emptyList()) }
   var isLoading by remember { mutableStateOf(true) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -105,7 +106,16 @@ fun InvoiceRequestsScreen(modifier: Modifier = Modifier) {
   }
 
   Scaffold(
-    topBar = { TopAppBar(title = { Text("Invoice Requests") }) },
+    topBar = {
+      TopAppBar(
+        title = { Text("Invoice Requests") },
+        navigationIcon = {
+          IconButton(onClick = onBack) {
+            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+          }
+        }
+      )
+    },
     modifier = modifier
   ) { padding ->
     Column(modifier = Modifier.fillMaxSize().padding(padding)) {

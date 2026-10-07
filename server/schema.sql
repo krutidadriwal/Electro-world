@@ -346,6 +346,14 @@ alter table public.price_list_items add column if not exists cost_price numeric 
 
 create index if not exists price_list_items_category_idx on public.price_list_items (category);
 
+
+create table if not exists public.price_list_categories (
+  category text primary key,
+  image_path text not null,
+  image_url text not null,
+  updated_at timestamptz not null default now()
+);
+
 -- Tracks the sales team's outreach on a customer's wishlisted item -- calling
 -- to quote a rate and gauge interest. Kept on the wishlist_items row itself
 -- (not a separate table) since the response belongs to that one wishlisted

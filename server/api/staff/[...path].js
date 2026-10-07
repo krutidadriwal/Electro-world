@@ -7,8 +7,11 @@ const { getSupabaseAdmin } = require('../../lib/supabaseAdmin');
 const { requireStaff, requireAdmin, StaffAuthError } = require('../../lib/staffAuth');
 const { routeSegmentsAfter } = require('../../lib/routeSegments');
 const { syncPriceList } = require('../../lib/priceList');
+const { uploadCategoryImage } = require('../../lib/categoryImages');
 const { normalizePhone } = require('../../lib/phone');
 const { sendToTokens } = require('../../lib/fcm');
+
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // base64 inflates ~33%; Vercel caps request bodies at 4.5MB
 
 const VALID_ROLES = ['admin', 'employee'];
 const VALID_WISHLIST_STATUSES = [
@@ -53,6 +56,10 @@ module.exports = async function handler(req, res) {
       return priceListList(req, res);
     case 'price-list-sync':
       return priceListSync(req, res);
+    case 'price-list-category-images':
+      return priceListCategoryImages(req, res);
+    case 'price-list-category-image':
+      return priceListCategoryImageUpload(req, res);
     case 'wishlist-list':
       return wishlistList(req, res);
     case 'wishlist-add':
@@ -261,6 +268,94 @@ async function priceListSync(req, res) {
       return res.status(err.status).json({ error: err.message });
     }
     console.error('sync price list error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Returns every category that currently appears in the price list, each with
+// its image_url if an admin has assigned one (null otherwise) -- any signed-in
+// staff member can read this, same as priceListList, since it's just what
+// drives the hero image shown at the end of CustomerPriceScreen.
+async function priceListCategoryImages(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    await requireStaff(req);
+
+    const pool = getPool();
+    const result = await pool.query(
+      `select pi.category, pc.image_url
+       from (select distinct category from public.price_list_items) pi
+       left join public.price_list_categories pc on pc.category = pi.category
+       order by pi.category`
+    );
+    return res.status(200).json({ categories: result.rows });
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('list price list category images error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Admin-only, same reasoning as priceListSync -- this changes what every
+// customer sees on the price screen, not a read-only lookup.
+async function priceListCategoryImageUpload(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { category, fileName, mimeType, base64Data } = req.body ?? {};
+  if (typeof category !== 'string' || category.trim().length === 0) {
+    return res.status(400).json({ error: 'category is required' });
+  }
+  if (typeof fileName !== 'string' || fileName.trim().length === 0) {
+    return res.status(400).json({ error: 'fileName is required' });
+  }
+  if (typeof mimeType !== 'string' || !mimeType.startsWith('image/')) {
+    return res.status(400).json({ error: 'mimeType must be an image/* type' });
+  }
+  if (typeof base64Data !== 'string' || base64Data.length === 0) {
+    return res.status(400).json({ error: 'base64Data is required' });
+  }
+
+  let buffer;
+  try {
+    buffer = Buffer.from(base64Data, 'base64');
+  } catch (err) {
+    return res.status(400).json({ error: 'base64Data is not valid base64' });
+  }
+  if (buffer.length === 0 || buffer.length > MAX_IMAGE_BYTES) {
+    return res.status(400).json({ error: `Image must be between 1 byte and ${MAX_IMAGE_BYTES} bytes` });
+  }
+
+  try {
+    await requireAdmin(req);
+
+    const file = await uploadCategoryImage(fileName.trim(), mimeType, buffer);
+
+    const pool = getPool();
+    const result = await pool.query(
+      `insert into public.price_list_categories (category, image_path, image_url)
+       values ($1, $2, $3)
+       on conflict (category) do update set
+         image_path = excluded.image_path,
+         image_url = excluded.image_url,
+         updated_at = now()
+       returning category, image_url`,
+      [category.trim(), file.path, file.url]
+    );
+    return res.status(201).json(result.rows[0]);
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('upload price list category image error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

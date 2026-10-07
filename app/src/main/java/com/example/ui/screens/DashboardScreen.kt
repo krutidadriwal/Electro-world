@@ -95,6 +95,7 @@ import com.example.data.network.CreateInvoiceRequestRequest
 import com.example.data.network.InvoiceFile
 import com.example.data.network.NetworkModule
 import com.example.data.notifications.notificationTrayId
+import com.example.ui.theme.AlertRed
 import com.example.ui.theme.GoldDark
 import com.example.ui.theme.GoldLight
 import com.example.ui.theme.GoldPrimary
@@ -258,7 +259,7 @@ fun DashboardScreen(
                   .align(Alignment.TopEnd)
                   .offset(x = 2.dp, y = (-2).dp)
                   .size(18.dp)
-                  .background(Color(0xFFE53935), CircleShape),
+                  .background(AlertRed, CircleShape),
                 contentAlignment = Alignment.Center
               ) {
                 Text(

@@ -55,7 +55,7 @@ fun LoginScreen(
     modifier = modifier.fillMaxSize().padding(24.dp),
     verticalArrangement = Arrangement.Center
   ) {
-    Text(text = "Electro World Staff", style = MaterialTheme.typography.headlineSmall)
+    Text(text = "EW Ops Hub", style = MaterialTheme.typography.headlineSmall)
     Spacer(modifier = Modifier.padding(top = 24.dp))
 
     OutlinedTextField(

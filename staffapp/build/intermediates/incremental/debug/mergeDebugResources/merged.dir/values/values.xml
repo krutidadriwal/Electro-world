@@ -75,6 +75,7 @@
     <item name="accessibility_custom_action_8" type="id"/>
     <item name="accessibility_custom_action_9" type="id"/>
     <item name="androidx_compose_ui_view_composition_context" type="id"/>
+    <item name="coil_request_manager" type="id"/>
     <item name="compose_view_saveable_id_tag" type="id"/>
     <item name="consume_window_insets_tag" type="id"/>
     <item name="hide_graphics_layer_in_inspector_tag" type="id"/>
@@ -113,7 +114,7 @@
     <integer name="m3c_window_layout_in_display_cutout_mode">1</integer>
     <integer name="status_bar_notification_info_maxnum">999</integer>
     <string name="androidx_startup" translatable="false">androidx.startup</string>
-    <string name="app_name">Electro World Staff</string>
+    <string name="app_name">EW Ops Hub</string>
     <string name="call_notification_answer_action">Answer</string>
     <string name="call_notification_answer_video_action">Video</string>
     <string name="call_notification_decline_action">Decline</string>
@@ -265,6 +266,38 @@
         <item name="android:textColor">@color/androidx_core_secondary_text_default_material_light</item>
         <item name="android:textSize">@dimen/notification_action_text_size</item>
     </style>
+    <declare-styleable name="AnimatedStateListDrawableCompat">
+        
+        <attr name="android:visible"/>
+        
+        <attr name="android:variablePadding"/>
+        
+        <attr name="android:constantSize"/>
+        
+        <attr name="android:dither"/>
+        
+        <attr name="android:enterFadeDuration"/>
+        
+        <attr name="android:exitFadeDuration"/>
+        
+        
+    </declare-styleable>
+    <declare-styleable name="AnimatedStateListDrawableItem">
+        
+        <attr name="android:drawable"/>
+        
+        <attr name="android:id"/>
+    </declare-styleable>
+    <declare-styleable name="AnimatedStateListDrawableTransition">
+        
+        <attr name="android:fromId"/>
+        
+        <attr name="android:toId"/>
+        
+        <attr name="android:drawable"/>
+        
+        <attr name="android:reversible"/>
+    </declare-styleable>
     <declare-styleable name="Capability">
         
         <attr format="reference" name="queryPatterns"/>
@@ -416,4 +449,24 @@
 
 <attr format="reference|string" name="scopeUris"/>
 </declare-styleable>
+    <declare-styleable name="StateListDrawable">
+        
+        <attr name="android:visible"/>
+        
+        <attr name="android:variablePadding"/>
+        
+        <attr name="android:constantSize"/>
+        
+        <attr name="android:dither"/>
+        
+        <attr name="android:enterFadeDuration"/>
+        
+        <attr name="android:exitFadeDuration"/>
+        
+        
+    </declare-styleable>
+    <declare-styleable name="StateListDrawableItem">
+        
+        <attr name="android:drawable"/>
+    </declare-styleable>
 </resources>

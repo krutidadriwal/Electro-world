@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import com.electroworld.staff.ui.theme.StaffAppTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,8 +41,8 @@ class MainActivity : ComponentActivity() {
     notificationTarget.value = intent?.getStringExtra(EXTRA_NOTIFICATION_TARGET)
     enableEdgeToEdge()
     setContent {
-      MaterialTheme {
-        Surface(modifier = Modifier.fillMaxSize()) {
+      StaffAppTheme {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
           val context = LocalContext.current
           val sessionManager = remember { SessionManager(context) }
           var isLoggedIn by remember { mutableStateOf(sessionManager.isLoggedIn) }

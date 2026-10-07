@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material3.AlertDialog
@@ -52,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.electroworld.staff.data.network.Category
 import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.network.Subcategory
+import com.electroworld.staff.data.network.lookupCustomerName
 import com.electroworld.staff.data.network.WishlistItem
 import com.electroworld.staff.data.network.WishlistAddRequest
 import com.electroworld.staff.data.network.WishlistStatusRequest
@@ -100,7 +102,7 @@ private fun statusLabel(status: String): String = when (status) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WishlistScreen(initialStatusFilter: String? = null, modifier: Modifier = Modifier) {
+fun WishlistScreen(initialStatusFilter: String? = null, onBack: () -> Unit, modifier: Modifier = Modifier) {
   var items by remember { mutableStateOf<List<WishlistItem>>(emptyList()) }
   var isLoading by remember { mutableStateOf(true) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -144,7 +146,16 @@ fun WishlistScreen(initialStatusFilter: String? = null, modifier: Modifier = Mod
   }
 
   Scaffold(
-    topBar = { TopAppBar(title = { Text("Wishlist") }) },
+    topBar = {
+      TopAppBar(
+        title = { Text("Wishlist") },
+        navigationIcon = {
+          IconButton(onClick = onBack) {
+            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+          }
+        }
+      )
+    },
     floatingActionButton = {
       FloatingActionButton(onClick = { showAddDialog = true }) {
         Icon(Icons.Default.Add, contentDescription = "Add customer to wishlist")
@@ -261,6 +272,8 @@ private fun AddToWishlistDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
   var isLoadingCategories by remember { mutableStateOf(true) }
   var phone by remember { mutableStateOf("") }
   var customerName by remember { mutableStateOf("") }
+  var customerExists by remember { mutableStateOf(false) }
+  var isLookingUpCustomer by remember { mutableStateOf(false) }
   var selectedCategory by remember { mutableStateOf<Category?>(null) }
   var selectedSubcategory by remember { mutableStateOf<Subcategory?>(null) }
   var categoryMenuExpanded by remember { mutableStateOf(false) }
@@ -278,6 +291,25 @@ private fun AddToWishlistDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
       categories = emptyList()
     } finally {
       isLoadingCategories = false
+    }
+  }
+
+  // Auto-fills the name for a phone that already has an account, instead of
+  // staff re-typing it -- and locks the field so it can't be accidentally
+  // overwritten, since that name belongs to the real account, not this form.
+  LaunchedEffect(phone) {
+    if (phone.length == 10) {
+      isLookingUpCustomer = true
+      val existingName = lookupCustomerName(phone)
+      if (existingName != null) {
+        customerName = existingName
+        customerExists = true
+      } else {
+        customerExists = false
+      }
+      isLookingUpCustomer = false
+    } else {
+      customerExists = false
     }
   }
 
@@ -302,10 +334,12 @@ private fun AddToWishlistDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
           singleLine = true,
           modifier = Modifier.fillMaxWidth()
         )
+        CustomerLookupStatus(phone, isLookingUpCustomer, customerExists)
         OutlinedTextField(
           value = customerName,
           onValueChange = { customerName = it },
-          label = { Text("Customer name") },
+          readOnly = customerExists,
+          label = { Text(if (customerExists) "Customer name (existing account)" else "Customer name *") },
           singleLine = true,
           modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
         )
@@ -386,7 +420,7 @@ private fun AddToWishlistDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
     },
     confirmButton = {
       Button(
-        enabled = !isSaving && phone.length == 10 && customerName.isNotBlank() && selectedCategory != null,
+        enabled = !isSaving && phone.length == 10 && (customerExists || customerName.isNotBlank()) && selectedCategory != null,
         onClick = {
           val category = selectedCategory ?: return@Button
           errorMessage = null

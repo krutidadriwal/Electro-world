@@ -5,6 +5,7 @@ import com.squareup.moshi.JsonClass
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PATCH
+import retrofit2.http.POST
 
 @JsonClass(generateAdapter = true)
 data class ComplaintItem(
@@ -42,9 +43,28 @@ data class ComplaintStatusResponse(
   @Json(name = "resolved_at") val resolvedAt: String?
 )
 
+@JsonClass(generateAdapter = true)
+data class ComplaintAddRequest(
+  val phone: String,
+  val customerName: String,
+  val categoryIconKey: String,
+  val subcategoryId: String? = null,
+  val description: String,
+  val address: String,
+  val contactPhone: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class ComplaintAddResponse(
+  val id: String
+)
+
 interface ComplaintsApi {
   @GET("api/staff/complaints-list")
   suspend fun list(): ComplaintsResponse
+
+  @POST("api/staff/complaints-add")
+  suspend fun add(@Body request: ComplaintAddRequest): ComplaintAddResponse
 
   @PATCH("api/staff/complaints-status")
   suspend fun updateStatus(@Body request: ComplaintStatusRequest): ComplaintStatusResponse

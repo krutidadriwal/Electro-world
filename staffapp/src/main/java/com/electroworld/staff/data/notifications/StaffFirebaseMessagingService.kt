@@ -38,7 +38,7 @@ class StaffFirebaseMessagingService : FirebaseMessagingService() {
 
   override fun onMessageReceived(message: RemoteMessage) {
     super.onMessageReceived(message)
-    val title = message.data["title"] ?: "Electro World Staff"
+    val title = message.data["title"] ?: "EW Ops Hub"
     val body = message.data["body"] ?: return
     val target = message.data["target"]
     val trayId = target?.hashCode() ?: Random.nextInt()

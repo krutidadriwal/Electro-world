@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -24,6 +25,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -53,8 +55,9 @@ private val DURATION_PRESETS = listOf(
   "30 days" to 30 * 24 * 60
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationsScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
+fun NotificationsScreen(isAdmin: Boolean, onBack: () -> Unit, modifier: Modifier = Modifier) {
   var notifications by remember { mutableStateOf<List<NotificationItem>>(emptyList()) }
   var isLoading by remember { mutableStateOf(true) }
   var showCompose by remember { mutableStateOf(false) }
@@ -85,6 +88,16 @@ fun NotificationsScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
   }
 
   Scaffold(
+    topBar = {
+      TopAppBar(
+        title = { Text("Broadcast") },
+        navigationIcon = {
+          IconButton(onClick = onBack) {
+            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+          }
+        }
+      )
+    },
     floatingActionButton = {
       if (isAdmin) {
         FloatingActionButton(onClick = { showCompose = true }) {

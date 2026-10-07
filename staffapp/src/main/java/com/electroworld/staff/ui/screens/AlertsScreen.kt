@@ -9,12 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -38,7 +40,7 @@ import com.electroworld.staff.data.network.NetworkModule
 // at send time (see server/lib/staffNotify.js and its callers).
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AlertsScreen(isAdmin: Boolean, onNavigate: (target: String) -> Unit, modifier: Modifier = Modifier) {
+fun AlertsScreen(isAdmin: Boolean, onNavigate: (target: String) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
   var wishlistCount by remember { mutableStateOf(0) }
   var complaintsCount by remember { mutableStateOf(0) }
   var installationsCount by remember { mutableStateOf(0) }
@@ -64,7 +66,16 @@ fun AlertsScreen(isAdmin: Boolean, onNavigate: (target: String) -> Unit, modifie
   }
 
   Scaffold(
-    topBar = { TopAppBar(title = { Text("Notifications") }) },
+    topBar = {
+      TopAppBar(
+        title = { Text("Notifications") },
+        navigationIcon = {
+          IconButton(onClick = onBack) {
+            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+          }
+        }
+      )
+    },
     modifier = modifier
   ) { padding ->
     if (isLoading) {

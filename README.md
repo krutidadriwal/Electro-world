@@ -1,9 +1,3 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
-
-<!-- trivial change to trigger CI on this PR -->
-
 
 # Run and deploy your AI Studio app
 
@@ -23,3 +17,9 @@ View your app in AI Studio: https://ai.studio/apps/16a6a125-f22c-4f1d-a0fe-514c4
 5. Remove this line from the app's `build.gradle.kts` file: `signingConfig = signingConfigs.getByName("debugConfig")`
 6. Run the app on an emulator or physical device
 7. If you have already published your app in AI Studio, please [request upload key reset](https://support.google.com/googleplay/android-developer/answer/9842756#zippy=%2Crequest-an-upload-key-reset) in Google Play Console.
+
+## Set Rules
+
+    1. now all reds in the app should be : #6E1734
+    2. all golden should be #C6A15B
+    3. and add expresso #2A1018 for tab colours or its lighter shades 

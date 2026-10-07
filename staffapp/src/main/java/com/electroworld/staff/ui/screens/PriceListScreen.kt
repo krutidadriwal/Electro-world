@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
@@ -41,12 +42,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.graphics.Color
+import coil.compose.AsyncImage
 import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.network.PriceListItem
+import com.electroworld.staff.ui.theme.Swatch4Taupe
+import com.electroworld.staff.ui.theme.Swatch5Pearl
+import com.electroworld.staff.ui.theme.Swatch8Sand
 import kotlinx.coroutines.launch
 
 // What the radio group is scoped to: which field the root list browses/groups
@@ -60,8 +69,9 @@ private sealed class PriceListNav {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
+fun PriceListScreen(isAdmin: Boolean, onBack: () -> Unit, modifier: Modifier = Modifier) {
   var allItems by remember { mutableStateOf<List<PriceListItem>>(emptyList()) }
+  var categoryImages by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
   var isLoading by remember { mutableStateOf(true) }
   var isSyncing by remember { mutableStateOf(false) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -77,7 +87,12 @@ fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
 
   selectedItem?.let { item ->
     BackHandler { selectedItem = null }
-    CustomerPriceScreen(item = item, onBack = { selectedItem = null }, modifier = modifier)
+    CustomerPriceScreen(
+      item = item,
+      categoryImageUrl = categoryImages[item.category],
+      onBack = { selectedItem = null },
+      modifier = modifier
+    )
     return
   }
 
@@ -96,6 +111,14 @@ fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
     } finally {
       isLoading = false
     }
+    try {
+      categoryImages = NetworkModule.priceListApi.categoryImages().categories
+        .mapNotNull { category -> category.imageUrl?.let { category.category to it } }
+        .toMap()
+    } catch (e: Exception) {
+      // Non-critical -- CustomerPriceScreen just shows no hero image for any
+      // category whose lookup fails, same as one with no image assigned yet.
+    }
   }
 
   // Drilling into a category/group's items is a dead end with nothing left to
@@ -109,10 +132,8 @@ fun PriceListScreen(isAdmin: Boolean, modifier: Modifier = Modifier) {
         title = { Text(navTitle(nav)) },
         navigationIcon = {
           val parent = navParent(nav)
-          if (parent != null) {
-            IconButton(onClick = { nav = parent }) {
-              Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-            }
+          IconButton(onClick = { if (parent != null) nav = parent else onBack() }) {
+            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
           }
         },
         actions = {
@@ -255,7 +276,11 @@ private fun RootLevel(
       LazyColumn(contentPadding = PaddingValues(16.dp)) {
         items(categories) { category ->
           val count = allItems.count { it.category == category }
-          NavRow(title = category, subtitle = "$count items") { onCategorySelected(category) }
+          NavRow(
+            title = category,
+            subtitle = "$count items",
+            containerColor = Swatch5Pearl.copy(alpha = 0.3f)
+          ) { onCategorySelected(category) }
         }
       }
     }
@@ -271,7 +296,8 @@ private fun RootLevel(
         items(groups.entries.toList()) { (group, itemsInGroup) ->
           NavRow(
             title = group,
-            subtitle = "${itemsInGroup.first().category} · ${itemsInGroup.size} items"
+            subtitle = "${itemsInGroup.first().category} · ${itemsInGroup.size} items",
+            containerColor = Swatch4Taupe.copy(alpha = 0.3f)
           ) { onGroupSelected(group) }
         }
       }
@@ -336,6 +362,7 @@ private fun ItemRows(items: List<PriceListItem>, isAdmin: Boolean, onItemSelecte
 @Composable
 private fun ItemRow(item: PriceListItem, isAdmin: Boolean, onClick: () -> Unit) {
   Card(
+    colors = CardDefaults.cardColors(containerColor = Swatch8Sand.copy(alpha = 0.1f)),
     modifier = Modifier
       .fillMaxWidth()
       .padding(bottom = 12.dp)
@@ -384,7 +411,12 @@ private fun ItemRow(item: PriceListItem, isAdmin: Boolean, onClick: () -> Unit) 
 // customer, so this favors large, unambiguous type over information density.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CustomerPriceScreen(item: PriceListItem, onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun CustomerPriceScreen(
+  item: PriceListItem,
+  categoryImageUrl: String?,
+  onBack: () -> Unit,
+  modifier: Modifier = Modifier
+) {
   Scaffold(
     topBar = {
       TopAppBar(
@@ -398,53 +430,69 @@ private fun CustomerPriceScreen(item: PriceListItem, onBack: () -> Unit, modifie
     },
     modifier = modifier
   ) { padding ->
-    Column(
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(padding)
-        .padding(24.dp),
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.Center
-    ) {
-      Text(
-        item.itemName,
-        style = MaterialTheme.typography.headlineSmall,
-        textAlign = TextAlign.Center
-      )
-      Text(
-        "${item.category} · ${item.groupName}",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.outline,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.padding(top = 8.dp)
-      )
-
-      Spacer(modifier = Modifier.height(40.dp))
-
-      if (item.mrp > item.finalPrice) {
+    Box(modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp)) {
+      Column(
+        modifier = Modifier.fillMaxSize().align(Alignment.Center),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+      ) {
         Text(
-          "MRP ₹${formatPrice(item.mrp)}",
-          style = MaterialTheme.typography.titleLarge,
-          color = MaterialTheme.colorScheme.outline,
-          textDecoration = TextDecoration.LineThrough
+          item.itemName,
+          style = MaterialTheme.typography.headlineSmall,
+          textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+          "${item.category} · ${item.groupName}",
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.outline,
+          textAlign = TextAlign.Center,
+          modifier = Modifier.padding(top = 8.dp)
+        )
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        if (item.mrp > item.finalPrice) {
+          Text(
+            "MRP ₹${formatPrice(item.mrp)}",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.outline,
+            textDecoration = TextDecoration.LineThrough
+          )
+          Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        Text(
+          "₹${formatPrice(item.finalPrice)}",
+          style = MaterialTheme.typography.displayMedium,
+          fontWeight = FontWeight.Bold,
+          color = MaterialTheme.colorScheme.primary
+        )
+
+        if (item.mrp > item.finalPrice) {
+          val savings = item.mrp - item.finalPrice
+          Text(
+            "You save ₹${formatPrice(savings)}",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(top = 12.dp)
+          )
+        }
       }
 
-      Text(
-        "₹${formatPrice(item.finalPrice)}",
-        style = MaterialTheme.typography.displayMedium,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary
-      )
-
-      if (item.mrp > item.finalPrice) {
-        val savings = item.mrp - item.finalPrice
-        Text(
-          "You save ₹${formatPrice(savings)}",
-          style = MaterialTheme.typography.titleMedium,
-          color = MaterialTheme.colorScheme.primary,
-          modifier = Modifier.padding(top = 12.dp)
+      // Category hero image, if an admin has assigned one -- anchored to the
+      // bottom of the screen rather than in the centered column above, so it
+      // reads as a closing visual rather than competing with the price for
+      // center billing.
+      if (categoryImageUrl != null) {
+        AsyncImage(
+          model = categoryImageUrl,
+          contentDescription = item.category,
+          contentScale = ContentScale.Fit,
+          modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .height(160.dp)
+            .clip(RoundedCornerShape(12.dp))
         )
       }
     }
@@ -452,8 +500,9 @@ private fun CustomerPriceScreen(item: PriceListItem, onBack: () -> Unit, modifie
 }
 
 @Composable
-private fun NavRow(title: String, subtitle: String, onClick: () -> Unit) {
+private fun NavRow(title: String, subtitle: String, containerColor: Color, onClick: () -> Unit) {
   Card(
+    colors = CardDefaults.cardColors(containerColor = containerColor),
     modifier = Modifier
       .fillMaxWidth()
       .padding(bottom = 12.dp)

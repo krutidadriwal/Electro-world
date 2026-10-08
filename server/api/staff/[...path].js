@@ -792,15 +792,15 @@ async function complaintsStatus(req, res) {
     const resolved = status === 'closed' || status === 'cancelled_by_staff' || status === 'cancelled_by_customer';
     const result = await pool.query(
       `update public.complaints
-       set status = $1,
+       set status = $1::public.complaint_status,
            updated_at = now(),
            resolved_at = case when $2 then now() else null end,
-           complaint_number = case when $1 = 'assigned_to_service_center' then $3 else complaint_number end,
-           technician_name = case when $1 = 'assigned_to_technician' then $4 else technician_name end,
-           technician_mobile = case when $1 = 'assigned_to_technician' then $5 else technician_mobile end,
-           blocked_reason = case when $1 = 'blocked' then $6 else blocked_reason end,
-           cancellation_reason = case when $1 in ('cancelled_by_staff', 'cancelled_by_customer') then $6 else cancellation_reason end,
-           closed_date = case when $1 = 'closed' then $7::date else closed_date end
+           complaint_number = case when $1::text = 'assigned_to_service_center' then $3 else complaint_number end,
+           technician_name = case when $1::text = 'assigned_to_technician' then $4 else technician_name end,
+           technician_mobile = case when $1::text = 'assigned_to_technician' then $5 else technician_mobile end,
+           blocked_reason = case when $1::text = 'blocked' then $6 else blocked_reason end,
+           cancellation_reason = case when $1::text in ('cancelled_by_staff', 'cancelled_by_customer') then $6 else cancellation_reason end,
+           closed_date = case when $1::text = 'closed' then $7::date else closed_date end
        where id = $8
        returning id, status, updated_at, resolved_at`,
       [
@@ -995,15 +995,15 @@ async function installationsStatus(req, res) {
     const resolved = status === 'closed' || status === 'cancelled_by_staff' || status === 'cancelled_by_customer';
     const result = await pool.query(
       `update public.installations
-       set status = $1,
+       set status = $1::public.installation_status,
            updated_at = now(),
            resolved_at = case when $2 then now() else null end,
-           installation_number = case when $1 = 'assigned_to_service_center' then $3 else installation_number end,
-           technician_name = case when $1 = 'assigned_to_technician' then $4 else technician_name end,
-           technician_mobile = case when $1 = 'assigned_to_technician' then $5 else technician_mobile end,
-           blocked_reason = case when $1 = 'blocked' then $6 else blocked_reason end,
-           cancellation_reason = case when $1 in ('cancelled_by_staff', 'cancelled_by_customer') then $6 else cancellation_reason end,
-           closed_date = case when $1 = 'closed' then $7::date else closed_date end
+           installation_number = case when $1::text = 'assigned_to_service_center' then $3 else installation_number end,
+           technician_name = case when $1::text = 'assigned_to_technician' then $4 else technician_name end,
+           technician_mobile = case when $1::text = 'assigned_to_technician' then $5 else technician_mobile end,
+           blocked_reason = case when $1::text = 'blocked' then $6 else blocked_reason end,
+           cancellation_reason = case when $1::text in ('cancelled_by_staff', 'cancelled_by_customer') then $6 else cancellation_reason end,
+           closed_date = case when $1::text = 'closed' then $7::date else closed_date end
        where id = $8
        returning id, status, updated_at, resolved_at`,
       [

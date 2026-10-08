@@ -22,7 +22,9 @@ public class ComplaintItemJsonAdapter(
 ) : JsonAdapter<ComplaintItem>() {
   private val options: JsonReader.Options = JsonReader.Options.of("id", "customer_phone",
       "customer_name", "category_name", "subcategory_name", "description", "address",
-      "contact_phone", "invoice_file_name", "status", "created_at", "updated_at", "resolved_at")
+      "contact_phone", "invoice_file_name", "status", "complaint_number", "technician_name",
+      "technician_mobile", "blocked_reason", "cancellation_reason", "closed_date", "created_at",
+      "updated_at", "resolved_at")
 
   private val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java, emptySet(),
       "id")
@@ -44,6 +46,12 @@ public class ComplaintItemJsonAdapter(
     var contactPhone: String? = null
     var invoiceFileName: String? = null
     var status: String? = null
+    var complaintNumber: String? = null
+    var technicianName: String? = null
+    var technicianMobile: String? = null
+    var blockedReason: String? = null
+    var cancellationReason: String? = null
+    var closedDate: String? = null
     var createdAt: String? = null
     var updatedAt: String? = null
     var resolvedAt: String? = null
@@ -66,11 +74,17 @@ public class ComplaintItemJsonAdapter(
         8 -> invoiceFileName = nullableStringAdapter.fromJson(reader)
         9 -> status = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("status",
             "status", reader)
-        10 -> createdAt = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("createdAt",
+        10 -> complaintNumber = nullableStringAdapter.fromJson(reader)
+        11 -> technicianName = nullableStringAdapter.fromJson(reader)
+        12 -> technicianMobile = nullableStringAdapter.fromJson(reader)
+        13 -> blockedReason = nullableStringAdapter.fromJson(reader)
+        14 -> cancellationReason = nullableStringAdapter.fromJson(reader)
+        15 -> closedDate = nullableStringAdapter.fromJson(reader)
+        16 -> createdAt = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("createdAt",
             "created_at", reader)
-        11 -> updatedAt = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("updatedAt",
+        17 -> updatedAt = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("updatedAt",
             "updated_at", reader)
-        12 -> resolvedAt = nullableStringAdapter.fromJson(reader)
+        18 -> resolvedAt = nullableStringAdapter.fromJson(reader)
         -1 -> {
           // Unknown name, skip it.
           reader.skipName()
@@ -94,6 +108,12 @@ public class ComplaintItemJsonAdapter(
         contactPhone = contactPhone,
         invoiceFileName = invoiceFileName,
         status = status ?: throw Util.missingProperty("status", "status", reader),
+        complaintNumber = complaintNumber,
+        technicianName = technicianName,
+        technicianMobile = technicianMobile,
+        blockedReason = blockedReason,
+        cancellationReason = cancellationReason,
+        closedDate = closedDate,
         createdAt = createdAt ?: throw Util.missingProperty("createdAt", "created_at", reader),
         updatedAt = updatedAt ?: throw Util.missingProperty("updatedAt", "updated_at", reader),
         resolvedAt = resolvedAt
@@ -125,6 +145,18 @@ public class ComplaintItemJsonAdapter(
     nullableStringAdapter.toJson(writer, value_.invoiceFileName)
     writer.name("status")
     stringAdapter.toJson(writer, value_.status)
+    writer.name("complaint_number")
+    nullableStringAdapter.toJson(writer, value_.complaintNumber)
+    writer.name("technician_name")
+    nullableStringAdapter.toJson(writer, value_.technicianName)
+    writer.name("technician_mobile")
+    nullableStringAdapter.toJson(writer, value_.technicianMobile)
+    writer.name("blocked_reason")
+    nullableStringAdapter.toJson(writer, value_.blockedReason)
+    writer.name("cancellation_reason")
+    nullableStringAdapter.toJson(writer, value_.cancellationReason)
+    writer.name("closed_date")
+    nullableStringAdapter.toJson(writer, value_.closedDate)
     writer.name("created_at")
     stringAdapter.toJson(writer, value_.createdAt)
     writer.name("updated_at")

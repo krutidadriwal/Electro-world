@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -66,16 +65,6 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 
-private val SERVICE_REQUEST_STATUSES = listOf("open", "in_progress", "resolved", "closed")
-
-private fun serviceStatusLabel(status: String): String = when (status) {
-  "open" -> "Open"
-  "in_progress" -> "In Progress"
-  "resolved" -> "Resolved"
-  "closed" -> "Closed"
-  else -> status
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ComplaintsScreen(initialStatusFilter: String? = null, onBack: () -> Unit, modifier: Modifier = Modifier) {
@@ -112,10 +101,20 @@ fun ComplaintsScreen(initialStatusFilter: String? = null, onBack: () -> Unit, mo
     }
   }
 
-  fun updateStatus(item: ComplaintItem, newStatus: String) {
+  fun updateStatus(item: ComplaintItem, newStatus: String, fields: StatusChangeFields) {
     scope.launch {
       try {
-        NetworkModule.complaintsApi.updateStatus(ComplaintStatusRequest(item.id, newStatus))
+        NetworkModule.complaintsApi.updateStatus(
+          ComplaintStatusRequest(
+            complaintId = item.id,
+            status = newStatus,
+            referenceNumber = fields.referenceNumber,
+            technicianName = fields.technicianName,
+            technicianMobile = fields.technicianMobile,
+            reason = fields.reason,
+            closedDate = fields.closedDate
+          )
+        )
         refreshTrigger++
       } catch (e: Exception) {
         errorMessage = "Failed to update status."
@@ -128,7 +127,7 @@ fun ComplaintsScreen(initialStatusFilter: String? = null, onBack: () -> Unit, mo
     ComplaintDetailScreen(
       item = item,
       onBack = { selectedItem = null },
-      onStatusSelected = { newStatus -> updateStatus(item, newStatus) },
+      onStatusSelected = { newStatus, fields -> updateStatus(item, newStatus, fields) },
       modifier = modifier
     )
     return
@@ -192,7 +191,7 @@ fun ComplaintsScreen(initialStatusFilter: String? = null, onBack: () -> Unit, mo
             text = { Text("All") },
             onClick = { statusFilter = null; statusFilterMenuExpanded = false }
           )
-          SERVICE_REQUEST_STATUSES.forEach { status ->
+          ALL_STATUSES_FOR_FILTER.forEach { status ->
             DropdownMenuItem(
               text = { Text(serviceStatusLabel(status)) },
               onClick = { statusFilter = status; statusFilterMenuExpanded = false }
@@ -226,7 +225,7 @@ fun ComplaintsScreen(initialStatusFilter: String? = null, onBack: () -> Unit, mo
             ComplaintRow(
               item = complaint,
               onClick = { selectedItem = complaint },
-              onStatusSelected = { newStatus -> updateStatus(complaint, newStatus) },
+              onStatusSelected = { newStatus, fields -> updateStatus(complaint, newStatus, fields) },
               onCall = {
                 val number = complaint.contactPhone?.takeIf { it.isNotBlank() } ?: complaint.customerPhone
                 context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")))
@@ -243,11 +242,9 @@ fun ComplaintsScreen(initialStatusFilter: String? = null, onBack: () -> Unit, mo
 private fun ComplaintRow(
   item: ComplaintItem,
   onClick: () -> Unit,
-  onStatusSelected: (String) -> Unit,
+  onStatusSelected: (String, StatusChangeFields) -> Unit,
   onCall: () -> Unit
 ) {
-  var statusMenuExpanded by remember { mutableStateOf(false) }
-
   Card(colors = staffCardColors(), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).clickable(onClick = onClick)) {
     Column(modifier = Modifier.padding(16.dp)) {
       Row(
@@ -282,22 +279,7 @@ private fun ComplaintRow(
       )
 
       Box(modifier = Modifier.padding(top = 8.dp)) {
-        AssistChip(
-          onClick = { statusMenuExpanded = true },
-          label = { Text(serviceStatusLabel(item.status)) },
-          trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) }
-        )
-        DropdownMenu(expanded = statusMenuExpanded, onDismissRequest = { statusMenuExpanded = false }) {
-          SERVICE_REQUEST_STATUSES.forEach { status ->
-            DropdownMenuItem(
-              text = { Text(serviceStatusLabel(status)) },
-              onClick = {
-                statusMenuExpanded = false
-                if (status != item.status) onStatusSelected(status)
-              }
-            )
-          }
-        }
+        StatusAssistChip(currentStatus = item.status, onConfirmed = onStatusSelected)
       }
     }
   }
@@ -308,11 +290,9 @@ private fun ComplaintRow(
 private fun ComplaintDetailScreen(
   item: ComplaintItem,
   onBack: () -> Unit,
-  onStatusSelected: (String) -> Unit,
+  onStatusSelected: (String, StatusChangeFields) -> Unit,
   modifier: Modifier = Modifier
 ) {
-  var statusMenuExpanded by remember { mutableStateOf(false) }
-
   Scaffold(
     topBar = {
       TopAppBar(
@@ -342,26 +322,16 @@ private fun ComplaintDetailScreen(
       item.invoiceFileName?.takeIf { it.isNotBlank() }?.let { DetailField("Invoice", it) }
       DetailField("Reported", formatIst(item.createdAt) ?: item.createdAt)
       item.resolvedAt?.let { DetailField("Resolved", formatIst(it) ?: it) }
+      item.complaintNumber?.takeIf { it.isNotBlank() }?.let { DetailField("Service center no.", it) }
+      if (!item.technicianName.isNullOrBlank() || !item.technicianMobile.isNullOrBlank()) {
+        DetailField("Technician", listOfNotNull(item.technicianName, item.technicianMobile).joinToString(" - "))
+      }
+      item.blockedReason?.takeIf { it.isNotBlank() }?.let { DetailField("Blocked reason", it) }
+      item.cancellationReason?.takeIf { it.isNotBlank() }?.let { DetailField("Cancellation reason", it) }
+      item.closedDate?.let { DetailField("Closed date", it) }
 
       Spacer(modifier = Modifier.height(16.dp))
-      Box {
-        AssistChip(
-          onClick = { statusMenuExpanded = true },
-          label = { Text(serviceStatusLabel(item.status)) },
-          trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) }
-        )
-        DropdownMenu(expanded = statusMenuExpanded, onDismissRequest = { statusMenuExpanded = false }) {
-          SERVICE_REQUEST_STATUSES.forEach { status ->
-            DropdownMenuItem(
-              text = { Text(serviceStatusLabel(status)) },
-              onClick = {
-                statusMenuExpanded = false
-                if (status != item.status) onStatusSelected(status)
-              }
-            )
-          }
-        }
-      }
+      StatusAssistChip(currentStatus = item.status, onConfirmed = onStatusSelected)
     }
   }
 }

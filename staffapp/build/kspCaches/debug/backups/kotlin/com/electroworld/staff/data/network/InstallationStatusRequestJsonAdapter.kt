@@ -11,19 +11,29 @@ import com.squareup.moshi.JsonWriter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.`internal`.Util
 import java.lang.NullPointerException
+import java.lang.reflect.Constructor
+import kotlin.Int
 import kotlin.String
 import kotlin.Suppress
 import kotlin.Unit
 import kotlin.collections.emptySet
+import kotlin.jvm.Volatile
 import kotlin.text.buildString
 
 public class InstallationStatusRequestJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<InstallationStatusRequest>() {
-  private val options: JsonReader.Options = JsonReader.Options.of("installationId", "status")
+  private val options: JsonReader.Options = JsonReader.Options.of("installationId", "status",
+      "referenceNumber", "technicianName", "technicianMobile", "reason", "closedDate")
 
   private val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java, emptySet(),
       "installationId")
+
+  private val nullableStringAdapter: JsonAdapter<String?> = moshi.adapter(String::class.java,
+      emptySet(), "referenceNumber")
+
+  @Volatile
+  private var constructorRef: Constructor<InstallationStatusRequest>? = null
 
   public override fun toString(): String = buildString(47) {
       append("GeneratedJsonAdapter(").append("InstallationStatusRequest").append(')') }
@@ -31,6 +41,12 @@ public class InstallationStatusRequestJsonAdapter(
   public override fun fromJson(reader: JsonReader): InstallationStatusRequest {
     var installationId: String? = null
     var status: String? = null
+    var referenceNumber: String? = null
+    var technicianName: String? = null
+    var technicianMobile: String? = null
+    var reason: String? = null
+    var closedDate: String? = null
+    var mask0 = -1
     reader.beginObject()
     while (reader.hasNext()) {
       when (reader.selectName(options)) {
@@ -38,6 +54,31 @@ public class InstallationStatusRequestJsonAdapter(
             throw Util.unexpectedNull("installationId", "installationId", reader)
         1 -> status = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("status",
             "status", reader)
+        2 -> {
+          referenceNumber = nullableStringAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 2).inv()
+          mask0 = mask0 and 0xfffffffb.toInt()
+        }
+        3 -> {
+          technicianName = nullableStringAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 3).inv()
+          mask0 = mask0 and 0xfffffff7.toInt()
+        }
+        4 -> {
+          technicianMobile = nullableStringAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 4).inv()
+          mask0 = mask0 and 0xffffffef.toInt()
+        }
+        5 -> {
+          reason = nullableStringAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 5).inv()
+          mask0 = mask0 and 0xffffffdf.toInt()
+        }
+        6 -> {
+          closedDate = nullableStringAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 6).inv()
+          mask0 = mask0 and 0xffffffbf.toInt()
+        }
         -1 -> {
           // Unknown name, skip it.
           reader.skipName()
@@ -46,11 +87,38 @@ public class InstallationStatusRequestJsonAdapter(
       }
     }
     reader.endObject()
-    return InstallationStatusRequest(
-        installationId = installationId ?: throw Util.missingProperty("installationId",
-            "installationId", reader),
-        status = status ?: throw Util.missingProperty("status", "status", reader)
-    )
+    if (mask0 == 0xffffff83.toInt()) {
+      // All parameters with defaults are set, invoke the constructor directly
+      return  InstallationStatusRequest(
+          installationId = installationId ?: throw Util.missingProperty("installationId",
+              "installationId", reader),
+          status = status ?: throw Util.missingProperty("status", "status", reader),
+          referenceNumber = referenceNumber,
+          technicianName = technicianName,
+          technicianMobile = technicianMobile,
+          reason = reason,
+          closedDate = closedDate
+      )
+    } else {
+      // Reflectively invoke the synthetic defaults constructor
+      @Suppress("UNCHECKED_CAST")
+      val localConstructor: Constructor<InstallationStatusRequest> = this.constructorRef ?:
+          InstallationStatusRequest::class.java.getDeclaredConstructor(String::class.java,
+          String::class.java, String::class.java, String::class.java, String::class.java,
+          String::class.java, String::class.java, Int::class.javaPrimitiveType,
+          Util.DEFAULT_CONSTRUCTOR_MARKER).also { this.constructorRef = it }
+      return localConstructor.newInstance(
+          installationId ?: throw Util.missingProperty("installationId", "installationId", reader),
+          status ?: throw Util.missingProperty("status", "status", reader),
+          referenceNumber,
+          technicianName,
+          technicianMobile,
+          reason,
+          closedDate,
+          mask0,
+          /* DefaultConstructorMarker */ null
+      )
+    }
   }
 
   public override fun toJson(writer: JsonWriter, value_: InstallationStatusRequest?): Unit {
@@ -62,6 +130,16 @@ public class InstallationStatusRequestJsonAdapter(
     stringAdapter.toJson(writer, value_.installationId)
     writer.name("status")
     stringAdapter.toJson(writer, value_.status)
+    writer.name("referenceNumber")
+    nullableStringAdapter.toJson(writer, value_.referenceNumber)
+    writer.name("technicianName")
+    nullableStringAdapter.toJson(writer, value_.technicianName)
+    writer.name("technicianMobile")
+    nullableStringAdapter.toJson(writer, value_.technicianMobile)
+    writer.name("reason")
+    nullableStringAdapter.toJson(writer, value_.reason)
+    writer.name("closedDate")
+    nullableStringAdapter.toJson(writer, value_.closedDate)
     writer.endObject()
   }
 }

@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -21,8 +22,10 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -44,10 +47,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.InvoiceFileCache
 import com.example.data.network.Category
 import com.example.data.network.CreateComplaintRequest
 import com.example.data.network.InvoiceFile
@@ -75,11 +80,32 @@ fun RegisterComplaintScreen(
 ) {
   BackHandler(onBack = onBack)
 
+  val context = LocalContext.current
   val coroutineScope = rememberCoroutineScope()
 
   var invoices by remember { mutableStateOf<List<InvoiceFile>>(emptyList()) }
   var selectedInvoice by remember { mutableStateOf<InvoiceFile?>(null) }
   var invoiceMenuExpanded by remember { mutableStateOf(false) }
+  var openingInvoiceId by remember { mutableStateOf<String?>(null) }
+
+  // Lets the user preview an invoice straight from the picker, before (or
+  // instead of) selecting it -- same cache-then-open flow as My Invoices/
+  // Dashboard (InvoiceFileCache), so a PDF already opened from there is
+  // served from disk here too.
+  fun openInvoice(invoice: InvoiceFile) {
+    if (openingInvoiceId != null) return
+    openingInvoiceId = invoice.id
+    coroutineScope.launch {
+      try {
+        val file = InvoiceFileCache.getOrDownload(context, userPhone, invoice)
+        InvoiceFileCache.openFile(context, file)
+      } catch (e: Exception) {
+        Toast.makeText(context, "Unable to open invoice. Please try again.", Toast.LENGTH_SHORT).show()
+      } finally {
+        openingInvoiceId = null
+      }
+    }
+  }
 
   var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
   var selectedCategory by remember { mutableStateOf<Category?>(null) }
@@ -208,10 +234,31 @@ fun RegisterComplaintScreen(
             invoiceMenuExpanded = false
           })
           invoices.forEach { inv ->
-            DropdownMenuItem(text = { Text(inv.name) }, onClick = {
-              selectedInvoice = inv
-              invoiceMenuExpanded = false
-            })
+            DropdownMenuItem(
+              text = { Text(inv.name) },
+              onClick = {
+                selectedInvoice = inv
+                invoiceMenuExpanded = false
+              },
+              trailingIcon = {
+                if (openingInvoiceId == inv.id) {
+                  CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.primary
+                  )
+                } else {
+                  IconButton(onClick = { openInvoice(inv) }, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                      Icons.Default.Visibility,
+                      contentDescription = "View invoice",
+                      tint = MaterialTheme.colorScheme.primary,
+                      modifier = Modifier.size(18.dp)
+                    )
+                  }
+                }
+              }
+            )
           }
         }
       }

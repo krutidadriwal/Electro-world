@@ -31,7 +31,51 @@ const VALID_WISHLIST_STATUSES = [
   'dropped_plan',
   'not_interested'
 ];
-const VALID_SERVICE_REQUEST_STATUSES = ['open', 'in_progress', 'resolved', 'closed'];
+// 'open' is the pre-action default only -- staff can never set it manually,
+// and in_progress/resolved are deprecated (kept in the DB enum but no
+// longer offered as a target status, see schema.sql).
+const VALID_SERVICE_REQUEST_STATUSES = [
+  'assigned_to_service_center',
+  'assigned_to_technician',
+  'blocked',
+  'cancelled_by_staff',
+  'cancelled_by_customer',
+  'closed'
+];
+
+// One required field (or field pair) per status, collected via a popup on
+// the staff app before the status change is allowed to go through.
+function statusChangeFieldsError(status, body) {
+  switch (status) {
+    case 'assigned_to_service_center':
+      if (typeof body.referenceNumber !== 'string' || body.referenceNumber.trim().length === 0) {
+        return 'referenceNumber is required for assigned_to_service_center';
+      }
+      return null;
+    case 'assigned_to_technician':
+      if (typeof body.technicianName !== 'string' || body.technicianName.trim().length === 0) {
+        return 'technicianName is required for assigned_to_technician';
+      }
+      if (typeof body.technicianMobile !== 'string' || !/^\d{10}$/.test(body.technicianMobile)) {
+        return 'technicianMobile must be a 10-digit number for assigned_to_technician';
+      }
+      return null;
+    case 'blocked':
+    case 'cancelled_by_staff':
+    case 'cancelled_by_customer':
+      if (typeof body.reason !== 'string' || body.reason.trim().length === 0) {
+        return 'reason is required for this status';
+      }
+      return null;
+    case 'closed':
+      if (typeof body.closedDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.closedDate)) {
+        return 'closedDate (YYYY-MM-DD) is required for closed';
+      }
+      return null;
+    default:
+      return null;
+  }
+}
 
 module.exports = async function handler(req, res) {
   // .../api/staff/<...> -- drop "api", "staff".
@@ -614,6 +658,12 @@ async function complaintsList(req, res) {
          c.contact_phone,
          c.invoice_file_name,
          c.status,
+         c.complaint_number,
+         c.technician_name,
+         c.technician_mobile,
+         c.blocked_reason,
+         c.cancellation_reason,
+         c.closed_date,
          c.created_at,
          c.updated_at,
          c.resolved_at
@@ -722,25 +772,47 @@ async function complaintsStatus(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { complaintId, status } = req.body ?? {};
+  const body = req.body ?? {};
+  const { complaintId, status } = body;
   if (typeof complaintId !== 'string' || complaintId.trim().length === 0) {
     return res.status(400).json({ error: 'complaintId is required' });
   }
   if (!VALID_SERVICE_REQUEST_STATUSES.includes(status)) {
     return res.status(400).json({ error: `status must be one of: ${VALID_SERVICE_REQUEST_STATUSES.join(', ')}` });
   }
+  const fieldsError = statusChangeFieldsError(status, body);
+  if (fieldsError) {
+    return res.status(400).json({ error: fieldsError });
+  }
 
   try {
     await requireStaff(req);
 
     const pool = getPool();
-    const resolved = status === 'resolved' || status === 'closed';
+    const resolved = status === 'closed' || status === 'cancelled_by_staff' || status === 'cancelled_by_customer';
     const result = await pool.query(
       `update public.complaints
-       set status = $1, updated_at = now(), resolved_at = case when $2 then now() else null end
-       where id = $3
+       set status = $1,
+           updated_at = now(),
+           resolved_at = case when $2 then now() else null end,
+           complaint_number = case when $1 = 'assigned_to_service_center' then $3 else complaint_number end,
+           technician_name = case when $1 = 'assigned_to_technician' then $4 else technician_name end,
+           technician_mobile = case when $1 = 'assigned_to_technician' then $5 else technician_mobile end,
+           blocked_reason = case when $1 = 'blocked' then $6 else blocked_reason end,
+           cancellation_reason = case when $1 in ('cancelled_by_staff', 'cancelled_by_customer') then $6 else cancellation_reason end,
+           closed_date = case when $1 = 'closed' then $7::date else closed_date end
+       where id = $8
        returning id, status, updated_at, resolved_at`,
-      [status, resolved, complaintId]
+      [
+        status,
+        resolved,
+        body.referenceNumber ?? null,
+        body.technicianName ?? null,
+        body.technicianMobile ?? null,
+        body.reason ?? null,
+        body.closedDate ?? null,
+        complaintId
+      ]
     );
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Complaint not found' });
@@ -780,6 +852,12 @@ async function installationsList(req, res) {
          i.contact_phone,
          i.invoice_file_name,
          i.status,
+         i.installation_number,
+         i.technician_name,
+         i.technician_mobile,
+         i.blocked_reason,
+         i.cancellation_reason,
+         i.closed_date,
          i.created_at,
          i.updated_at,
          i.resolved_at
@@ -897,25 +975,47 @@ async function installationsStatus(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { installationId, status } = req.body ?? {};
+  const body = req.body ?? {};
+  const { installationId, status } = body;
   if (typeof installationId !== 'string' || installationId.trim().length === 0) {
     return res.status(400).json({ error: 'installationId is required' });
   }
   if (!VALID_SERVICE_REQUEST_STATUSES.includes(status)) {
     return res.status(400).json({ error: `status must be one of: ${VALID_SERVICE_REQUEST_STATUSES.join(', ')}` });
   }
+  const fieldsError = statusChangeFieldsError(status, body);
+  if (fieldsError) {
+    return res.status(400).json({ error: fieldsError });
+  }
 
   try {
     await requireStaff(req);
 
     const pool = getPool();
-    const resolved = status === 'resolved' || status === 'closed';
+    const resolved = status === 'closed' || status === 'cancelled_by_staff' || status === 'cancelled_by_customer';
     const result = await pool.query(
       `update public.installations
-       set status = $1, updated_at = now(), resolved_at = case when $2 then now() else null end
-       where id = $3
+       set status = $1,
+           updated_at = now(),
+           resolved_at = case when $2 then now() else null end,
+           installation_number = case when $1 = 'assigned_to_service_center' then $3 else installation_number end,
+           technician_name = case when $1 = 'assigned_to_technician' then $4 else technician_name end,
+           technician_mobile = case when $1 = 'assigned_to_technician' then $5 else technician_mobile end,
+           blocked_reason = case when $1 = 'blocked' then $6 else blocked_reason end,
+           cancellation_reason = case when $1 in ('cancelled_by_staff', 'cancelled_by_customer') then $6 else cancellation_reason end,
+           closed_date = case when $1 = 'closed' then $7::date else closed_date end
+       where id = $8
        returning id, status, updated_at, resolved_at`,
-      [status, resolved, installationId]
+      [
+        status,
+        resolved,
+        body.referenceNumber ?? null,
+        body.technicianName ?? null,
+        body.technicianMobile ?? null,
+        body.reason ?? null,
+        body.closedDate ?? null,
+        installationId
+      ]
     );
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Installation request not found' });

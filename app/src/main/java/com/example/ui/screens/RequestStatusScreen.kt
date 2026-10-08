@@ -54,7 +54,12 @@ data class RequestStatusItem(
   val subtitle: String,
   val address: String,
   val status: String,
-  val createdAt: String
+  val createdAt: String,
+  // Only ever populated for assigned_to_service_center ("Service center
+  // no. X") and assigned_to_technician ("Technician: Name - Mobile") --
+  // blocked/cancelled reasons are staff-internal and deliberately never
+  // surfaced here.
+  val assignedInfo: String? = null
 )
 
 // primary/secondary/outline rather than green/amber/gray -- the 8-swatch
@@ -203,7 +208,24 @@ fun RequestStatusScreen(
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(item.address, color = MaterialTheme.colorScheme.outline, fontSize = 10.sp, maxLines = 1)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(formatRequestDate(item.createdAt), color = MaterialTheme.colorScheme.outline, fontSize = 10.sp)
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Text(formatRequestDate(item.createdAt), color = MaterialTheme.colorScheme.outline, fontSize = 10.sp)
+                  // Staff-assigned info -- absent until staff sets the
+                  // status to assigned_to_service_center/assigned_to_technician,
+                  // so this section is simply skipped until then.
+                  item.assignedInfo?.let { info ->
+                    Text(
+                      text = info,
+                      color = MaterialTheme.colorScheme.primary,
+                      fontSize = 10.sp,
+                      fontWeight = FontWeight.Bold
+                    )
+                  }
+                }
               }
             }
           }
@@ -239,13 +261,27 @@ fun InstallationStatusScreen(userPhone: String, onBack: () -> Unit, modifier: Mo
   )
 }
 
+// Mirrors the staff app's status values (see ServiceRequestStatus.kt) --
+// only these two ever have customer-facing info to show; blocked/cancelled
+// reasons are staff-internal.
+private fun assignedInfoFor(status: String, serviceCenterNo: String?, technicianName: String?, technicianMobile: String?): String? =
+  when (status) {
+    "assigned_to_service_center" -> serviceCenterNo?.takeIf { it.isNotBlank() }?.let { "Service center no. $it" }
+    "assigned_to_technician" -> listOfNotNull(
+      technicianName?.takeIf { it.isNotBlank() },
+      technicianMobile?.takeIf { it.isNotBlank() }
+    ).takeIf { it.isNotEmpty() }?.joinToString(" - ")?.let { "Technician: $it" }
+    else -> null
+  }
+
 private fun Complaint.toStatusItem() = RequestStatusItem(
   id = id,
   title = categoryName + (subcategoryName?.let { " - $it" } ?: ""),
   subtitle = description,
   address = address,
   status = status,
-  createdAt = createdAt
+  createdAt = createdAt,
+  assignedInfo = assignedInfoFor(status, complaintNumber, technicianName, technicianMobile)
 )
 
 private fun Installation.toStatusItem() = RequestStatusItem(
@@ -257,5 +293,6 @@ private fun Installation.toStatusItem() = RequestStatusItem(
   ).joinToString(" + "),
   address = address,
   status = status,
-  createdAt = createdAt
+  createdAt = createdAt,
+  assignedInfo = assignedInfoFor(status, installationNumber, technicianName, technicianMobile)
 )

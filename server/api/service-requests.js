@@ -43,7 +43,8 @@ async function complaintsGet(req, res) {
     const result = await pool.query(
       `select id, invoice_file_id, invoice_file_name, category_icon_key, category_name,
               subcategory_id, subcategory_name, description, address,
-              contact_phone, status, created_at, updated_at, resolved_at
+              contact_phone, status, complaint_number, technician_name, technician_mobile,
+              created_at, updated_at, resolved_at
        from public.complaints
        where phone = $1
        order by created_at desc`,
@@ -118,7 +119,7 @@ async function complaintsPost(req, res) {
        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        returning id, invoice_file_id, invoice_file_name, category_icon_key, category_name,
                  subcategory_id, subcategory_name, description, address,
-                 contact_phone, status, created_at, updated_at, resolved_at`,
+                 contact_phone, status, complaint_number, created_at, updated_at, resolved_at`,
       [
         normalizedPhone,
         typeof invoiceFileId === 'string' && invoiceFileId.trim().length > 0 ? invoiceFileId.trim() : null,
@@ -172,7 +173,8 @@ async function installationsGet(req, res) {
     const result = await pool.query(
       `select id, invoice_file_id, invoice_file_name, category_icon_key, category_name,
               item_name, wants_demo, wants_installation, address,
-              contact_phone, status, created_at, updated_at, resolved_at
+              contact_phone, status, installation_number, technician_name, technician_mobile,
+              created_at, updated_at, resolved_at
        from public.installations
        where phone = $1
        order by created_at desc`,
@@ -247,7 +249,7 @@ async function installationsPost(req, res) {
        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        returning id, invoice_file_id, invoice_file_name, category_icon_key, category_name,
                  item_name, wants_demo, wants_installation, address,
-                 contact_phone, status, created_at, updated_at, resolved_at`,
+                 contact_phone, status, installation_number, created_at, updated_at, resolved_at`,
       [
         normalizedPhone,
         typeof invoiceFileId === 'string' && invoiceFileId.trim().length > 0 ? invoiceFileId.trim() : null,

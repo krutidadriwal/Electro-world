@@ -173,6 +173,35 @@ alter table public.complaints add column if not exists subcategory_name text;
 alter table public.complaints drop column if exists issue_type;
 alter table public.complaints add column if not exists address text;
 
+-- Staff-assigned reference number (e.g. a service ticket/job number from
+-- their own tracking system), set from the staff app when they update a
+-- complaint's status. Null until assigned -- the customer app only shows
+-- this section once a number exists.
+alter table public.complaints add column if not exists complaint_number text;
+
+-- Extends the original 4-value status set with a staff-driven workflow:
+-- each of these requires a specific field to be filled on the staff app
+-- before the status change is allowed (see complaintsStatus in
+-- api/staff/[...path].js). in_progress/resolved are left in place
+-- (Postgres can't drop an enum value) but are no longer offered as a
+-- target status -- any existing rows still carrying them just display
+-- their raw value, same precedent as wishlist_response_status below.
+alter type public.complaint_status add value if not exists 'assigned_to_service_center';
+alter type public.complaint_status add value if not exists 'assigned_to_technician';
+alter type public.complaint_status add value if not exists 'blocked';
+alter type public.complaint_status add value if not exists 'cancelled_by_staff';
+alter type public.complaint_status add value if not exists 'cancelled_by_customer';
+
+-- One column per status-specific field above. Set once when its matching
+-- status is chosen and never cleared by a later status change -- kept as a
+-- historical record, same denormalize-for-history convention used
+-- throughout this schema (e.g. category_name on complaints itself).
+alter table public.complaints add column if not exists technician_name text;
+alter table public.complaints add column if not exists technician_mobile text;
+alter table public.complaints add column if not exists blocked_reason text;
+alter table public.complaints add column if not exists cancellation_reason text;
+alter table public.complaints add column if not exists closed_date date;
+
 create index if not exists complaints_phone_idx on public.complaints (phone, created_at desc);
 
 -- A wishlisted entry is either a whole category (subcategory_id null) or a
@@ -224,6 +253,25 @@ create table if not exists public.installations (
   resolved_at timestamptz,
   constraint installations_wants_something check (wants_demo or wants_installation)
 );
+
+-- Staff-assigned reference number, set from the staff app when they update
+-- an installation request's status. Null until assigned -- the customer app
+-- only shows this section once a number exists.
+alter table public.installations add column if not exists installation_number text;
+
+-- Same staff-driven status workflow as complaints (see the comment above
+-- complaint_status's add value statements).
+alter type public.installation_status add value if not exists 'assigned_to_service_center';
+alter type public.installation_status add value if not exists 'assigned_to_technician';
+alter type public.installation_status add value if not exists 'blocked';
+alter type public.installation_status add value if not exists 'cancelled_by_staff';
+alter type public.installation_status add value if not exists 'cancelled_by_customer';
+
+alter table public.installations add column if not exists technician_name text;
+alter table public.installations add column if not exists technician_mobile text;
+alter table public.installations add column if not exists blocked_reason text;
+alter table public.installations add column if not exists cancellation_reason text;
+alter table public.installations add column if not exists closed_date date;
 
 create index if not exists installations_phone_idx on public.installations (phone, created_at desc);
 

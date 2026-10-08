@@ -93,6 +93,9 @@ data class Complaint(
   val address: String,
   @Json(name = "contact_phone") val contactPhone: String?,
   val status: String,
+  @Json(name = "complaint_number") val complaintNumber: String?,
+  @Json(name = "technician_name") val technicianName: String?,
+  @Json(name = "technician_mobile") val technicianMobile: String?,
   @Json(name = "created_at") val createdAt: String,
   @Json(name = "updated_at") val updatedAt: String,
   @Json(name = "resolved_at") val resolvedAt: String?
@@ -155,6 +158,9 @@ data class Installation(
   val address: String,
   @Json(name = "contact_phone") val contactPhone: String?,
   val status: String,
+  @Json(name = "installation_number") val installationNumber: String?,
+  @Json(name = "technician_name") val technicianName: String?,
+  @Json(name = "technician_mobile") val technicianMobile: String?,
   @Json(name = "created_at") val createdAt: String,
   @Json(name = "updated_at") val updatedAt: String,
   @Json(name = "resolved_at") val resolvedAt: String?

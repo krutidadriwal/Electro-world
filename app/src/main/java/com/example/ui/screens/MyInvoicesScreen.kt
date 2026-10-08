@@ -8,11 +8,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,11 +21,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.GoldSecondary
-import com.example.ui.theme.OnSlateText
-import com.example.ui.theme.SlateBackground
-import com.example.ui.theme.SlateSurface
-import com.example.ui.theme.SlateSurfaceVariant
 
 /**
  * Full-screen home for Store Invoices & Bills, matching the header/back
@@ -42,21 +37,21 @@ fun MyInvoicesScreen(
 
   Scaffold(
     modifier = modifier.fillMaxSize(),
-    containerColor = SlateBackground,
+    containerColor = MaterialTheme.colorScheme.background,
     topBar = {
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .background(SlateSurface)
+          .background(MaterialTheme.colorScheme.surface)
           .padding(top = 40.dp, bottom = 16.dp, start = 8.dp, end = 16.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        IconButton(onClick = onBack, modifier = Modifier.background(SlateSurfaceVariant, CircleShape)) {
-          Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back", tint = GoldSecondary)
+        IconButton(onClick = onBack) {
+          Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.secondary)
         }
         Text(
           text = "Store Invoices & Bills",
-          color = OnSlateText,
+          color = MaterialTheme.colorScheme.onSurface,
           fontSize = 18.sp,
           fontWeight = FontWeight.Bold,
           modifier = Modifier.padding(start = 12.dp)

@@ -19,10 +19,10 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,22 +34,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.network.NetworkModule
 import com.example.data.network.PointsHistoryEntry
-import com.example.ui.theme.GoldGradientEnd
-import com.example.ui.theme.GoldGradientStart
-import com.example.ui.theme.GoldPrimary
-import com.example.ui.theme.GoldSecondary
-import com.example.ui.theme.OnSlateText
-import com.example.ui.theme.OnSlateTextSecondary
-import com.example.ui.theme.SlateBackground
-import com.example.ui.theme.SlateSurface
-import com.example.ui.theme.SlateSurfaceVariant
+import com.example.ui.theme.appCardColors
 
 /**
  * Full-screen rewards home: gold-gradient balance card + point history list,
@@ -83,21 +74,21 @@ fun PointsScreen(
 
   Scaffold(
     modifier = modifier.fillMaxSize(),
-    containerColor = SlateBackground,
+    containerColor = MaterialTheme.colorScheme.background,
     topBar = {
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .background(SlateSurface)
+          .background(MaterialTheme.colorScheme.surface)
           .padding(top = 40.dp, bottom = 16.dp, start = 8.dp, end = 16.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        IconButton(onClick = onBack, modifier = Modifier.background(SlateSurfaceVariant, CircleShape)) {
-          Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back", tint = GoldSecondary)
+        IconButton(onClick = onBack) {
+          Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.secondary)
         }
         Text(
           text = "My Points",
-          color = OnSlateText,
+          color = MaterialTheme.colorScheme.onSurface,
           fontSize = 18.sp,
           fontWeight = FontWeight.Bold,
           modifier = Modifier.padding(start = 12.dp)
@@ -111,7 +102,7 @@ fun PointsScreen(
           modifier = Modifier.fillMaxSize().padding(paddingValues),
           contentAlignment = Alignment.Center
         ) {
-          CircularProgressIndicator(color = GoldPrimary)
+          CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
       }
       errorMessage != null -> {
@@ -119,10 +110,10 @@ fun PointsScreen(
           modifier = Modifier.fillMaxSize().padding(paddingValues).padding(vertical = 60.dp),
           horizontalAlignment = Alignment.CenterHorizontally
         ) {
-          Icon(Icons.Default.Warning, "Error", tint = GoldSecondary, modifier = Modifier.height(40.dp))
+          Icon(Icons.Default.Warning, "Error", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.height(40.dp))
           Text(
             text = errorMessage ?: "",
-            color = OnSlateTextSecondary,
+            color = MaterialTheme.colorScheme.outline,
             fontSize = 13.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 8.dp, start = 24.dp, end = 24.dp)
@@ -140,7 +131,7 @@ fun PointsScreen(
           item {
             Text(
               text = "POINT HISTORY",
-              color = GoldPrimary,
+              color = MaterialTheme.colorScheme.primary,
               fontSize = 11.sp,
               fontWeight = FontWeight.Bold,
               letterSpacing = 2.sp,
@@ -152,7 +143,7 @@ fun PointsScreen(
             item {
               Text(
                 text = "No points earned yet.",
-                color = OnSlateTextSecondary,
+                color = MaterialTheme.colorScheme.outline,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(vertical = 20.dp)
               )
@@ -170,11 +161,15 @@ fun PointsScreen(
 
 @Composable
 private fun PointsBalanceCard(balance: Int) {
+  // primary -> secondary (the two amber swatches), with onPrimary text --
+  // that role is Charcoal in both schemes, which is exactly the contrast
+  // this gradient needs regardless of light/dark mode.
+  val onGradient = MaterialTheme.colorScheme.onPrimary
   Box(
     modifier = Modifier
       .fillMaxWidth()
       .background(
-        brush = Brush.linearGradient(listOf(GoldGradientStart, GoldGradientEnd)),
+        brush = Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)),
         shape = RoundedCornerShape(20.dp)
       )
       .padding(24.dp)
@@ -182,13 +177,13 @@ private fun PointsBalanceCard(balance: Int) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
       Text(
         text = "Available points",
-        color = Color(0xCC1E2022),
+        color = onGradient.copy(alpha = 0.8f),
         fontSize = 13.sp,
         fontWeight = FontWeight.SemiBold
       )
       Text(
         text = balance.toString(),
-        color = SlateBackground,
+        color = onGradient,
         fontSize = 40.sp,
         fontWeight = FontWeight.Black,
         modifier = Modifier.padding(top = 6.dp)
@@ -210,7 +205,7 @@ private fun formatPointsDate(isoTimestamp: String): String {
 @Composable
 private fun PointsHistoryRow(entry: PointsHistoryEntry) {
   Card(
-    colors = CardDefaults.cardColors(containerColor = SlateSurfaceVariant),
+    colors = appCardColors(),
     shape = RoundedCornerShape(12.dp),
     modifier = Modifier.fillMaxWidth()
   ) {
@@ -222,19 +217,19 @@ private fun PointsHistoryRow(entry: PointsHistoryEntry) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
           modifier = Modifier
-            .background(GoldPrimary.copy(alpha = 0.15f), CircleShape)
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape)
             .padding(8.dp)
         ) {
-          Icon(Icons.Default.Star, contentDescription = null, tint = GoldSecondary, modifier = Modifier.height(16.dp))
+          Icon(Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.height(16.dp))
         }
         Column(modifier = Modifier.padding(start = 12.dp)) {
-          Text(text = entry.reason, color = OnSlateText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-          Text(text = formatPointsDate(entry.createdAt), color = OnSlateTextSecondary, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+          Text(text = entry.reason, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+          Text(text = formatPointsDate(entry.createdAt), color = MaterialTheme.colorScheme.outline, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
         }
       }
       Text(
         text = if (entry.points >= 0) "+${entry.points}" else entry.points.toString(),
-        color = if (entry.points >= 0) GoldSecondary else OnSlateTextSecondary,
+        color = if (entry.points >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
         fontSize = 14.sp,
         fontWeight = FontWeight.Bold
       )

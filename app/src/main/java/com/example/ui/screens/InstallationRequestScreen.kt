@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,7 +32,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -54,14 +57,13 @@ import com.example.data.network.Category
 import com.example.data.network.CreateInstallationRequest
 import com.example.data.network.InvoiceFile
 import com.example.data.network.NetworkModule
-import com.example.ui.theme.GoldPrimary
-import com.example.ui.theme.GoldSecondary
-import com.example.ui.theme.OnSlateText
-import com.example.ui.theme.OnSlateTextSecondary
-import com.example.ui.theme.SlateBackground
-import com.example.ui.theme.SlateSurface
-import com.example.ui.theme.SlateSurfaceVariant
+import com.example.ui.theme.Swatch2Paper
 import kotlinx.coroutines.launch
+
+// Fixed Paper in light mode (matching the rest of the app's dropdowns);
+// dark mode keeps the Material default tonal surface.
+@Composable
+private fun dropdownMenuContainerColor() = if (isSystemInDarkTheme()) MenuDefaults.containerColor else Swatch2Paper
 
 /**
  * Full-screen Installation Request flow (its own screen, not a dashboard
@@ -131,28 +133,28 @@ fun InstallationRequestScreen(
 
   Scaffold(
     modifier = modifier.fillMaxSize(),
-    containerColor = SlateBackground,
+    containerColor = MaterialTheme.colorScheme.background,
     topBar = {
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .background(SlateSurface)
+          .background(MaterialTheme.colorScheme.surface)
           .padding(top = 40.dp, bottom = 16.dp, start = 8.dp, end = 16.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
         IconButton(onClick = onBack) {
-          Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = GoldPrimary)
+          Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
         }
         Spacer(modifier = Modifier.width(4.dp))
         Text(
           text = "Installation Request",
-          color = OnSlateText,
+          color = MaterialTheme.colorScheme.onSurface,
           fontSize = 18.sp,
           fontWeight = FontWeight.Bold,
           modifier = Modifier.weight(1f)
         )
         IconButton(onClick = onOpenHistory) {
-          Icon(Icons.Default.History, contentDescription = "My installation requests", tint = GoldPrimary)
+          Icon(Icons.Default.History, contentDescription = "My installation requests", tint = MaterialTheme.colorScheme.primary)
         }
       }
     }
@@ -165,12 +167,12 @@ fun InstallationRequestScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
       ) {
-        Icon(Icons.Default.CheckCircle, "Submitted", tint = GoldSecondary, modifier = Modifier.size(48.dp))
+        Icon(Icons.Default.CheckCircle, "Submitted", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(48.dp))
         Spacer(modifier = Modifier.height(12.dp))
-        Text("Request Submitted", color = OnSlateText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text("Request Submitted", color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Text(
           text = "Our team will get in touch with you shortly.",
-          color = OnSlateTextSecondary,
+          color = MaterialTheme.colorScheme.outline,
           fontSize = 12.sp,
           textAlign = TextAlign.Center,
           modifier = Modifier.padding(top = 6.dp)
@@ -187,10 +189,10 @@ fun InstallationRequestScreen(
             contactPhone = ""
             submitSuccess = false
           },
-          colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
+          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
           shape = RoundedCornerShape(10.dp)
         ) {
-          Text("FILE ANOTHER REQUEST", color = SlateBackground, fontWeight = FontWeight.Bold)
+          Text("FILE ANOTHER REQUEST", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
         }
       }
       return@Scaffold
@@ -203,7 +205,7 @@ fun InstallationRequestScreen(
         .padding(12.dp)
         .verticalScroll(rememberScrollState())
     ) {
-      Text("Related Invoice (optional)", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+      Text("Related Invoice (optional)", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
       ExposedDropdownMenuBox(
         expanded = invoiceMenuExpanded,
         onExpandedChange = { invoiceMenuExpanded = it }
@@ -212,18 +214,18 @@ fun InstallationRequestScreen(
           value = selectedInvoice?.name ?: "No specific invoice",
           onValueChange = {},
           readOnly = true,
-          trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = OnSlateTextSecondary) },
+          trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = MaterialTheme.colorScheme.outline) },
           colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = OnSlateText,
-            unfocusedTextColor = OnSlateText,
-            focusedBorderColor = GoldPrimary,
-            unfocusedBorderColor = SlateSurfaceVariant
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline
           ),
           modifier = Modifier
             .fillMaxWidth()
             .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
         )
-        ExposedDropdownMenu(expanded = invoiceMenuExpanded, onDismissRequest = { invoiceMenuExpanded = false }) {
+        ExposedDropdownMenu(expanded = invoiceMenuExpanded, onDismissRequest = { invoiceMenuExpanded = false }, containerColor = dropdownMenuContainerColor()) {
           DropdownMenuItem(text = { Text("No specific invoice") }, onClick = {
             selectedInvoice = null
             invoiceMenuExpanded = false
@@ -239,23 +241,23 @@ fun InstallationRequestScreen(
 
       Spacer(modifier = Modifier.height(14.dp))
 
-      Text("Item Name *", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+      Text("Item Name *", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
       OutlinedTextField(
         value = itemName,
         onValueChange = { itemName = it },
         placeholder = { Text("e.g. LG 1.5 Ton Split AC") },
         colors = OutlinedTextFieldDefaults.colors(
-          focusedTextColor = OnSlateText,
-          unfocusedTextColor = OnSlateText,
-          focusedBorderColor = GoldPrimary,
-          unfocusedBorderColor = SlateSurfaceVariant
+          focusedTextColor = MaterialTheme.colorScheme.onSurface,
+          unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+          focusedBorderColor = MaterialTheme.colorScheme.primary,
+          unfocusedBorderColor = MaterialTheme.colorScheme.outline
         ),
         modifier = Modifier.fillMaxWidth()
       )
 
       Spacer(modifier = Modifier.height(14.dp))
 
-      Text("Product Category *", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+      Text("Product Category *", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
       ExposedDropdownMenuBox(
         expanded = categoryMenuExpanded,
         onExpandedChange = { categoryMenuExpanded = it }
@@ -264,18 +266,18 @@ fun InstallationRequestScreen(
           value = selectedCategory?.name ?: "Select a category",
           onValueChange = {},
           readOnly = true,
-          trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = OnSlateTextSecondary) },
+          trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = MaterialTheme.colorScheme.outline) },
           colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = OnSlateText,
-            unfocusedTextColor = OnSlateText,
-            focusedBorderColor = GoldPrimary,
-            unfocusedBorderColor = SlateSurfaceVariant
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline
           ),
           modifier = Modifier
             .fillMaxWidth()
             .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
         )
-        ExposedDropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
+        ExposedDropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }, containerColor = dropdownMenuContainerColor()) {
           visibleCategories.forEach { option ->
             DropdownMenuItem(text = { Text(option.name) }, onClick = { selectCategory(option) })
           }
@@ -285,7 +287,7 @@ fun InstallationRequestScreen(
       if (selectedCategory != null) {
         Spacer(modifier = Modifier.height(14.dp))
 
-        Text("What do you need? *", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+        Text("What do you need? *", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
 
         val category = selectedCategory!!
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -295,11 +297,11 @@ fun InstallationRequestScreen(
               if (category.canDemo) wantsDemo = checked else promptUnavailable("Demo")
             },
             enabled = category.canDemo,
-            colors = CheckboxDefaults.colors(checkedColor = GoldPrimary)
+            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
           )
           Text(
             text = "Demo",
-            color = if (category.canDemo) OnSlateText else OnSlateTextSecondary,
+            color = if (category.canDemo) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
             fontSize = 13.sp,
             modifier = Modifier
               .weight(1f)
@@ -313,11 +315,11 @@ fun InstallationRequestScreen(
               if (category.canInstall) wantsInstallation = checked else promptUnavailable("Installation")
             },
             enabled = category.canInstall,
-            colors = CheckboxDefaults.colors(checkedColor = GoldPrimary)
+            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
           )
           Text(
             text = "Installation",
-            color = if (category.canInstall) OnSlateText else OnSlateTextSecondary,
+            color = if (category.canInstall) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
             fontSize = 13.sp,
             modifier = Modifier
               .weight(1f)
@@ -328,40 +330,40 @@ fun InstallationRequestScreen(
 
       Spacer(modifier = Modifier.height(14.dp))
 
-      Text("Address *", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+      Text("Address *", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
       OutlinedTextField(
         value = address,
         onValueChange = { address = it },
         placeholder = { Text("Where should our technician visit?") },
         minLines = 2,
         colors = OutlinedTextFieldDefaults.colors(
-          focusedTextColor = OnSlateText,
-          unfocusedTextColor = OnSlateText,
-          focusedBorderColor = GoldPrimary,
-          unfocusedBorderColor = SlateSurfaceVariant
+          focusedTextColor = MaterialTheme.colorScheme.onSurface,
+          unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+          focusedBorderColor = MaterialTheme.colorScheme.primary,
+          unfocusedBorderColor = MaterialTheme.colorScheme.outline
         ),
         modifier = Modifier.fillMaxWidth()
       )
 
       Spacer(modifier = Modifier.height(14.dp))
 
-      Text("Alternate Contact Number (optional)", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+      Text("Alternate Contact Number (optional)", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
       OutlinedTextField(
         value = contactPhone,
         onValueChange = { if (it.length <= 10) contactPhone = it.filter { c -> c.isDigit() } },
         placeholder = { Text("10-digit mobile number") },
         colors = OutlinedTextFieldDefaults.colors(
-          focusedTextColor = OnSlateText,
-          unfocusedTextColor = OnSlateText,
-          focusedBorderColor = GoldPrimary,
-          unfocusedBorderColor = SlateSurfaceVariant
+          focusedTextColor = MaterialTheme.colorScheme.onSurface,
+          unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+          focusedBorderColor = MaterialTheme.colorScheme.primary,
+          unfocusedBorderColor = MaterialTheme.colorScheme.outline
         ),
         modifier = Modifier.fillMaxWidth()
       )
 
       submitError?.let {
         Spacer(modifier = Modifier.height(10.dp))
-        Text(it, color = GoldSecondary, fontSize = 12.sp)
+        Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
       }
 
       Spacer(modifier = Modifier.height(20.dp))
@@ -403,11 +405,11 @@ fun InstallationRequestScreen(
           }
         },
         enabled = !isSubmitting,
-        colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp)
       ) {
-        Text(if (isSubmitting) "SUBMITTING..." else "SUBMIT REQUEST", color = SlateBackground, fontWeight = FontWeight.Bold)
+        Text(if (isSubmitting) "SUBMITTING..." else "SUBMIT REQUEST", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
       }
 
       Spacer(modifier = Modifier.height(12.dp))

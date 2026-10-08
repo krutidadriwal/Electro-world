@@ -34,10 +34,10 @@ import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,13 +57,7 @@ import com.example.data.network.Category
 import com.example.data.network.ConfirmWishlistRequest
 import com.example.data.network.NetworkModule
 import com.example.data.network.WishlistItemDto
-import com.example.ui.theme.GoldPrimary
-import com.example.ui.theme.GoldSecondary
-import com.example.ui.theme.OnSlateText
-import com.example.ui.theme.OnSlateTextSecondary
-import com.example.ui.theme.SlateBackground
-import com.example.ui.theme.SlateSurface
-import com.example.ui.theme.SlateSurfaceVariant
+import com.example.ui.theme.appCardColors
 import kotlinx.coroutines.launch
 
 /**
@@ -130,29 +124,29 @@ fun WishlistScreen(
 
   Scaffold(
     modifier = modifier.fillMaxSize(),
-    containerColor = SlateBackground,
+    containerColor = MaterialTheme.colorScheme.background,
     topBar = {
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .background(SlateSurface)
+          .background(MaterialTheme.colorScheme.surface)
           .padding(top = 40.dp, bottom = 16.dp, start = 8.dp, end = 16.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
         IconButton(onClick = ::navigateBack) {
-          Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = GoldPrimary)
+          Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
         }
         Spacer(modifier = Modifier.width(4.dp))
         Text(
           text = screenTitle,
-          color = OnSlateText,
+          color = MaterialTheme.colorScheme.onSurface,
           fontSize = 18.sp,
           fontWeight = FontWeight.Bold,
           modifier = Modifier.weight(1f)
         )
         if (!viewingMyWishlist && selectedCategory == null) {
           IconButton(onClick = { viewingMyWishlist = true }) {
-            Icon(Icons.Default.Bookmarks, contentDescription = "View my wishlist", tint = GoldPrimary)
+            Icon(Icons.Default.Bookmarks, contentDescription = "View my wishlist", tint = MaterialTheme.colorScheme.primary)
           }
         }
       }
@@ -170,7 +164,7 @@ fun WishlistScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
           ) {
-            CircularProgressIndicator(color = GoldPrimary)
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
           }
         }
         errorMessage != null -> WishlistEmptyState(message = errorMessage ?: "")
@@ -226,7 +220,7 @@ private fun WishlistCategoryList(
   ) {
     items(categories) { category ->
       Card(
-        colors = CardDefaults.cardColors(containerColor = SlateSurfaceVariant),
+        colors = appCardColors(),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier
           .fillMaxWidth()
@@ -239,21 +233,21 @@ private fun WishlistCategoryList(
           Box(
             modifier = Modifier
               .size(42.dp)
-              .background(GoldPrimary.copy(alpha = 0.1f), CircleShape),
+              .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape),
             contentAlignment = Alignment.Center
           ) {
-            Icon(iconForKey(category.iconKey), contentDescription = category.name, tint = GoldSecondary, modifier = Modifier.size(22.dp))
+            Icon(iconForKey(category.iconKey), contentDescription = category.name, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(22.dp))
           }
           Spacer(modifier = Modifier.width(12.dp))
           Column(modifier = Modifier.weight(1f)) {
-            Text(text = category.name, color = OnSlateText, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(text = category.name, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             Text(
               text = "${category.subcategories.size} subcategories",
-              color = OnSlateTextSecondary,
+              color = MaterialTheme.colorScheme.outline,
               fontSize = 11.sp
             )
           }
-          Icon(Icons.Default.ChevronRight, contentDescription = null, tint = OnSlateTextSecondary)
+          Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
         }
       }
     }
@@ -284,12 +278,12 @@ private fun WishlistSubcategoryPicker(
         .padding(horizontal = 16.dp, vertical = 12.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
-      Text(text = category.name, color = OnSlateText, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+      Text(text = category.name, color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
       IconButton(onClick = { categoryStarred = !categoryStarred }) {
         Icon(
           imageVector = if (categoryStarred) Icons.Default.Star else Icons.Default.StarBorder,
           contentDescription = if (categoryStarred) "Unstar category" else "Star whole category",
-          tint = GoldSecondary
+          tint = MaterialTheme.colorScheme.secondary
         )
       }
     }
@@ -302,7 +296,7 @@ private fun WishlistSubcategoryPicker(
       items(category.subcategories) { subcategory ->
         val starred = starredSubcategoryIds.contains(subcategory.id)
         Card(
-          colors = CardDefaults.cardColors(containerColor = SlateSurfaceVariant),
+          colors = appCardColors(),
           shape = RoundedCornerShape(12.dp),
           modifier = Modifier.fillMaxWidth()
         ) {
@@ -313,7 +307,7 @@ private fun WishlistSubcategoryPicker(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Text(text = subcategory.name, color = OnSlateText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(text = subcategory.name, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             IconButton(onClick = {
               starredSubcategoryIds = if (starred) {
                 starredSubcategoryIds - subcategory.id
@@ -324,7 +318,7 @@ private fun WishlistSubcategoryPicker(
               Icon(
                 imageVector = if (starred) Icons.Default.Star else Icons.Default.StarBorder,
                 contentDescription = if (starred) "Unstar subcategory" else "Star subcategory",
-                tint = GoldSecondary
+                tint = MaterialTheme.colorScheme.secondary
               )
             }
           }
@@ -334,13 +328,13 @@ private fun WishlistSubcategoryPicker(
 
     Button(
       onClick = { onConfirm(categoryStarred, starredSubcategoryIds) },
-      colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
+      colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
       modifier = Modifier
         .fillMaxWidth()
         .padding(16.dp),
       shape = RoundedCornerShape(10.dp)
     ) {
-      Text("CONFIRM WISHLIST", color = SlateBackground, fontWeight = FontWeight.Bold)
+      Text("CONFIRM WISHLIST", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
     }
   }
 }
@@ -359,7 +353,7 @@ private fun WishlistSavedList(items: List<WishlistItemDto>) {
   ) {
     items(items) { item ->
       Card(
-        colors = CardDefaults.cardColors(containerColor = SlateSurfaceVariant),
+        colors = appCardColors(),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth()
       ) {
@@ -367,11 +361,11 @@ private fun WishlistSavedList(items: List<WishlistItemDto>) {
           modifier = Modifier.padding(14.dp),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Icon(Icons.Default.Star, contentDescription = null, tint = GoldSecondary, modifier = Modifier.size(18.dp))
+          Icon(Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
           Spacer(modifier = Modifier.width(10.dp))
           Text(
             text = if (item.subcategoryName != null) "${item.categoryName} • ${item.subcategoryName}" else item.categoryName,
-            color = OnSlateText,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold
           )
@@ -390,6 +384,6 @@ private fun WishlistEmptyState(message: String) {
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.Center
   ) {
-    Text(text = message, color = OnSlateTextSecondary, fontSize = 14.sp)
+    Text(text = message, color = MaterialTheme.colorScheme.outline, fontSize = 14.sp)
   }
 }

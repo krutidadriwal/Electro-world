@@ -35,10 +35,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.GoldDark
-import com.example.ui.theme.GoldLight
-import com.example.ui.theme.GoldPrimary
-import com.example.ui.theme.GoldSecondary
 
 // The official ElectroWorld base64-encoded logo image uploaded by the user
 const val LOGO_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAI8AAAB5CAYAAAAAqHKXAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAVPSURBVHhe7dRbjiM3DEbh2Wa2l2wp+0mQzLQx/bls100iJfEA56GNEvmTEvrHj8X4+68//jmjdYrJ8QHcrf2KgfFye2ueIjleYBbNWSTBi8qu+YsAvJTRdJ6iA17C6Dpf0QgXP5POmgEzZs35FgeYVeeOxGxZc77E0KvoHnpjHvX7dBh4Nd1HL8yxpWdSYdhVdS+tsf+WnkmDQVfVvfTADK/0XAoMubLupiX2fqdnU2DI1XU/rbDvJz0fjgFX1b20xv6f9Hw4BlxN99ESex/RWuEYcBXdQ0vs/fDPjd/e/G7dUAw3u87fEns/fPEwPmn9UAw3o87cGvs/uffhbHxnrzAMNpPO2hr7t9CeoRhudJ2vNfbf7cZ/lCc3vrF/GAYbUWfqgRl6aY4wDDaSztIa+9/uxn8YfzNTGE9BB9AZWmP/aM0XhsEyauYemCGL5gzDYJk0aw/MEK35UmHYaM3XAzNEa76UGDpKc/XADNGaLzWG7615WmP/LJpzCByip2ZphX0zaub0OEBPzXI39htBZ0iN4Xtqljuwx2g6T1oM3lOzXMHao+t8KTF0T81yFOvNpLOmxNC9NMderDOrzp0OA/fSHO/w7Eq6i1QYtpfmEL9fVfeSCsP20Axf+F35elfhGLSXGTL09veZj87t2RQYsodRfSN031/43Sc9nwJDltd0v1t4Zo/WSIEhy+O60094fq/WCcVw5X7d5V6sc0RrhWK48rXu7gzWPKr1QjFc+V33dQVrn9GaoRhudd3PndjrjNYMxXAr6k5aYM+zWjcMg62ie2iN/a9q/RAMNbPO3gtz3KE9QjDUTDprT8xyt/YLwVCj63y9MEdr7R+CoUbTeXpilp6aJQRDjaAz9MQsUZorBENl1dw9MUsGzRiCobJozt6YJ5vmDcFQkZqtN+bJrNlDMFRPzRKBmUbROUIwVGvtH4GZRtSZQjDU3dovCnONrvOFYKg7tEcU5ppJZw3BUFe0dgRmmlXnDsNgZ7RmT8wyu84fiuHOaM3W2H8l3UUohjuq9Vpgz5V1N6EY7ojWuhN7lT91T6EY7ojWuor1y2fdWTgG3KM1zmLd8r3uLxwDftLzR7HeSEbO8H2LSTDkJz2/B2uMZJZZzJECQ77Ts+/w7Eg6y+/4bS/NkQaDbumZLTwzks6yhWd6aY5UGHZLz3zhdyPpLO/wbE/NkgrD6tHvM+sse7BGb82TDgMb3N9H8vukx7FeT82SEkOPrvOdxbq9NU9KDD2iznQV60doprQYfASd4U7s1VvzpMbwWTV3C+wZoZnS4wBZNGdL7B2hmYbAISI1Ww/MEKW5hsFBemqW1tjbPBGacSgcprX2b4m9M2rm4XCgu7VfS+ydWbMPi4Nd1fotsfcIOsPQONwZrdkSe4+m8wyPA+7RGi2x96g61xQ45Cs91xJ7j67zTYODRg1t75l01qmIGtQlz6gzFydxsbPr/MVBXOgquodiJy5yNd1H8QEXuKrupXiBi1td91OACyt/6p6KX7io8rvua2lczpN/7vxtAd3dkriUVR/DEd3hUriMSw/mytnBdI/L4CL+9+rFXz0/kO5zelzAw6uXfvX8QLrTqXH4hwtd+F262ylx6IctHkyLmsl0v1PhsE/eecE7a+3KlVz3PB0O/M2dF/3RnXXM9oXfZdf80+Lgey96lztqmecTns+iOafHBVxyx0P5TzNcwdq9Nc8yuIiHPgL/PqG9W2DPVtp3SVzKndorErPt1TrFL1zUHdqjmBAv/YrWLibHB3BEaxWL4YP4pOeLhfFxqN8XxQMfSz2YYjf1aIqiKIqiKIriNf8CMwll/1zjlWgAAAAASUVORK5CYII="
@@ -63,6 +59,13 @@ fun ElectroWorldLogo(
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.Center
   ) {
+    // Captured here (composable context) rather than read inside the Canvas
+    // draw lambda below, which runs outside composition and has no access
+    // to MaterialTheme.
+    val goldLight = MaterialTheme.colorScheme.tertiary
+    val goldPrimary = MaterialTheme.colorScheme.primary
+    val goldDark = MaterialTheme.colorScheme.secondary
+
     if (logoBitmap != null) {
       Image(
         bitmap = logoBitmap,
@@ -96,7 +99,7 @@ fun ElectroWorldLogo(
 
       // Golden gradient
       val goldBrush = Brush.linearGradient(
-        colors = listOf(GoldLight, GoldPrimary, GoldDark),
+        colors = listOf(goldLight, goldPrimary, goldDark),
         start = Offset(width * 0.1f, height * 0.9f),
         end = Offset(width * 0.9f, height * 0.1f)
       )
@@ -175,7 +178,7 @@ fun ElectroWorldLogo(
       Column {
         Text(
           text = "Electro",
-          color = GoldSecondary,
+          color = MaterialTheme.colorScheme.secondary,
           fontSize = (iconSize * 0.4f).sp,
           fontWeight = FontWeight.ExtraBold,
           letterSpacing = 1.sp,
@@ -183,7 +186,7 @@ fun ElectroWorldLogo(
         )
         Text(
           text = "WORLD",
-          color = GoldLight,
+          color = MaterialTheme.colorScheme.tertiary,
           fontSize = (iconSize * 0.18f).sp,
           fontWeight = FontWeight.Light,
           letterSpacing = 5.sp,

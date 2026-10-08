@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,7 +28,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -50,14 +53,13 @@ import com.example.data.network.CreateComplaintRequest
 import com.example.data.network.InvoiceFile
 import com.example.data.network.NetworkModule
 import com.example.data.network.Subcategory
-import com.example.ui.theme.GoldPrimary
-import com.example.ui.theme.GoldSecondary
-import com.example.ui.theme.OnSlateText
-import com.example.ui.theme.OnSlateTextSecondary
-import com.example.ui.theme.SlateBackground
-import com.example.ui.theme.SlateSurface
-import com.example.ui.theme.SlateSurfaceVariant
+import com.example.ui.theme.Swatch2Paper
 import kotlinx.coroutines.launch
+
+// Fixed Paper in light mode (matching the rest of the app's dropdowns);
+// dark mode keeps the Material default tonal surface.
+@Composable
+private fun dropdownMenuContainerColor() = if (isSystemInDarkTheme()) MenuDefaults.containerColor else Swatch2Paper
 
 /**
  * Full-screen Register Complaint flow (its own screen, not a dashboard
@@ -109,28 +111,28 @@ fun RegisterComplaintScreen(
 
   Scaffold(
     modifier = modifier.fillMaxSize(),
-    containerColor = SlateBackground,
+    containerColor = MaterialTheme.colorScheme.background,
     topBar = {
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .background(SlateSurface)
+          .background(MaterialTheme.colorScheme.surface)
           .padding(top = 40.dp, bottom = 16.dp, start = 8.dp, end = 16.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
         IconButton(onClick = onBack) {
-          Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = GoldPrimary)
+          Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
         }
         Spacer(modifier = Modifier.width(4.dp))
         Text(
           text = "Register Complaint",
-          color = OnSlateText,
+          color = MaterialTheme.colorScheme.onSurface,
           fontSize = 18.sp,
           fontWeight = FontWeight.Bold,
           modifier = Modifier.weight(1f)
         )
         IconButton(onClick = onOpenHistory) {
-          Icon(Icons.Default.History, contentDescription = "My complaints", tint = GoldPrimary)
+          Icon(Icons.Default.History, contentDescription = "My complaints", tint = MaterialTheme.colorScheme.primary)
         }
       }
     }
@@ -143,12 +145,12 @@ fun RegisterComplaintScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
       ) {
-        Icon(Icons.Default.CheckCircle, "Submitted", tint = GoldSecondary, modifier = Modifier.size(48.dp))
+        Icon(Icons.Default.CheckCircle, "Submitted", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(48.dp))
         Spacer(modifier = Modifier.height(12.dp))
-        Text("Complaint Registered", color = OnSlateText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text("Complaint Registered", color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Text(
           text = "Our team will get in touch with you shortly.",
-          color = OnSlateTextSecondary,
+          color = MaterialTheme.colorScheme.outline,
           fontSize = 12.sp,
           textAlign = TextAlign.Center,
           modifier = Modifier.padding(top = 6.dp)
@@ -164,10 +166,10 @@ fun RegisterComplaintScreen(
             contactPhone = ""
             submitSuccess = false
           },
-          colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
+          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
           shape = RoundedCornerShape(10.dp)
         ) {
-          Text("FILE ANOTHER COMPLAINT", color = SlateBackground, fontWeight = FontWeight.Bold)
+          Text("FILE ANOTHER COMPLAINT", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
         }
       }
       return@Scaffold
@@ -180,7 +182,7 @@ fun RegisterComplaintScreen(
         .padding(12.dp)
         .verticalScroll(rememberScrollState())
     ) {
-      Text("Related Invoice (optional)", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+      Text("Related Invoice (optional)", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
       ExposedDropdownMenuBox(
         expanded = invoiceMenuExpanded,
         onExpandedChange = { invoiceMenuExpanded = it }
@@ -189,18 +191,18 @@ fun RegisterComplaintScreen(
           value = selectedInvoice?.name ?: "No specific invoice",
           onValueChange = {},
           readOnly = true,
-          trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = OnSlateTextSecondary) },
+          trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = MaterialTheme.colorScheme.outline) },
           colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = OnSlateText,
-            unfocusedTextColor = OnSlateText,
-            focusedBorderColor = GoldPrimary,
-            unfocusedBorderColor = SlateSurfaceVariant
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline
           ),
           modifier = Modifier
             .fillMaxWidth()
             .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
         )
-        ExposedDropdownMenu(expanded = invoiceMenuExpanded, onDismissRequest = { invoiceMenuExpanded = false }) {
+        ExposedDropdownMenu(expanded = invoiceMenuExpanded, onDismissRequest = { invoiceMenuExpanded = false }, containerColor = dropdownMenuContainerColor()) {
           DropdownMenuItem(text = { Text("No specific invoice") }, onClick = {
             selectedInvoice = null
             invoiceMenuExpanded = false
@@ -216,7 +218,7 @@ fun RegisterComplaintScreen(
 
       Spacer(modifier = Modifier.height(14.dp))
 
-      Text("Product Category", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+      Text("Product Category", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
       ExposedDropdownMenuBox(
         expanded = categoryMenuExpanded,
         onExpandedChange = { categoryMenuExpanded = it }
@@ -225,18 +227,18 @@ fun RegisterComplaintScreen(
           value = selectedCategory?.name ?: "Select a category",
           onValueChange = {},
           readOnly = true,
-          trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = OnSlateTextSecondary) },
+          trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = MaterialTheme.colorScheme.outline) },
           colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = OnSlateText,
-            unfocusedTextColor = OnSlateText,
-            focusedBorderColor = GoldPrimary,
-            unfocusedBorderColor = SlateSurfaceVariant
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline
           ),
           modifier = Modifier
             .fillMaxWidth()
             .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
         )
-        ExposedDropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
+        ExposedDropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }, containerColor = dropdownMenuContainerColor()) {
           categories.forEach { option ->
             DropdownMenuItem(text = { Text(option.name) }, onClick = {
               selectedCategory = option
@@ -250,7 +252,7 @@ fun RegisterComplaintScreen(
       if (selectedCategory != null && selectedCategory!!.subcategories.isNotEmpty()) {
         Spacer(modifier = Modifier.height(14.dp))
 
-        Text("Product Type (optional)", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+        Text("Product Type (optional)", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
         ExposedDropdownMenuBox(
           expanded = subcategoryMenuExpanded,
           onExpandedChange = { subcategoryMenuExpanded = it }
@@ -259,18 +261,18 @@ fun RegisterComplaintScreen(
             value = selectedSubcategory?.name ?: "Select a product type",
             onValueChange = {},
             readOnly = true,
-            trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = OnSlateTextSecondary) },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = MaterialTheme.colorScheme.outline) },
             colors = OutlinedTextFieldDefaults.colors(
-              focusedTextColor = OnSlateText,
-              unfocusedTextColor = OnSlateText,
-              focusedBorderColor = GoldPrimary,
-              unfocusedBorderColor = SlateSurfaceVariant
+              focusedTextColor = MaterialTheme.colorScheme.onSurface,
+              unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+              focusedBorderColor = MaterialTheme.colorScheme.primary,
+              unfocusedBorderColor = MaterialTheme.colorScheme.outline
             ),
             modifier = Modifier
               .fillMaxWidth()
               .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
           )
-          ExposedDropdownMenu(expanded = subcategoryMenuExpanded, onDismissRequest = { subcategoryMenuExpanded = false }) {
+          ExposedDropdownMenu(expanded = subcategoryMenuExpanded, onDismissRequest = { subcategoryMenuExpanded = false }, containerColor = dropdownMenuContainerColor()) {
             selectedCategory!!.subcategories.forEach { option ->
               DropdownMenuItem(text = { Text(option.name) }, onClick = {
                 selectedSubcategory = option
@@ -283,57 +285,57 @@ fun RegisterComplaintScreen(
 
       Spacer(modifier = Modifier.height(14.dp))
 
-      Text("Description *", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+      Text("Description *", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
       OutlinedTextField(
         value = description,
         onValueChange = { description = it },
         placeholder = { Text("Describe the issue in detail...") },
         minLines = 3,
         colors = OutlinedTextFieldDefaults.colors(
-          focusedTextColor = OnSlateText,
-          unfocusedTextColor = OnSlateText,
-          focusedBorderColor = GoldPrimary,
-          unfocusedBorderColor = SlateSurfaceVariant
+          focusedTextColor = MaterialTheme.colorScheme.onSurface,
+          unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+          focusedBorderColor = MaterialTheme.colorScheme.primary,
+          unfocusedBorderColor = MaterialTheme.colorScheme.outline
         ),
         modifier = Modifier.fillMaxWidth()
       )
 
       Spacer(modifier = Modifier.height(14.dp))
 
-      Text("Address *", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+      Text("Address *", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
       OutlinedTextField(
         value = address,
         onValueChange = { address = it },
         placeholder = { Text("Where should our technician visit?") },
         minLines = 2,
         colors = OutlinedTextFieldDefaults.colors(
-          focusedTextColor = OnSlateText,
-          unfocusedTextColor = OnSlateText,
-          focusedBorderColor = GoldPrimary,
-          unfocusedBorderColor = SlateSurfaceVariant
+          focusedTextColor = MaterialTheme.colorScheme.onSurface,
+          unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+          focusedBorderColor = MaterialTheme.colorScheme.primary,
+          unfocusedBorderColor = MaterialTheme.colorScheme.outline
         ),
         modifier = Modifier.fillMaxWidth()
       )
 
       Spacer(modifier = Modifier.height(14.dp))
 
-      Text("Alternate Contact Number (optional)", color = OnSlateTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+      Text("Alternate Contact Number (optional)", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
       OutlinedTextField(
         value = contactPhone,
         onValueChange = { if (it.length <= 10) contactPhone = it.filter { c -> c.isDigit() } },
         placeholder = { Text("10-digit mobile number") },
         colors = OutlinedTextFieldDefaults.colors(
-          focusedTextColor = OnSlateText,
-          unfocusedTextColor = OnSlateText,
-          focusedBorderColor = GoldPrimary,
-          unfocusedBorderColor = SlateSurfaceVariant
+          focusedTextColor = MaterialTheme.colorScheme.onSurface,
+          unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+          focusedBorderColor = MaterialTheme.colorScheme.primary,
+          unfocusedBorderColor = MaterialTheme.colorScheme.outline
         ),
         modifier = Modifier.fillMaxWidth()
       )
 
       submitError?.let {
         Spacer(modifier = Modifier.height(10.dp))
-        Text(it, color = GoldSecondary, fontSize = 12.sp)
+        Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
       }
 
       Spacer(modifier = Modifier.height(20.dp))
@@ -370,11 +372,11 @@ fun RegisterComplaintScreen(
           }
         },
         enabled = !isSubmitting,
-        colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp)
       ) {
-        Text(if (isSubmitting) "SUBMITTING..." else "SUBMIT COMPLAINT", color = SlateBackground, fontWeight = FontWeight.Bold)
+        Text(if (isSubmitting) "SUBMITTING..." else "SUBMIT COMPLAINT", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
       }
 
       Spacer(modifier = Modifier.height(12.dp))

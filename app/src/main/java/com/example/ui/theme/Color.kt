@@ -2,22 +2,30 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Electro World Color Palette (Gold & Espresso) -- kept identical to
-// staffapp/src/main/java/com/electroworld/staff/ui/theme/Color.kt so both
-// apps read as the same brand.
-val GoldPrimary = Color(0xFFC6A15B)       // Gold accent
-val GoldSecondary = Color(0xFFC6A15B)     // Gold accent
-val GoldLight = Color(0xFFDBC28C)         // Lighter tint of GoldPrimary
-val GoldDark = Color(0xFF8F7641)          // Darker shade of GoldPrimary
-val Espresso = Color(0xFF2A1018)          // Card/tile surfaces
-val EspressoLight = Color(0xFF4A2733)     // Lighter shade, for borders/elevated elements
-val SlateBackground = Color(0xFF1E2022)   // Screen background (not a "tab" surface)
-val SlateSurface = Espresso
-val SlateSurfaceVariant = EspressoLight
-val OnSlateText = Color(0xFFEEEEEE)       // Off-white readable text
-val OnSlateTextSecondary = Color(0xFFAAAAAA) // Soft gray body text
-val AlertRed = Color(0xFF6E1734)          // Error/alert accent
-val SuccessGreen = Color(0xFF81C784)      // Success verification color
-val GoldGradientStart = GoldLight
-val GoldGradientEnd = GoldDark
+// The ONLY 8 colors allowed anywhere in this app -- both the light and dark
+// schemes in Theme.kt are built exclusively from these, matching
+// staffapp/src/main/java/com/electroworld/staff/ui/theme/Color.kt exactly so
+// both apps read as the same brand. No other file should reference these
+// directly; use MaterialTheme.colorScheme.* instead, so colors actually
+// switch with the active theme.
+val Swatch1Charcoal = Color(0xFF3B3430)
+val Swatch2Paper = Color(0xFFFCFCFC)
+val Swatch3Amber = Color(0xFFE9A515)
+val Swatch4Taupe = Color(0xFF959188)
+val Swatch5Pearl = Color(0xFFDBD8D2)
+val Swatch6DeepAmber = Color(0xFFD99912)
+val Swatch7PaleGold = Color(0xFFF0CF8C)
+val Swatch8Sand = Color(0xFFBFA995)
 
+// All 8 swatches together, for call sites that intentionally need the raw
+// palette rather than a theme role.
+val AllSwatches = listOf(
+  Swatch1Charcoal, Swatch2Paper, Swatch3Amber, Swatch4Taupe,
+  Swatch5Pearl, Swatch6DeepAmber, Swatch7PaleGold, Swatch8Sand
+)
+
+// Per the same explicit design rule used in the staff app: Charcoal and
+// Taupe are the two swatches dark/muted enough to need Paper text for
+// contrast; every other swatch reads fine with Charcoal text.
+fun contrastTextColor(background: Color): Color =
+  if (background == Swatch1Charcoal || background == Swatch4Taupe) Swatch2Paper else Swatch1Charcoal

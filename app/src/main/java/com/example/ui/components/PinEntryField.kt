@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,10 +27,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.GoldPrimary
-import com.example.ui.theme.OnSlateText
-import com.example.ui.theme.SlateSurface
-import com.example.ui.theme.SlateSurfaceVariant
 
 private const val PIN_LENGTH = 4
 
@@ -78,10 +75,10 @@ fun PinEntryField(
         Box(
           modifier = Modifier
             .size(56.dp)
-            .background(SlateSurface, RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
             .border(
               width = 1.dp,
-              color = if (filled) GoldPrimary else SlateSurfaceVariant,
+              color = if (filled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
               shape = RoundedCornerShape(12.dp)
             ),
           contentAlignment = Alignment.Center
@@ -89,7 +86,7 @@ fun PinEntryField(
           if (filled) {
             Text(
               text = "●",
-              color = OnSlateText,
+              color = MaterialTheme.colorScheme.onSurface,
               fontSize = 22.sp,
               fontWeight = FontWeight.Bold,
               textAlign = TextAlign.Center

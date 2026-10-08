@@ -1,13 +1,12 @@
 package com.example.ui.screens
 
-import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,8 +48,6 @@ import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
@@ -96,16 +93,10 @@ import com.example.data.network.CreateInvoiceRequestRequest
 import com.example.data.network.InvoiceFile
 import com.example.data.network.NetworkModule
 import com.example.data.notifications.notificationTrayId
-import com.example.ui.theme.AlertRed
-import com.example.ui.theme.GoldDark
-import com.example.ui.theme.GoldLight
-import com.example.ui.theme.GoldPrimary
-import com.example.ui.theme.GoldSecondary
-import com.example.ui.theme.OnSlateText
-import com.example.ui.theme.OnSlateTextSecondary
-import com.example.ui.theme.SlateBackground
-import com.example.ui.theme.SlateSurface
-import com.example.ui.theme.SlateSurfaceVariant
+import com.example.ui.theme.Swatch1Charcoal
+import com.example.ui.theme.Swatch2Paper
+import com.example.ui.theme.Swatch8Sand
+import com.example.ui.theme.appCardColors
 import kotlinx.coroutines.launch
 
 // Screen Enumeration for dialog overlays
@@ -189,7 +180,7 @@ fun DashboardScreen(
 
   Scaffold(
     modifier = modifier.fillMaxSize(),
-    containerColor = SlateBackground
+    containerColor = MaterialTheme.colorScheme.background
   ) { paddingValues ->
     Box(
       modifier = Modifier
@@ -220,21 +211,25 @@ fun DashboardScreen(
             Box(
               modifier = Modifier
                 .size(48.dp)
-                .background(SlateSurfaceVariant, CircleShape),
+                .background(MaterialTheme.colorScheme.surface, CircleShape),
               contentAlignment = Alignment.Center
             ) {
               Text(
                 text = userName.take(2).ifBlank { "EW" }.uppercase(),
-                color = GoldPrimary,
+                color = MaterialTheme.colorScheme.secondary,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
               )
             }
             Column(modifier = Modifier.padding(start = 12.dp)) {
-              Text(text = "Welcome Back,", color = OnSlateTextSecondary, fontSize = 12.sp)
+              // outline, not onSurfaceVariant -- this text sits directly on
+              // `background`, and in dark mode onSurfaceVariant is set to the
+              // same color as background (see Theme.kt), which would make it
+              // invisible there (same fix applied in the staff app).
+              Text(text = "Welcome Back,", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp)
               Text(
                 text = userName.ifBlank { "Guest" },
-                color = OnSlateText,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold
               )
@@ -245,29 +240,31 @@ fun DashboardScreen(
             Box(
               modifier = Modifier
                 .size(44.dp)
-                .background(SlateSurface, CircleShape)
+                .background(MaterialTheme.colorScheme.surface, CircleShape)
                 .clickable { activeOverlay = ActiveModule.NOTIFICATIONS },
               contentAlignment = Alignment.Center
             ) {
               Icon(
                 imageVector = Icons.Default.Notifications,
                 contentDescription = "Notifications",
-                tint = GoldSecondary,
+                tint = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.size(20.dp)
               )
             }
             if (unreadNotificationCount > 0) {
+              // secondary, not a red/error color -- the 8-swatch palette has
+              // no red, same convention as the staff app's CountBadge.
               Box(
                 modifier = Modifier
                   .align(Alignment.TopEnd)
                   .offset(x = 2.dp, y = (-2).dp)
                   .size(18.dp)
-                  .background(AlertRed, CircleShape),
+                  .background(MaterialTheme.colorScheme.secondary, CircleShape),
                 contentAlignment = Alignment.Center
               ) {
                 Text(
                   text = if (unreadNotificationCount > 9) "9+" else unreadNotificationCount.toString(),
-                  color = Color.White,
+                  color = MaterialTheme.colorScheme.onSecondary,
                   fontSize = 10.sp,
                   lineHeight = 10.sp,
                   fontWeight = FontWeight.Bold,
@@ -283,7 +280,7 @@ fun DashboardScreen(
         // Section header
         Text(
           text = "STORE DEPARTMENTS & SERVICES",
-          color = GoldPrimary,
+          color = MaterialTheme.colorScheme.primary,
           fontSize = 11.sp,
           fontWeight = FontWeight.Bold,
           letterSpacing = 2.sp,
@@ -307,21 +304,21 @@ fun DashboardScreen(
                 .height(140.dp)
                 .clickable { item.onClick?.invoke() ?: run { activeOverlay = item.actionType } }
                 .testTag("module_${item.title.lowercase().replace(" ", "_")}"),
-              colors = CardDefaults.cardColors(containerColor = SlateSurface),
+              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)),
               shape = RoundedCornerShape(16.dp),
-              border = BorderStroke(1.dp, SlateSurfaceVariant)
+              border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
               Column(modifier = Modifier.fillMaxSize().padding(14.dp)) {
                 Box(
                   modifier = Modifier
                     .size(38.dp)
-                    .background(GoldPrimary.copy(alpha = 0.12f), CircleShape),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
                   contentAlignment = Alignment.Center
                 ) {
                   Icon(
                     imageVector = item.icon,
                     contentDescription = item.title,
-                    tint = GoldSecondary,
+                    tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(18.dp)
                   )
                 }
@@ -330,7 +327,7 @@ fun DashboardScreen(
 
                 Text(
                   text = item.title,
-                  color = OnSlateText,
+                  color = MaterialTheme.colorScheme.onSurface,
                   fontSize = 12.sp,
                   fontWeight = FontWeight.Bold,
                   maxLines = 2,
@@ -351,7 +348,7 @@ fun DashboardScreen(
         ) {
           Text(
             text = "MY INVOICES",
-            color = GoldPrimary,
+            color = MaterialTheme.colorScheme.primary,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 2.sp
@@ -360,11 +357,11 @@ fun DashboardScreen(
             modifier = Modifier.clickable { onOpenInvoices() },
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Text(text = "See more", color = GoldSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Text(text = "See more", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             Icon(
               imageVector = Icons.Default.ChevronRight,
               contentDescription = null,
-              tint = GoldSecondary,
+              tint = MaterialTheme.colorScheme.secondary,
               modifier = Modifier.size(14.dp)
             )
           }
@@ -374,14 +371,13 @@ fun DashboardScreen(
           modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-          colors = CardDefaults.cardColors(containerColor = SlateSurface),
-          shape = RoundedCornerShape(16.dp),
-          border = BorderStroke(1.dp, SlateSurfaceVariant)
+          colors = appCardColors(),
+          shape = RoundedCornerShape(16.dp)
         ) {
           if (recentInvoices.isEmpty()) {
             Text(
               text = "No invoices yet.",
-              color = OnSlateTextSecondary,
+              color = MaterialTheme.colorScheme.outline,
               fontSize = 12.sp,
               modifier = Modifier.padding(16.dp)
             )
@@ -404,7 +400,12 @@ fun DashboardScreen(
         }
       }
 
-      // Overlay portal for the active module's detail screen
+      // Overlay portal for the active module's detail screen. Visit Store
+      // gets its own explicit (theme-independent) palette per an exact
+      // design spec -- Charcoal page backdrop, a crisp Paper card, a solid
+      // DeepAmber header bar -- rather than the theme-adaptive colors the
+      // Notifications overlay still uses.
+      val isVisitStore = activeOverlay == ActiveModule.VISIT_STORE
       AnimatedVisibility(
         visible = activeOverlay != ActiveModule.NONE,
         enter = fadeIn(),
@@ -412,7 +413,11 @@ fun DashboardScreen(
         modifier = Modifier.fillMaxSize()
       ) {
         Surface(
-          color = Color(0xF2121212), // High contrast transparent scrim background
+          color = if (isVisitStore) {
+            if (isSystemInDarkTheme()) Swatch1Charcoal else Swatch2Paper
+          } else {
+            MaterialTheme.colorScheme.scrim.copy(alpha = 0.85f)
+          },
           modifier = Modifier.fillMaxSize()
         ) {
           Box(
@@ -425,40 +430,70 @@ fun DashboardScreen(
               modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.85f)
-                .shadow(16.dp, RoundedCornerShape(20.dp)),
-              colors = CardDefaults.cardColors(containerColor = SlateSurface),
+                // The drop shadow's elevation layer isn't clipped to the card's
+                // rounded shape, so with a translucent (alpha 0.3) containerColor
+                // it shows through as a faint square halo around the card --
+                // skip it for Visit Store, where the background is translucent.
+                .let { if (isVisitStore) it else it.shadow(16.dp, RoundedCornerShape(20.dp)) },
+              colors = CardDefaults.cardColors(
+                containerColor = if (isVisitStore) Swatch8Sand.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface
+              ),
               shape = RoundedCornerShape(20.dp),
-              border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.3f))
+              border = if (isVisitStore) null else BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
             ) {
-              Column(
-                modifier = Modifier
-                  .fillMaxSize()
-                  .padding(20.dp)
-              ) {
-                // Overlay Sheet Header
+              Column(modifier = Modifier.fillMaxSize()) {
+                // Modal Header Bar -- same translucent Paper as the card body for
+                // Visit Store (matching the card's own top corner radius),
+                // vs. the plain inline header the other overlay still uses.
                 Row(
-                  modifier = Modifier.fillMaxWidth(),
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .let {
+                      if (isVisitStore) {
+                        it.background(Swatch8Sand.copy(alpha = 0.5f), RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                      } else {
+                        it
+                      }
+                    }
+                    .padding(20.dp),
                   verticalAlignment = Alignment.CenterVertically,
                   horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                   Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                      modifier = Modifier
-                        .size(36.dp)
-                        .background(GoldPrimary.copy(alpha = 0.1f), CircleShape),
-                      contentAlignment = Alignment.Center
-                    ) {
+                    if (isVisitStore) {
                       Icon(
                         imageVector = getModuleIcon(activeOverlay),
                         contentDescription = "Icon",
-                        tint = GoldPrimary,
-                        modifier = Modifier.size(20.dp)
+                        tint = Swatch1Charcoal,
+                        modifier = Modifier.size(22.dp)
                       )
+                    } else {
+                      Box(
+                        modifier = Modifier
+                          .size(36.dp)
+                          .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape),
+                        contentAlignment = Alignment.Center
+                      ) {
+                        // onSurface, not a literal swatch -- this badge sits
+                        // on primary.copy(alpha=0.1f) over the overlay
+                        // card's own `surface` background, which is light
+                        // (Pearl) in light mode but dark (Taupe) in dark
+                        // mode. A hardcoded Charcoal tint read fine in light
+                        // mode but was nearly invisible in dark mode;
+                        // onSurface already resolves to Charcoal/Paper to
+                        // match.
+                        Icon(
+                          imageVector = getModuleIcon(activeOverlay),
+                          contentDescription = "Icon",
+                          tint = MaterialTheme.colorScheme.onSurface,
+                          modifier = Modifier.size(20.dp)
+                        )
+                      }
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
                       text = getModuleTitle(activeOverlay),
-                      color = OnSlateText,
+                      color = if (isVisitStore) Swatch1Charcoal else MaterialTheme.colorScheme.onSurface,
                       fontSize = 18.sp,
                       fontWeight = FontWeight.Bold
                     )
@@ -466,23 +501,32 @@ fun DashboardScreen(
 
                   IconButton(
                     onClick = { activeOverlay = ActiveModule.NONE },
-                    modifier = Modifier.background(SlateSurfaceVariant, CircleShape)
+                    modifier = Modifier.background(
+                      if (isVisitStore) Swatch1Charcoal else MaterialTheme.colorScheme.surfaceVariant,
+                      CircleShape
+                    )
                   ) {
                     Icon(
                       imageVector = Icons.Default.Close,
                       contentDescription = "Dismiss",
-                      tint = OnSlateTextSecondary
+                      tint = if (isVisitStore) Swatch2Paper else Swatch1Charcoal
                     )
                   }
                 }
 
-                Divider(
-                  color = SlateSurfaceVariant,
-                  modifier = Modifier.padding(vertical = 12.dp)
-                )
+                if (!isVisitStore) {
+                  Divider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+                  )
+                }
 
                 // Render respective interactive placeholder layouts dynamically
-                Box(modifier = Modifier.weight(1f)) {
+                Box(
+                  modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 20.dp, end = 20.dp, top = if (isVisitStore) 20.dp else 0.dp, bottom = 20.dp)
+                ) {
                   when (activeOverlay) {
                     ActiveModule.VISIT_STORE -> VisitStoreSubScreen()
                     ActiveModule.NOTIFICATIONS -> NotificationsSubScreen()
@@ -512,30 +556,30 @@ private fun InvoiceChip(invoice: InvoiceFile, isOpening: Boolean, onClick: () ->
   Column(
     modifier = Modifier
       .width(130.dp)
-      .background(SlateSurfaceVariant, RoundedCornerShape(12.dp))
+      .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
       .clickable(enabled = !isOpening) { onClick() }
       .padding(12.dp)
   ) {
     Box(
       modifier = Modifier
         .size(28.dp)
-        .background(GoldPrimary.copy(alpha = 0.15f), CircleShape),
+        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
       contentAlignment = Alignment.Center
     ) {
       if (isOpening) {
         androidx.compose.material3.CircularProgressIndicator(
           modifier = Modifier.size(14.dp),
-          color = GoldSecondary,
+          color = MaterialTheme.colorScheme.secondary,
           strokeWidth = 1.5.dp
         )
       } else {
-        Icon(imageVector = Icons.Default.Description, contentDescription = null, tint = GoldSecondary, modifier = Modifier.size(14.dp))
+        Icon(imageVector = Icons.Default.Description, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(14.dp))
       }
     }
     Spacer(modifier = Modifier.height(10.dp))
     Text(
       text = invoice.name,
-      color = OnSlateText,
+      color = MaterialTheme.colorScheme.onSurface,
       fontSize = 12.sp,
       fontWeight = FontWeight.SemiBold,
       maxLines = 1,
@@ -544,7 +588,7 @@ private fun InvoiceChip(invoice: InvoiceFile, isOpening: Boolean, onClick: () ->
     invoice.createdAt?.let {
       Text(
         text = formatInvoiceDate(it),
-        color = OnSlateTextSecondary,
+        color = MaterialTheme.colorScheme.outline,
         fontSize = 10.sp,
         modifier = Modifier.padding(top = 2.dp)
       )
@@ -659,7 +703,7 @@ fun MyInvoicesSubScreen(userPhone: String) {
             modifier = Modifier.fillMaxWidth().padding(vertical = 60.dp),
             horizontalAlignment = Alignment.CenterHorizontally
           ) {
-            androidx.compose.material3.CircularProgressIndicator(color = GoldPrimary)
+            androidx.compose.material3.CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
           }
         }
       }
@@ -669,9 +713,9 @@ fun MyInvoicesSubScreen(userPhone: String) {
             modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally
           ) {
-            Icon(Icons.Default.Warning, "Error", tint = GoldSecondary, modifier = Modifier.size(40.dp))
+            Icon(Icons.Default.Warning, "Error", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(40.dp))
             Spacer(modifier = Modifier.height(8.dp))
-            Text(errorMessage ?: "", color = OnSlateTextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center)
+            Text(errorMessage ?: "", color = MaterialTheme.colorScheme.outline, fontSize = 13.sp, textAlign = TextAlign.Center)
           }
         }
       }
@@ -681,16 +725,16 @@ fun MyInvoicesSubScreen(userPhone: String) {
             modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally
           ) {
-            Icon(Icons.Default.Info, "No invoices", tint = GoldSecondary, modifier = Modifier.size(40.dp))
+            Icon(Icons.Default.Info, "No invoices", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(40.dp))
             Spacer(modifier = Modifier.height(8.dp))
-            Text("No invoices found for your account yet.", color = OnSlateTextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center)
+            Text("No invoices found for your account yet.", color = MaterialTheme.colorScheme.outline, fontSize = 13.sp, textAlign = TextAlign.Center)
           }
         }
       }
       else -> {
         items(invoices) { inv ->
           Card(
-            colors = CardDefaults.cardColors(containerColor = SlateSurfaceVariant),
+            colors = appCardColors(),
             modifier = Modifier
               .fillMaxWidth()
               .clickable(enabled = openingInvoiceId == null) { openInvoice(inv) },
@@ -704,24 +748,24 @@ fun MyInvoicesSubScreen(userPhone: String) {
               Column(modifier = Modifier.weight(1f)) {
                 Text(
                   text = inv.name,
-                  color = OnSlateText,
+                  color = MaterialTheme.colorScheme.onSurface,
                   fontSize = 13.sp,
                   fontWeight = FontWeight.Bold,
                   maxLines = 1,
                   overflow = TextOverflow.Ellipsis
                 )
                 inv.createdAt?.let {
-                  Text(text = formatInvoiceDate(it), color = OnSlateTextSecondary, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                  Text(text = formatInvoiceDate(it), color = MaterialTheme.colorScheme.outline, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
                 }
               }
               if (openingInvoiceId == inv.id) {
                 androidx.compose.material3.CircularProgressIndicator(
                   modifier = Modifier.size(20.dp),
-                  color = GoldPrimary,
+                  color = MaterialTheme.colorScheme.primary,
                   strokeWidth = 2.dp
                 )
               } else {
-                Icon(Icons.Default.Description, "Open PDF", tint = GoldPrimary, modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Description, "Open PDF", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
               }
             }
           }
@@ -738,9 +782,9 @@ fun MyInvoicesSubScreen(userPhone: String) {
           .fillMaxWidth()
           .padding(top = 6.dp)
           .clickable { showRequestDialog = true },
-        colors = CardDefaults.cardColors(containerColor = SlateSurfaceVariant),
+        colors = appCardColors(),
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.25f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
       ) {
         Row(
           modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -749,16 +793,16 @@ fun MyInvoicesSubScreen(userPhone: String) {
           Box(
             modifier = Modifier
               .size(36.dp)
-              .background(GoldPrimary.copy(alpha = 0.12f), CircleShape),
+              .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
             contentAlignment = Alignment.Center
           ) {
-            Icon(Icons.Default.Add, contentDescription = null, tint = GoldPrimary, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
           }
           Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
-            Text(text = "Can't find an invoice?", color = OnSlateText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            Text(text = "Request one from our team", color = OnSlateTextSecondary, fontSize = 11.sp)
+            Text(text = "Can't find an invoice?", color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(text = "Request one from our team", color = MaterialTheme.colorScheme.outline, fontSize = 11.sp)
           }
-          Icon(Icons.Default.ChevronRight, contentDescription = null, tint = GoldSecondary, modifier = Modifier.size(18.dp))
+          Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
         }
       }
     }
@@ -767,29 +811,29 @@ fun MyInvoicesSubScreen(userPhone: String) {
   if (showRequestDialog) {
     androidx.compose.material3.AlertDialog(
       onDismissRequest = { if (!isSubmittingRequest) showRequestDialog = false },
-      containerColor = SlateSurface,
-      title = { Text("Request an Invoice", color = OnSlateText, fontWeight = FontWeight.Bold) },
+      containerColor = MaterialTheme.colorScheme.surface,
+      title = { Text("Request an Invoice", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) },
       text = {
         Column {
           Text(
             text = "Describe the purchase you need an invoice for (item, approximate date, etc.) and our team will follow up.",
-            color = OnSlateTextSecondary,
+            color = MaterialTheme.colorScheme.outline,
             fontSize = 12.sp,
             modifier = Modifier.padding(bottom = 12.dp)
           )
           androidx.compose.material3.OutlinedTextField(
             value = requestDescription,
             onValueChange = { requestDescription = it },
-            placeholder = { Text("e.g. Refrigerator purchased around March 2026", color = OnSlateTextSecondary) },
+            placeholder = { Text("e.g. Refrigerator purchased around March 2026", color = MaterialTheme.colorScheme.outline) },
             minLines = 3,
             modifier = Modifier.fillMaxWidth(),
             colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-              focusedBorderColor = GoldPrimary,
-              unfocusedBorderColor = SlateSurfaceVariant,
-              focusedContainerColor = SlateSurface,
-              unfocusedContainerColor = SlateSurface,
-              focusedTextColor = OnSlateText,
-              unfocusedTextColor = OnSlateText
+              focusedBorderColor = MaterialTheme.colorScheme.primary,
+              unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+              focusedContainerColor = MaterialTheme.colorScheme.surface,
+              unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+              focusedTextColor = MaterialTheme.colorScheme.onSurface,
+              unfocusedTextColor = MaterialTheme.colorScheme.onSurface
             ),
             shape = RoundedCornerShape(12.dp)
           )
@@ -801,84 +845,22 @@ fun MyInvoicesSubScreen(userPhone: String) {
           enabled = !isSubmittingRequest && requestDescription.trim().isNotEmpty()
         ) {
           if (isSubmittingRequest) {
-            androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(16.dp), color = GoldPrimary, strokeWidth = 2.dp)
+            androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
           } else {
-            Text("Submit", color = GoldPrimary, fontWeight = FontWeight.Bold)
+            Text("Submit", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
           }
         }
       },
       dismissButton = {
         TextButton(onClick = { showRequestDialog = false }, enabled = !isSubmittingRequest) {
-          Text("Cancel", color = OnSlateTextSecondary)
+          Text("Cancel", color = MaterialTheme.colorScheme.outline)
         }
       }
     )
   }
 }
 
-// 2. VISIT STORE SUB-SCREEN
-@Composable
-fun VisitStoreSubScreen() {
-  val context = LocalContext.current
-  val storeName = com.example.BuildConfig.STORE_NAME
-  val storeAddress = com.example.BuildConfig.STORE_ADDRESS
-  val storePhone = com.example.BuildConfig.STORE_PHONE
-  val storeWorkingHours = com.example.BuildConfig.STORE_WORKING_HOURS
-  val storeLatitude = com.example.BuildConfig.STORE_LATITUDE
-  val storeLongitude = com.example.BuildConfig.STORE_LONGITUDE
-
-  Column(modifier = Modifier.fillMaxSize()) {
-    Card(
-      colors = CardDefaults.cardColors(containerColor = SlateSurfaceVariant),
-      shape = RoundedCornerShape(12.dp),
-      modifier = Modifier.fillMaxWidth()
-    ) {
-      Column(modifier = Modifier.padding(16.dp)) {
-        Text(text = storeName, color = GoldSecondary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-        Text(text = storeAddress, color = OnSlateText, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
-        Text(text = "Hours: $storeWorkingHours", color = OnSlateTextSecondary, fontSize = 11.sp)
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-          Icon(Icons.Default.Phone, "Phone", tint = GoldPrimary, modifier = Modifier.size(14.dp))
-          Spacer(modifier = Modifier.width(4.dp))
-          Text(text = storePhone, color = GoldLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        }
-      }
-    }
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Button(
-      onClick = {
-        val uri = Uri.parse("geo:$storeLatitude,$storeLongitude?q=$storeLatitude,$storeLongitude($storeName)")
-        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
-      },
-      colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
-      modifier = Modifier.fillMaxWidth(),
-      shape = RoundedCornerShape(10.dp)
-    ) {
-      Icon(Icons.Default.LocationOn, "Map", tint = SlateBackground, modifier = Modifier.size(16.dp))
-      Spacer(modifier = Modifier.width(6.dp))
-      Text("VIEW ON MAP", color = SlateBackground, fontWeight = FontWeight.Bold)
-    }
-
-    Spacer(modifier = Modifier.height(10.dp))
-
-    Button(
-      onClick = {
-        context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$storePhone")))
-      },
-      colors = ButtonDefaults.buttonColors(containerColor = SlateSurfaceVariant, contentColor = OnSlateText),
-      modifier = Modifier.fillMaxWidth(),
-      shape = RoundedCornerShape(10.dp)
-    ) {
-      Icon(Icons.Default.Phone, "Call", tint = GoldPrimary, modifier = Modifier.size(16.dp))
-      Spacer(modifier = Modifier.width(6.dp))
-      Text("CALL STORE", fontWeight = FontWeight.Bold)
-    }
-  }
-}
-
-// 3. NOTIFICATIONS SUB-SCREEN
+// 2. NOTIFICATIONS SUB-SCREEN
 // Lists still-active (not-yet-expired) notifications, first line only,
 // greyed out once opened. Read state is a local "seen" marker -- kept in
 // SharedPreferences via NotificationReadStore, never sent to the server.
@@ -928,7 +910,7 @@ fun NotificationsSubScreen() {
         modifier = Modifier.fillMaxWidth().padding(vertical = 60.dp),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
-        androidx.compose.material3.CircularProgressIndicator(color = GoldPrimary)
+        androidx.compose.material3.CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
       }
     }
     errorMessage != null -> {
@@ -936,9 +918,9 @@ fun NotificationsSubScreen() {
         modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
-        Icon(Icons.Default.Warning, "Error", tint = GoldSecondary, modifier = Modifier.size(40.dp))
+        Icon(Icons.Default.Warning, "Error", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(40.dp))
         Spacer(modifier = Modifier.height(8.dp))
-        Text(errorMessage ?: "", color = OnSlateTextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center)
+        Text(errorMessage ?: "", color = MaterialTheme.colorScheme.outline, fontSize = 13.sp, textAlign = TextAlign.Center)
       }
     }
     notifications.isEmpty() -> {
@@ -946,9 +928,9 @@ fun NotificationsSubScreen() {
         modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
-        Icon(Icons.Default.Notifications, "No notifications", tint = GoldSecondary, modifier = Modifier.size(40.dp))
+        Icon(Icons.Default.Notifications, "No notifications", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(40.dp))
         Spacer(modifier = Modifier.height(8.dp))
-        Text("You're all caught up -- no active notifications.", color = OnSlateTextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center)
+        Text("You're all caught up -- no active notifications.", color = MaterialTheme.colorScheme.outline, fontSize = 13.sp, textAlign = TextAlign.Center)
       }
     }
     else -> {
@@ -960,7 +942,7 @@ fun NotificationsSubScreen() {
           val isRead = notification.id in readIds
           Card(
             colors = CardDefaults.cardColors(
-              containerColor = if (isRead) SlateSurfaceVariant.copy(alpha = 0.5f) else SlateSurfaceVariant
+              containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isRead) 0.15f else 0.3f)
             ),
             modifier = Modifier
               .fillMaxWidth()
@@ -975,7 +957,7 @@ fun NotificationsSubScreen() {
                 modifier = Modifier
                   .size(32.dp)
                   .background(
-                    (if (isRead) OnSlateTextSecondary else GoldPrimary).copy(alpha = 0.15f),
+                    (if (isRead) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary).copy(alpha = 0.35f),
                     CircleShape
                   ),
                 contentAlignment = Alignment.Center
@@ -983,14 +965,14 @@ fun NotificationsSubScreen() {
                 Icon(
                   imageVector = Icons.Default.Notifications,
                   contentDescription = null,
-                  tint = if (isRead) OnSlateTextSecondary else GoldSecondary,
+                  tint = if (isRead) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.secondary,
                   modifier = Modifier.size(16.dp)
                 )
               }
               Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
                 Text(
                   text = notification.message.substringBefore('\n'),
-                  color = if (isRead) OnSlateTextSecondary else OnSlateText,
+                  color = if (isRead) (Swatch1Charcoal.copy(alpha = 0.3f)) else Swatch1Charcoal,
                   fontSize = 13.sp,
                   fontWeight = if (isRead) FontWeight.Normal else FontWeight.Bold,
                   maxLines = 1,
@@ -998,12 +980,12 @@ fun NotificationsSubScreen() {
                 )
                 Text(
                   text = formatInvoiceDate(notification.createdAt),
-                  color = OnSlateTextSecondary,
+                  color = if (isRead) Swatch1Charcoal.copy(alpha = 0.5f) else Swatch1Charcoal,
                   fontSize = 11.sp,
                   modifier = Modifier.padding(top = 4.dp)
                 )
               }
-              Icon(Icons.Default.ChevronRight, contentDescription = null, tint = OnSlateTextSecondary, modifier = Modifier.size(16.dp))
+              Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(16.dp))
             }
           }
         }
@@ -1021,9 +1003,9 @@ private fun NotificationDetailDialog(notification: ActiveNotification, onDismiss
   androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
     Card(
       modifier = Modifier.fillMaxWidth(),
-      colors = CardDefaults.cardColors(containerColor = SlateSurface),
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
       shape = RoundedCornerShape(16.dp),
-      border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.3f))
+      border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
     ) {
       Column(
         modifier = Modifier
@@ -1035,9 +1017,9 @@ private fun NotificationDetailDialog(notification: ActiveNotification, onDismiss
           horizontalArrangement = Arrangement.SpaceBetween,
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Text(text = "Announcement", color = GoldPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+          Text(text = "Announcement", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
           IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-            Icon(Icons.Default.Close, contentDescription = "Close", tint = OnSlateTextSecondary)
+            Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.outline)
           }
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -1059,9 +1041,9 @@ private fun NotificationDetailDialog(notification: ActiveNotification, onDismiss
           )
           Spacer(modifier = Modifier.height(14.dp))
         }
-        Text(text = notification.message, color = OnSlateText, fontSize = 14.sp)
+        Text(text = notification.message, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
         Spacer(modifier = Modifier.height(10.dp))
-        Text(text = formatInvoiceDate(notification.createdAt), color = OnSlateTextSecondary, fontSize = 11.sp)
+        Text(text = formatInvoiceDate(notification.createdAt), color = MaterialTheme.colorScheme.outline, fontSize = 11.sp)
       }
     }
   }

@@ -13,6 +13,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,7 +34,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -86,16 +86,11 @@ import com.example.data.network.SetPinRequest
 import com.example.data.network.VerifyOtpRequest
 import com.example.ui.components.ElectroWorldLogo
 import com.example.ui.components.PinEntryField
-import com.example.ui.theme.AlertRed
-import com.example.ui.theme.GoldDark
-import com.example.ui.theme.GoldPrimary
-import com.example.ui.theme.GoldSecondary
-import com.example.ui.theme.OnSlateText
-import com.example.ui.theme.OnSlateTextSecondary
-import com.example.ui.theme.SlateBackground
-import com.example.ui.theme.SlateSurface
-import com.example.ui.theme.SlateSurfaceVariant
-import com.example.ui.theme.SuccessGreen
+import com.example.ui.theme.Swatch1Charcoal
+import com.example.ui.theme.Swatch2Paper
+import com.example.ui.theme.Swatch3Amber
+import com.example.ui.theme.Swatch6DeepAmber
+import com.example.ui.theme.Swatch8Sand
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
@@ -111,6 +106,13 @@ private val HOW_HEARD_OPTIONS = listOf(
   "Store Visit",
   "Other"
 )
+
+// The login sheet/field background: translucent Sand, same in both light
+// and dark mode. Everything else on the sheet (text, borders, buttons)
+// stays the fixed Charcoal/Amber/DeepAmber palette regardless of theme.
+@Composable
+private fun loginSheetBackground(): Color = (if (isSystemInDarkTheme()) Swatch8Sand.copy(alpha = 0.5f) else Swatch8Sand.copy(alpha = 0.3f))
+ 
 
 @OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -397,9 +399,9 @@ fun LoginScreen(
   Column(
     modifier = modifier
       .fillMaxSize()
-      .background(SlateBackground)
+      .background(if (isSystemInDarkTheme()) Swatch1Charcoal else Swatch2Paper)
   ) {
-    // 1. Header band: brand logo, on the dark background. While the keyboard
+    // 1. Header band: brand logo, on the background. While the keyboard
     // is open, the full logo fades out (freeing up vertical space) and a
     // small mark fades in at the top-right as a minimal persistent brand cue.
     Box(
@@ -433,12 +435,17 @@ fun LoginScreen(
       }
     }
 
-    // 2. Rounded content sheet holding the active auth step
+    // 2. Rounded content sheet holding the active auth step, over a
+    // Swatch1Charcoal page background (see the Column background below).
+    // Text/borders/buttons on the sheet are a fixed Charcoal/Amber/
+    // DeepAmber palette regardless of theme -- only the sheet/field
+    // background itself (loginSheetBackground()) still follows device
+    // theme, Sand in dark mode and Pearl in light mode.
     Box(
       modifier = Modifier
         .fillMaxWidth()
         .weight(1f)
-        .background(SlateSurface, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+        .background(loginSheetBackground(), RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
     ) {
       Column(modifier = Modifier.fillMaxSize()) {
         // 2a. Scrollable body: fields, links, error messages -- everything
@@ -538,17 +545,20 @@ fun LoginScreen(
                   .fillMaxWidth()
                   .height(54.dp)
                   .testTag("send_otp_button"),
-                colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, disabledContainerColor = GoldDark),
+                colors = ButtonDefaults.buttonColors(
+                  containerColor = Swatch6DeepAmber,
+                  disabledContainerColor = Swatch6DeepAmber.copy(alpha = 0.5f)
+                ),
                 shape = RoundedCornerShape(12.dp)
               ) {
                 if (isSubmitting) {
-                  CircularProgressIndicator(modifier = Modifier.size(24.dp), color = SlateBackground, strokeWidth = 2.5.dp)
+                  CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Swatch1Charcoal, strokeWidth = 2.5.dp)
                 } else {
                   Text(
                     text = if (mode == AuthMode.LOGIN) "Continue" else "Send One-Time Password",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = SlateBackground
+                    color = Swatch1Charcoal
                   )
                 }
               }
@@ -559,10 +569,10 @@ fun LoginScreen(
                   horizontalArrangement = Arrangement.Center,
                   verticalAlignment = Alignment.CenterVertically
                 ) {
-                  Text(text = "Already have an account? ", color = OnSlateTextSecondary, fontSize = 13.sp)
+                  Text(text = "Already have an account? ", color = Swatch1Charcoal.copy(alpha = 0.6f), fontSize = 13.sp)
                   Text(
                     text = "Sign in instead",
-                    color = GoldSecondary,
+                    color = Swatch3Amber,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
@@ -578,10 +588,10 @@ fun LoginScreen(
                   horizontalArrangement = Arrangement.Center,
                   verticalAlignment = Alignment.CenterVertically
                 ) {
-                  Text(text = "New here? ", color = OnSlateTextSecondary, fontSize = 13.sp)
+                  Text(text = "New here? ", color = Swatch1Charcoal.copy(alpha = 0.6f), fontSize = 13.sp)
                   Text(
                     text = "Sign up instead",
-                    color = GoldSecondary,
+                    color = Swatch3Amber,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
@@ -594,15 +604,18 @@ fun LoginScreen(
             AuthStep.OTP -> {
               if (isVerifying) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp)) {
-                  CircularProgressIndicator(color = GoldPrimary, modifier = Modifier.size(28.dp))
+                  CircularProgressIndicator(color = Swatch3Amber, modifier = Modifier.size(28.dp))
                   Spacer(modifier = Modifier.height(8.dp))
-                  Text(text = "Verifying security credentials...", color = GoldSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                  Text(text = "Verifying security credentials...", color = Swatch3Amber, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 }
               } else if (verificationSuccess) {
+                // primary (amber), not a green -- the 8-swatch palette has no
+                // green, matching the "no red" rule applied to error states
+                // elsewhere in both apps.
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp)) {
-                  Icon(imageVector = Icons.Default.CheckCircle, contentDescription = "Verified success", tint = SuccessGreen, modifier = Modifier.size(36.dp))
+                  Icon(imageVector = Icons.Default.CheckCircle, contentDescription = "Verified success", tint = Swatch3Amber, modifier = Modifier.size(36.dp))
                   Spacer(modifier = Modifier.height(4.dp))
-                  Text(text = "Verification Successful!", color = SuccessGreen, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                  Text(text = "Verification Successful!", color = Swatch3Amber, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
               } else {
                 Button(
@@ -611,22 +624,22 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .height(54.dp)
                     .testTag("verify_otp_button"),
-                  colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
+                  colors = ButtonDefaults.buttonColors(containerColor = Swatch6DeepAmber),
                   shape = RoundedCornerShape(12.dp)
                 ) {
-                  Text(text = "Verify", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = SlateBackground)
+                  Text(text = "Verify", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Swatch1Charcoal)
                 }
               }
 
               Spacer(modifier = Modifier.height(20.dp))
 
               Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                Text(text = "Didn't receive the SMS? ", color = OnSlateTextSecondary, fontSize = 13.sp)
+                Text(text = "Didn't receive the SMS? ", color = Swatch1Charcoal.copy(alpha = 0.6f), fontSize = 13.sp)
                 if (countdownTimer > 0) {
-                  Text(text = "Resend in ${countdownTimer}s", color = GoldPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                  Text(text = "Resend in ${countdownTimer}s", color = Swatch3Amber, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 } else {
                   TextButton(onClick = { sendOtp() }) {
-                    Text(text = "Resend OTP Code", color = GoldSecondary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(text = "Resend OTP Code", color = Swatch3Amber, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                   }
                 }
               }
@@ -639,13 +652,16 @@ fun LoginScreen(
                   .fillMaxWidth()
                   .height(54.dp)
                   .testTag("set_pin_button"),
-                colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, disabledContainerColor = GoldDark),
+                colors = ButtonDefaults.buttonColors(
+                  containerColor = Swatch6DeepAmber,
+                  disabledContainerColor = Swatch6DeepAmber.copy(alpha = 0.5f)
+                ),
                 shape = RoundedCornerShape(12.dp)
               ) {
                 if (isSubmitting) {
-                  CircularProgressIndicator(modifier = Modifier.size(24.dp), color = SlateBackground, strokeWidth = 2.5.dp)
+                  CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Swatch1Charcoal, strokeWidth = 2.5.dp)
                 } else {
-                  Text(text = "Save PIN & Continue", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = SlateBackground)
+                  Text(text = "Save PIN & Continue", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Swatch1Charcoal)
                 }
               }
             }
@@ -657,13 +673,16 @@ fun LoginScreen(
                   .fillMaxWidth()
                   .height(54.dp)
                   .testTag("login_pin_button"),
-                colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, disabledContainerColor = GoldDark),
+                colors = ButtonDefaults.buttonColors(
+                  containerColor = Swatch6DeepAmber,
+                  disabledContainerColor = Swatch6DeepAmber.copy(alpha = 0.5f)
+                ),
                 shape = RoundedCornerShape(12.dp)
               ) {
                 if (isSubmitting) {
-                  CircularProgressIndicator(modifier = Modifier.size(24.dp), color = SlateBackground, strokeWidth = 2.5.dp)
+                  CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Swatch1Charcoal, strokeWidth = 2.5.dp)
                 } else {
-                  Text(text = "Log In", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = SlateBackground)
+                  Text(text = "Log In", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Swatch1Charcoal)
                 }
               }
             }
@@ -685,13 +704,13 @@ fun LoginScreen(
           Icon(
             imageVector = Icons.Default.Lock,
             contentDescription = "Secure",
-            tint = Color(0xFFA0A0A0),
+            tint = Swatch1Charcoal.copy(alpha = 0.6f),
             modifier = Modifier.size(12.dp)
           )
           Spacer(modifier = Modifier.width(4.dp))
           Text(
             text = "Electro World Shield • End-To-End Encrypted OTP Verification",
-            color = Color(0xFFA0A0A0),
+            color = Swatch1Charcoal.copy(alpha = 0.6f),
             fontSize = 10.sp,
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center
@@ -730,7 +749,7 @@ private fun EntryStepView(
   ) {
     Text(
       text = if (mode == AuthMode.LOGIN) "Sign In" else "Create Account",
-      color = OnSlateText,
+      color = Swatch1Charcoal,
       fontSize = 24.sp,
       fontWeight = FontWeight.Bold,
       modifier = Modifier.padding(bottom = 12.dp)
@@ -743,7 +762,7 @@ private fun EntryStepView(
         } else {
           "Tell us a bit about yourself to create your Electro World account."
         },
-        color = OnSlateTextSecondary,
+        color = Swatch1Charcoal.copy(alpha = 0.6f),
         fontSize = 13.sp,
         textAlign = TextAlign.Center,
         modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 28.dp),
@@ -755,9 +774,9 @@ private fun EntryStepView(
       OutlinedTextField(
         value = fullName,
         onValueChange = onFullNameChange,
-        placeholder = { Text("Full Name", color = OnSlateTextSecondary) },
+        placeholder = { Text("Full Name", color = Swatch1Charcoal.copy(alpha = 0.6f)) },
         leadingIcon = {
-          Icon(imageVector = Icons.Default.Person, contentDescription = "Name Icon", tint = GoldPrimary)
+          Icon(imageVector = Icons.Default.Person, contentDescription = "Name Icon", tint = Swatch3Amber)
         },
         modifier = Modifier
           .fillMaxWidth()
@@ -765,12 +784,12 @@ private fun EntryStepView(
           .testTag("full_name_input"),
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(
-          focusedBorderColor = GoldPrimary,
-          unfocusedBorderColor = SlateSurfaceVariant,
-          focusedContainerColor = SlateSurface,
-          unfocusedContainerColor = SlateSurface,
-          focusedTextColor = OnSlateText,
-          unfocusedTextColor = OnSlateText
+          focusedBorderColor = Swatch3Amber,
+          unfocusedBorderColor = Swatch1Charcoal.copy(alpha = 0.6f),
+          focusedContainerColor = loginSheetBackground(),
+          unfocusedContainerColor = loginSheetBackground(),
+          focusedTextColor = Swatch1Charcoal,
+          unfocusedTextColor = Swatch1Charcoal
         ),
         shape = RoundedCornerShape(12.dp)
       )
@@ -783,9 +802,9 @@ private fun EntryStepView(
           onPhoneNumberChange(input)
         }
       },
-      placeholder = { Text("Mobile Number", color = OnSlateTextSecondary) },
+      placeholder = { Text("Mobile Number", color = Swatch1Charcoal.copy(alpha = 0.6f)) },
       leadingIcon = {
-        Icon(imageVector = Icons.Default.Phone, contentDescription = "Phone Icon", tint = GoldPrimary)
+        Icon(imageVector = Icons.Default.Phone, contentDescription = "Phone Icon", tint = Swatch3Amber)
       },
       prefix = {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -794,9 +813,9 @@ private fun EntryStepView(
               .padding(end = 10.dp)
               .width(1.dp)
               .height(20.dp)
-              .background(SlateSurfaceVariant)
+              .background(Swatch1Charcoal.copy(alpha = 0.6f))
           )
-          Text(text = "+91", color = OnSlateText, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+          Text(text = "+91", color = Swatch1Charcoal, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
         }
       },
       modifier = Modifier
@@ -807,12 +826,12 @@ private fun EntryStepView(
       keyboardActions = KeyboardActions(onDone = { if (mode == AuthMode.LOGIN) onSubmit() }),
       singleLine = true,
       colors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = GoldPrimary,
-        unfocusedBorderColor = SlateSurfaceVariant,
-        focusedContainerColor = SlateSurface,
-        unfocusedContainerColor = SlateSurface,
-        focusedTextColor = OnSlateText,
-        unfocusedTextColor = OnSlateText
+        focusedBorderColor = Swatch3Amber,
+        unfocusedBorderColor = Swatch1Charcoal.copy(alpha = 0.6f),
+        focusedContainerColor = loginSheetBackground(),
+        unfocusedContainerColor = loginSheetBackground(),
+        focusedTextColor = Swatch1Charcoal,
+        unfocusedTextColor = Swatch1Charcoal
       ),
       shape = RoundedCornerShape(12.dp)
     )
@@ -829,7 +848,7 @@ private fun EntryStepView(
           value = howHeard ?: "",
           onValueChange = {},
           readOnly = true,
-          placeholder = { Text("How did you hear about us?", color = OnSlateTextSecondary) },
+          placeholder = { Text("How did you hear about us?", color = Swatch1Charcoal.copy(alpha = 0.6f)) },
           trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = howHeardMenuExpanded) },
           modifier = Modifier
             .fillMaxWidth()
@@ -837,23 +856,23 @@ private fun EntryStepView(
             .testTag("how_heard_input"),
           singleLine = true,
           colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = GoldPrimary,
-            unfocusedBorderColor = SlateSurfaceVariant,
-            focusedContainerColor = SlateSurface,
-            unfocusedContainerColor = SlateSurface,
-            focusedTextColor = OnSlateText,
-            unfocusedTextColor = OnSlateText
+            focusedBorderColor = Swatch3Amber,
+            unfocusedBorderColor = Swatch1Charcoal.copy(alpha = 0.6f),
+            focusedContainerColor = loginSheetBackground(),
+            unfocusedContainerColor = loginSheetBackground(),
+            focusedTextColor = Swatch1Charcoal,
+            unfocusedTextColor = Swatch1Charcoal
           ),
           shape = RoundedCornerShape(12.dp)
         )
         ExposedDropdownMenu(
           expanded = howHeardMenuExpanded,
           onDismissRequest = { onHowHeardMenuExpandedChange(false) },
-          modifier = Modifier.background(SlateSurface)
+          modifier = Modifier.background(loginSheetBackground())
         ) {
           HOW_HEARD_OPTIONS.forEach { option ->
             DropdownMenuItem(
-              text = { Text(option, color = OnSlateText) },
+              text = { Text(option, color = Swatch1Charcoal) },
               onClick = { onHowHeardSelected(option) }
             )
           }
@@ -875,7 +894,7 @@ private fun EntryStepView(
       ) {
         Text(
           text = "Create an Account",
-          color = GoldSecondary,
+          color = Swatch3Amber,
           fontSize = 13.sp,
           fontWeight = FontWeight.SemiBold
         )
@@ -892,7 +911,7 @@ private fun EntryStepView(
       ) {
         Text(
           text = "Sign In Instead",
-          color = GoldSecondary,
+          color = Swatch3Amber,
           fontSize = 13.sp,
           fontWeight = FontWeight.SemiBold
         )
@@ -916,8 +935,8 @@ private fun OtpStepView(
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-      IconButton(onClick = onBack, modifier = Modifier.background(SlateSurface, CircleShape)) {
-        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back", tint = GoldSecondary)
+      IconButton(onClick = onBack) {
+        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back", tint = Swatch3Amber)
       }
       Spacer(modifier = Modifier.weight(1f))
     }
@@ -926,7 +945,7 @@ private fun OtpStepView(
 
     Text(
       text = "Enter Verification Code",
-      color = OnSlateText,
+      color = Swatch1Charcoal,
       fontSize = 24.sp,
       fontWeight = FontWeight.Bold,
       modifier = Modifier.padding(bottom = 12.dp)
@@ -934,7 +953,7 @@ private fun OtpStepView(
 
     Text(
       text = "We have dispatched a 6-digit verification code to +91 $phoneNumber. Check your messages.",
-      color = OnSlateTextSecondary,
+      color = Swatch1Charcoal.copy(alpha = 0.6f),
       fontSize = 13.sp,
       textAlign = TextAlign.Center,
       modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 28.dp),
@@ -945,10 +964,10 @@ private fun OtpStepView(
       value = otpCode,
       onValueChange = onOtpChange,
       placeholder = {
-        Text(text = "● ● ● ● ● ●", color = OnSlateTextSecondary.copy(alpha = 0.4f), textAlign = TextAlign.Center, letterSpacing = 4.sp)
+        Text(text = "● ● ● ● ● ●", color = Swatch1Charcoal.copy(alpha = 0.3f), textAlign = TextAlign.Center, letterSpacing = 4.sp)
       },
       leadingIcon = {
-        Icon(imageVector = Icons.Default.Lock, contentDescription = "Secure lock icon", tint = GoldPrimary)
+        Icon(imageVector = Icons.Default.Lock, contentDescription = "Secure lock icon", tint = Swatch3Amber)
       },
       modifier = Modifier
         .fillMaxWidth()
@@ -957,13 +976,13 @@ private fun OtpStepView(
       keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
       singleLine = true,
       colors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = GoldPrimary,
-        unfocusedBorderColor = SlateSurfaceVariant,
-        focusedContainerColor = SlateSurface,
-        unfocusedContainerColor = SlateSurface,
-        focusedTextColor = GoldSecondary,
-        unfocusedTextColor = OnSlateText,
-        focusedLabelColor = GoldSecondary
+        focusedBorderColor = Swatch3Amber,
+        unfocusedBorderColor = Swatch1Charcoal.copy(alpha = 0.6f),
+        focusedContainerColor = loginSheetBackground(),
+        unfocusedContainerColor = loginSheetBackground(),
+        focusedTextColor = Swatch3Amber,
+        unfocusedTextColor = Swatch1Charcoal,
+        focusedLabelColor = Swatch3Amber
       ),
       shape = RoundedCornerShape(12.dp),
       textStyle = androidx.compose.ui.text.TextStyle(
@@ -999,14 +1018,14 @@ private fun SetPinStepView(
   ) {
     Text(
       text = "Set Your PIN",
-      color = OnSlateText,
+      color = Swatch1Charcoal,
       fontSize = 24.sp,
       fontWeight = FontWeight.Bold,
       modifier = Modifier.padding(bottom = 12.dp)
     )
     Text(
       text = "Choose a 4-digit PIN. You'll use it to sign in from now on.",
-      color = OnSlateTextSecondary,
+      color = Swatch1Charcoal.copy(alpha = 0.6f),
       fontSize = 13.sp,
       textAlign = TextAlign.Center,
       modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 28.dp),
@@ -1015,7 +1034,7 @@ private fun SetPinStepView(
 
     Text(
       text = "NEW PIN",
-      color = OnSlateTextSecondary,
+      color = Swatch1Charcoal.copy(alpha = 0.6f),
       fontSize = 11.sp,
       fontWeight = FontWeight.Bold,
       letterSpacing = 1.sp,
@@ -1032,7 +1051,7 @@ private fun SetPinStepView(
 
     Text(
       text = "CONFIRM PIN",
-      color = OnSlateTextSecondary,
+      color = Swatch1Charcoal.copy(alpha = 0.6f),
       fontSize = 11.sp,
       fontWeight = FontWeight.Bold,
       letterSpacing = 1.sp,
@@ -1070,8 +1089,8 @@ private fun EnterPinStepView(
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-      IconButton(onClick = onBack, modifier = Modifier.background(SlateSurface, CircleShape)) {
-        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back", tint = GoldSecondary)
+      IconButton(onClick = onBack) {
+        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back", tint = Swatch3Amber)
       }
       Spacer(modifier = Modifier.weight(1f))
     }
@@ -1080,14 +1099,14 @@ private fun EnterPinStepView(
 
     Text(
       text = "Enter Your PIN",
-      color = OnSlateText,
+      color = Swatch1Charcoal,
       fontSize = 24.sp,
       fontWeight = FontWeight.Bold,
       modifier = Modifier.padding(bottom = 12.dp)
     )
     Text(
       text = "Enter the 4-digit PIN for +91 $phoneNumber.",
-      color = OnSlateTextSecondary,
+      color = Swatch1Charcoal.copy(alpha = 0.6f),
       fontSize = 13.sp,
       textAlign = TextAlign.Center,
       modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 28.dp),
@@ -1112,7 +1131,7 @@ private fun EnterPinStepView(
     ) {
       Text(
         text = "Forgot PIN?",
-        color = GoldSecondary,
+        color = Swatch3Amber,
         fontSize = 13.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.clickable { onForgotPin() }.testTag("forgot_pin_link")
@@ -1124,8 +1143,8 @@ private fun EnterPinStepView(
 @Composable
 private fun ErrorRow(message: String) {
   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 16.dp)) {
-    Icon(imageVector = Icons.Default.Warning, contentDescription = "Error icon", tint = AlertRed, modifier = Modifier.size(16.dp))
+    Icon(imageVector = Icons.Default.Warning, contentDescription = "Error icon", tint = Swatch1Charcoal, modifier = Modifier.size(16.dp))
     Spacer(modifier = Modifier.width(6.dp))
-    Text(text = message, color = AlertRed, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+    Text(text = message, color = Swatch1Charcoal, fontSize = 13.sp, fontWeight = FontWeight.Medium)
   }
 }

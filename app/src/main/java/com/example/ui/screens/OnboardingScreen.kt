@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,11 +42,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.ui.components.ElectroWorldLogo
-import com.example.ui.theme.GoldDark
-import com.example.ui.theme.GoldPrimary
-import com.example.ui.theme.OnSlateText
-import com.example.ui.theme.OnSlateTextSecondary
-import com.example.ui.theme.SlateBackground
 
 private const val PANEL_ANIMATION_MS = 1000
 private const val CONTENT_FADE_MS = 625
@@ -73,7 +69,7 @@ fun OnboardingScreen(
   // to go, so back is left to its default (system) behavior there.
   BackHandler(enabled = revealed) { revealed = false }
 
-  BoxWithConstraints(modifier = modifier.fillMaxSize().background(SlateBackground)) {
+  BoxWithConstraints(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
     val collapsedOffset = maxHeight * 0.52f
     val panelOffset by animateDpAsState(
       targetValue = if (revealed) 0.dp else collapsedOffset,
@@ -99,7 +95,7 @@ fun OnboardingScreen(
       modifier = Modifier
         .fillMaxSize()
         .offset(y = panelOffset)
-        .background(SlateBackground, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+        .background(MaterialTheme.colorScheme.background, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
     ) {
       AnimatedVisibility(
         visible = !revealed,
@@ -160,7 +156,7 @@ private fun WelcomeCopy(onGetStarted: () -> Unit) {
   ) {
     Text(
       text = "Welcomes You",
-      color = OnSlateText,
+      color = MaterialTheme.colorScheme.onBackground,
       fontSize = 24.sp,
       fontWeight = FontWeight.Bold,
       textAlign = TextAlign.Center,
@@ -169,7 +165,7 @@ private fun WelcomeCopy(onGetStarted: () -> Unit) {
 
     Text(
       text = "Sign in to access your orders, schedule installations, or request support.",
-      color = OnSlateTextSecondary,
+      color = MaterialTheme.colorScheme.outline,
       fontSize = 13.sp,
       textAlign = TextAlign.Center,
       lineHeight = 18.sp,
@@ -181,14 +177,17 @@ private fun WelcomeCopy(onGetStarted: () -> Unit) {
       modifier = Modifier
         .fillMaxWidth()
         .height(54.dp),
-      colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, disabledContainerColor = GoldDark),
+      colors = ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.primary,
+        disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+      ),
       shape = RoundedCornerShape(12.dp)
     ) {
       Text(
         text = "GET STARTED",
         fontSize = 14.sp,
         fontWeight = FontWeight.Bold,
-        color = SlateBackground,
+        color = MaterialTheme.colorScheme.onPrimary,
         letterSpacing = 1.sp
       )
     }

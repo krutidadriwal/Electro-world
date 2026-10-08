@@ -1,69 +1,108 @@
 package com.example.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.CardColors
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 
-// FloatingActionButton defaults to primaryContainer/onPrimaryContainer --
-// left unset, it falls back to Material3's baseline purple-ish tone. Set
-// explicitly (even though this app has no FABs today) so it stays on-brand
-// red/gold if one's ever added, and to match staffapp's theme.
+// Both schemes below are built exclusively from the 8 swatches in Color.kt,
+// matching staffapp/src/main/java/com/electroworld/staff/ui/theme/Theme.kt
+// role-for-role so both apps read as the same brand in both light and dark
+// mode. Every role Material3's scheme builders accept is filled in
+// explicitly -- left unset, several (primaryContainer, secondaryContainer,
+// error, outline, ...) fall back to Material3's own baseline colors, which
+// are NOT in the 8-color palette (its default error is red, several
+// containers are purple-tinted).
 //
-// surfaceTint is also set to Transparent -- left at its default (`primary`,
-// i.e. gold), Card/Surface blend it into the surface color based on
-// elevation, washing cards with a gold tint instead of pure dark espresso.
-private val DarkColorScheme =
-  darkColorScheme(
-    primary = GoldPrimary,
-    secondary = GoldSecondary,
-    tertiary = GoldLight,
-    background = SlateBackground,
-    surface = SlateSurface,
-    onPrimary = SlateBackground,
-    onSecondary = SlateBackground,
-    onBackground = OnSlateText,
-    onSurface = OnSlateText,
-    surfaceVariant = SlateSurfaceVariant,
-    onSurfaceVariant = OnSlateTextSecondary,
-    error = AlertRed,
-    primaryContainer = AlertRed,
-    onPrimaryContainer = OnSlateText,
-    surfaceTint = Color.Transparent
-  )
+// Swatch6 (deep amber) is used for secondary/badges/accents in BOTH schemes,
+// so that specific brand element stays consistent regardless of device theme.
 
-private val LightColorScheme =
-  lightColorScheme(
-    primary = GoldPrimary,
-    secondary = GoldSecondary,
-    tertiary = GoldDark,
-    background = SlateBackground,
-    surface = SlateSurface,
-    onPrimary = SlateBackground,
-    onSecondary = SlateBackground,
-    onBackground = OnSlateText,
-    onSurface = OnSlateText,
-    surfaceVariant = SlateSurfaceVariant,
-    onSurfaceVariant = OnSlateTextSecondary,
-    error = AlertRed,
-    primaryContainer = AlertRed,
-    onPrimaryContainer = OnSlateText,
-    surfaceTint = Color.Transparent
-  )
+private val LightColorScheme = lightColorScheme(
+  primary = Swatch3Amber,
+  onPrimary = Swatch1Charcoal,
+  primaryContainer = Swatch6DeepAmber,
+  onPrimaryContainer = Swatch1Charcoal,
+  secondary = Swatch6DeepAmber,
+  onSecondary = Swatch1Charcoal,
+  secondaryContainer = Swatch7PaleGold,
+  onSecondaryContainer = Swatch1Charcoal,
+  tertiary = Swatch7PaleGold,
+  onTertiary = Swatch1Charcoal,
+  tertiaryContainer = Swatch8Sand,
+  onTertiaryContainer = Swatch1Charcoal,
+  background = Swatch2Paper,
+  onBackground = Swatch1Charcoal,
+  surface = Swatch5Pearl,
+  onSurface = Swatch1Charcoal,
+  surfaceVariant = Swatch8Sand,
+  onSurfaceVariant = Swatch4Taupe,
+  // Left at its default (`primary`), Card/Surface blend this into the
+  // surface color based on elevation, tinting every card instead of
+  // showing the flat swatch color.
+  surfaceTint = Color.Transparent,
+  error = Swatch1Charcoal,
+  onError = Swatch2Paper,
+  errorContainer = Swatch8Sand,
+  onErrorContainer = Swatch1Charcoal,
+  outline = Swatch4Taupe,
+  outlineVariant = Swatch8Sand,
+  inverseSurface = Swatch1Charcoal,
+  inverseOnSurface = Swatch2Paper,
+  inversePrimary = Swatch7PaleGold,
+  scrim = Swatch1Charcoal
+)
+
+// Charcoal is the palette's only dark swatch, so it carries the background
+// here -- there's no second dark tone for elevated surfaces, so Taupe
+// stands in for cards (lighter than the background, same role elevation
+// normally plays). Text (onBackground/onSurface/onSurfaceVariant) is Paper
+// throughout dark mode, matching the staff app.
+private val DarkColorScheme = darkColorScheme(
+  primary = Swatch3Amber,
+  onPrimary = Swatch1Charcoal,
+  primaryContainer = Swatch6DeepAmber,
+  onPrimaryContainer = Swatch1Charcoal,
+  secondary = Swatch6DeepAmber,
+  onSecondary = Swatch1Charcoal,
+  secondaryContainer = Swatch7PaleGold,
+  onSecondaryContainer = Swatch1Charcoal,
+  tertiary = Swatch7PaleGold,
+  onTertiary = Swatch1Charcoal,
+  tertiaryContainer = Swatch8Sand,
+  onTertiaryContainer = Swatch1Charcoal,
+  background = Swatch1Charcoal,
+  onBackground = Swatch2Paper,
+  surface = Swatch4Taupe,
+  onSurface = Swatch2Paper,
+  surfaceVariant = Swatch8Sand,
+  onSurfaceVariant = Swatch2Paper,
+  surfaceTint = Color.Transparent,
+  error = Swatch1Charcoal,
+  onError = Swatch2Paper,
+  errorContainer = Swatch8Sand,
+  onErrorContainer = Swatch1Charcoal,
+  outline = Swatch8Sand,
+  outlineVariant = Swatch8Sand,
+  inverseSurface = Swatch5Pearl,
+  inverseOnSurface = Swatch1Charcoal,
+  inversePrimary = Swatch6DeepAmber,
+  scrim = Swatch1Charcoal
+)
 
 @Composable
 fun MyApplicationTheme(
-  darkTheme: Boolean = true, // Force brand dark theme to match Electro World style
-  dynamicColor: Boolean = false, // Disable dynamic colors to enforce branding
+  darkTheme: Boolean = isSystemInDarkTheme(),
   content: @Composable () -> Unit,
 ) {
   val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-
   MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
 }
+
+// Shared card color for every screen, matching staffCardColors() in the
+// staff app's Theme.kt -- change the color here once rather than per screen.
+@Composable
+fun appCardColors(): CardColors = CardDefaults.cardColors(containerColor = Swatch8Sand.copy(alpha = 0.3f))

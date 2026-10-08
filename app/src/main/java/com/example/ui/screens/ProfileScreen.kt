@@ -3,6 +3,7 @@ package com.example.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,10 +27,10 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -49,15 +50,8 @@ import androidx.compose.ui.unit.sp
 import com.example.data.network.DeleteUserRequest
 import com.example.data.network.NetworkModule
 import com.example.data.network.UpdateUserRequest
-import com.example.ui.theme.AlertRed
-import com.example.ui.theme.GoldDark
-import com.example.ui.theme.GoldPrimary
-import com.example.ui.theme.GoldSecondary
-import com.example.ui.theme.OnSlateText
-import com.example.ui.theme.OnSlateTextSecondary
-import com.example.ui.theme.SlateBackground
-import com.example.ui.theme.SlateSurface
-import com.example.ui.theme.SlateSurfaceVariant
+import com.example.ui.theme.Swatch1Charcoal
+import com.example.ui.theme.appCardColors
 import kotlinx.coroutines.launch
 
 /**
@@ -129,21 +123,21 @@ fun ProfileScreen(
 
   Scaffold(
     modifier = modifier.fillMaxSize(),
-    containerColor = SlateBackground,
+    containerColor = MaterialTheme.colorScheme.background,
     topBar = {
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .background(SlateSurface)
+          .background(MaterialTheme.colorScheme.surface)
           .padding(top = 40.dp, bottom = 16.dp, start = 8.dp, end = 16.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        IconButton(onClick = ::navigateBack, modifier = Modifier.background(SlateSurfaceVariant, CircleShape)) {
-          Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back", tint = GoldSecondary)
+        IconButton(onClick = ::navigateBack) {
+          Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.secondary)
         }
         Text(
           text = "Profile",
-          color = OnSlateText,
+          color = MaterialTheme.colorScheme.onSurface,
           fontSize = 18.sp,
           fontWeight = FontWeight.Bold,
           modifier = Modifier.padding(start = 12.dp)
@@ -161,12 +155,12 @@ fun ProfileScreen(
         modifier = Modifier
           .size(72.dp)
           .align(Alignment.CenterHorizontally)
-          .background(SlateSurfaceVariant, CircleShape),
+          .background(MaterialTheme.colorScheme.surface, CircleShape),
         contentAlignment = Alignment.Center
       ) {
         Text(
           text = userName.take(2).ifBlank { "EW" }.uppercase(),
-          color = GoldPrimary,
+          color = MaterialTheme.colorScheme.secondary,
           fontWeight = FontWeight.Bold,
           fontSize = 22.sp
         )
@@ -177,7 +171,7 @@ fun ProfileScreen(
       if (isEditing) {
         Text(
           text = "FULL NAME",
-          color = OnSlateTextSecondary,
+          color = MaterialTheme.colorScheme.outline,
           fontSize = 11.sp,
           fontWeight = FontWeight.Bold,
           letterSpacing = 1.sp,
@@ -189,50 +183,53 @@ fun ProfileScreen(
           modifier = Modifier.fillMaxWidth(),
           singleLine = true,
           colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = GoldPrimary,
-            unfocusedBorderColor = SlateSurfaceVariant,
-            focusedContainerColor = SlateSurface,
-            unfocusedContainerColor = SlateSurface,
-            focusedTextColor = OnSlateText,
-            unfocusedTextColor = OnSlateText
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
           ),
           shape = RoundedCornerShape(12.dp)
         )
 
         errorMessage?.let {
-          Text(text = it, color = AlertRed, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+          Text(text = it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
           TextButton(onClick = { isEditing = false; editedName = userName; errorMessage = null }) {
-            Text("Cancel", color = OnSlateTextSecondary)
+            Text("Cancel", color = MaterialTheme.colorScheme.outline)
           }
           Button(
             onClick = { saveName() },
             enabled = !isSaving,
-            colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, disabledContainerColor = GoldDark),
+            colors = ButtonDefaults.buttonColors(
+              containerColor = MaterialTheme.colorScheme.primary,
+              disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+            ),
             shape = RoundedCornerShape(10.dp)
           ) {
             if (isSaving) {
-              CircularProgressIndicator(modifier = Modifier.size(18.dp), color = SlateBackground, strokeWidth = 2.dp)
+              CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
             } else {
-              Text("Save", color = SlateBackground, fontWeight = FontWeight.SemiBold)
+              Text("Save", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.SemiBold)
             }
           }
         }
       } else {
         Text(
           text = userName.ifBlank { "Guest" },
-          color = OnSlateText,
+          color = MaterialTheme.colorScheme.onBackground,
           fontSize = 20.sp,
           fontWeight = FontWeight.Bold,
           modifier = Modifier.align(Alignment.CenterHorizontally)
         )
         Text(
           text = "+91 $userPhone",
-          color = OnSlateTextSecondary,
+          color = MaterialTheme.colorScheme.outline,
           fontSize = 13.sp,
           modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp)
         )
@@ -265,7 +262,7 @@ fun ProfileScreen(
         )
 
         errorMessage?.let {
-          Text(text = it, color = AlertRed, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
+          Text(text = it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
         }
       }
     }
@@ -274,28 +271,28 @@ fun ProfileScreen(
   if (showDeleteConfirm) {
     AlertDialog(
       onDismissRequest = { if (!isDeleting) showDeleteConfirm = false },
-      containerColor = SlateSurface,
-      icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = AlertRed) },
-      title = { Text("Delete Account?", color = OnSlateText, fontWeight = FontWeight.Bold) },
+      containerColor = MaterialTheme.colorScheme.surface,
+      icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+      title = { Text("Delete Account?", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) },
       text = {
         Text(
           "This permanently deletes your account, complaints, wishlist, and installation requests. This cannot be undone.",
-          color = OnSlateTextSecondary,
+          color = if (isSystemInDarkTheme()) Swatch1Charcoal else MaterialTheme.colorScheme.outline,
           fontSize = 13.sp
         )
       },
       confirmButton = {
         TextButton(onClick = { deleteAccount() }, enabled = !isDeleting) {
           if (isDeleting) {
-            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = AlertRed, strokeWidth = 2.dp)
+            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.error, strokeWidth = 2.dp)
           } else {
-            Text("Delete", color = AlertRed, fontWeight = FontWeight.Bold)
+            Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
           }
         }
       },
       dismissButton = {
         TextButton(onClick = { showDeleteConfirm = false }, enabled = !isDeleting) {
-          Text("Cancel", color = OnSlateTextSecondary)
+          Text("Cancel", color = MaterialTheme.colorScheme.outline)
         }
       }
     )
@@ -313,7 +310,7 @@ private fun ProfileActionRow(
     modifier = Modifier
       .fillMaxWidth()
       .clickable { onClick() },
-    colors = CardDefaults.cardColors(containerColor = SlateSurface),
+    colors = appCardColors(),
     shape = RoundedCornerShape(12.dp)
   ) {
     Row(
@@ -325,12 +322,12 @@ private fun ProfileActionRow(
       Icon(
         imageVector = icon,
         contentDescription = null,
-        tint = if (destructive) AlertRed else GoldPrimary,
+        tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
         modifier = Modifier.size(20.dp)
       )
       Text(
         text = label,
-        color = if (destructive) AlertRed else OnSlateText,
+        color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
         fontSize = 14.sp,
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.padding(start = 14.dp).weight(1f)
@@ -338,7 +335,7 @@ private fun ProfileActionRow(
       Icon(
         imageVector = Icons.Default.ChevronRight,
         contentDescription = null,
-        tint = OnSlateTextSecondary,
+        tint = MaterialTheme.colorScheme.outline,
         modifier = Modifier.size(18.dp)
       )
     }

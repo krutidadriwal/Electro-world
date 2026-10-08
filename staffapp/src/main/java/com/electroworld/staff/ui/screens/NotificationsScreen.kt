@@ -46,6 +46,7 @@ import com.electroworld.staff.data.network.CreateNotificationRequest
 import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.network.NotificationItem
 import com.electroworld.staff.data.network.UploadNotificationImageRequest
+import com.electroworld.staff.ui.theme.staffCardColors
 import kotlinx.coroutines.launch
 
 private val DURATION_PRESETS = listOf(
@@ -125,7 +126,7 @@ fun NotificationsScreen(isAdmin: Boolean, onBack: () -> Unit, modifier: Modifier
 
 @Composable
 private fun NotificationCard(notification: NotificationItem) {
-  Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+  Card(colors = staffCardColors(), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
     Column(modifier = Modifier.padding(16.dp)) {
       Text(notification.message, style = MaterialTheme.typography.bodyLarge)
       Row(modifier = Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

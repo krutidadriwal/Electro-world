@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -123,6 +124,7 @@ fun DashboardScreen(
   onOpenRegisterComplaint: () -> Unit,
   onOpenInstallation: () -> Unit,
   onOpenInvoices: () -> Unit,
+  onOpenPoints: () -> Unit,
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
@@ -181,7 +183,8 @@ fun DashboardScreen(
     DashboardModuleItem("INSTALLATION REQUEST", Icons.Default.Settings, "Schedule a new installation", onClick = onOpenInstallation),
     DashboardModuleItem("REGISTER COMPLAINT", Icons.Default.Warning, "Report a service issue", onClick = onOpenRegisterComplaint),
     DashboardModuleItem("WISHLIST", Icons.Default.Favorite, "Browse categories you've saved", onClick = onOpenWishlist),
-    DashboardModuleItem("VISIT STORE", Icons.Default.LocationOn, "Address, map & contact", ActiveModule.VISIT_STORE)
+    DashboardModuleItem("VISIT STORE", Icons.Default.LocationOn, "Address, map & contact", ActiveModule.VISIT_STORE),
+    DashboardModuleItem("MY POINTS", Icons.Default.Star, "View your rewards balance", onClick = onOpenPoints)
   )
 
   Scaffold(
@@ -292,7 +295,7 @@ fun DashboardScreen(
           columns = GridCells.Fixed(2),
           modifier = Modifier
             .fillMaxWidth()
-            .height(300.dp)
+            .height(440.dp)
             .padding(horizontal = 12.dp),
           userScrollEnabled = false,
           verticalArrangement = Arrangement.spacedBy(8.dp),

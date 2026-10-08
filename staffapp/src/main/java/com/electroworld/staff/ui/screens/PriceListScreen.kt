@@ -1,6 +1,7 @@
 package com.electroworld.staff.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,13 +13,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Card
@@ -42,7 +45,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -53,9 +55,11 @@ import androidx.compose.ui.graphics.Color
 import coil.compose.AsyncImage
 import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.network.PriceListItem
+import com.electroworld.staff.ui.theme.AllSwatches
 import com.electroworld.staff.ui.theme.Swatch4Taupe
 import com.electroworld.staff.ui.theme.Swatch5Pearl
 import com.electroworld.staff.ui.theme.Swatch8Sand
+import com.electroworld.staff.ui.theme.contrastTextColor
 import kotlinx.coroutines.launch
 
 // What the radio group is scoped to: which field the root list browses/groups
@@ -409,6 +413,12 @@ private fun ItemRow(item: PriceListItem, isAdmin: Boolean, onClick: () -> Unit) 
 
 // Full-screen, customer-facing view: the salesperson hands their phone to the
 // customer, so this favors large, unambiguous type over information density.
+// Background is one of the 8 swatches, picked fresh per item (remember keyed
+// on `item`, so it stays stable while this one item is on screen but
+// reshuffles on the next), matching the "shuffling randomly" reference-design
+// request; text color follows the explicit contrast rule in
+// contrastTextColor (Color.kt) rather than any theme role, since the
+// background itself isn't a theme role here.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CustomerPriceScreen(
@@ -417,45 +427,82 @@ private fun CustomerPriceScreen(
   onBack: () -> Unit,
   modifier: Modifier = Modifier
 ) {
-  Scaffold(
-    topBar = {
-      TopAppBar(
-        title = {},
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-          }
-        }
-      )
-    },
-    modifier = modifier
-  ) { padding ->
-    Box(modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp)) {
+  val backgroundColor = remember(item) { AllSwatches.random() }
+  val textColor = remember(backgroundColor) { contrastTextColor(backgroundColor) }
+
+  // Background fills the entire screen, including under the top bar area --
+  // Scaffold's own `padding` (status bar / notch inset) is applied inside the
+  // colored Box rather than around it, so the color itself reaches every
+  // edge instead of leaving a themed margin around a smaller card.
+  Scaffold(modifier = modifier, containerColor = backgroundColor) { padding ->
+    Box(
+      modifier = Modifier
+        .fillMaxSize()
+        .background(backgroundColor)
+        .padding(padding)
+    ) {
+      IconButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart).padding(8.dp)) {
+        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = textColor)
+      }
+
       Column(
-        modifier = Modifier.fillMaxSize().align(Alignment.Center),
+        modifier = Modifier
+          .fillMaxSize()
+          .align(Alignment.Center)
+          .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
       ) {
+       
+        Box(
+          modifier = Modifier
+            .size(230.dp)
+            .background(textColor.copy(alpha = 0.12f), CircleShape),
+          contentAlignment = Alignment.BottomCenter
+        ) {
+          if (categoryImageUrl != null) {
+            AsyncImage(
+              model = categoryImageUrl,
+              contentDescription = item.category,
+              contentScale = ContentScale.Fit,
+              modifier = Modifier
+                .requiredSize(300.dp)
+                .align(Alignment.BottomCenter)
+            )
+          } else {
+            Icon(
+              Icons.Default.Image,
+              contentDescription = null,
+              tint = textColor,
+              modifier = Modifier.size(56.dp)
+            )
+          }
+        }
+
+        Spacer(modifier = Modifier.height(64.dp))
+
         Text(
           item.itemName,
           style = MaterialTheme.typography.headlineSmall,
+          fontWeight = FontWeight.Bold,
+          color = textColor,
           textAlign = TextAlign.Center
         )
         Text(
           "${item.category} · ${item.groupName}",
           style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.outline,
+          color = textColor.copy(alpha = 0.75f),
           textAlign = TextAlign.Center,
           modifier = Modifier.padding(top = 8.dp)
         )
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         if (item.mrp > item.finalPrice) {
           Text(
             "MRP ₹${formatPrice(item.mrp)}",
             style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.outline,
+            color = textColor.copy(alpha = 0.75f),
             textDecoration = TextDecoration.LineThrough
           )
           Spacer(modifier = Modifier.height(12.dp))
@@ -465,7 +512,7 @@ private fun CustomerPriceScreen(
           "₹${formatPrice(item.finalPrice)}",
           style = MaterialTheme.typography.displayMedium,
           fontWeight = FontWeight.Bold,
-          color = MaterialTheme.colorScheme.primary
+          color = textColor
         )
 
         if (item.mrp > item.finalPrice) {
@@ -473,27 +520,10 @@ private fun CustomerPriceScreen(
           Text(
             "You save ₹${formatPrice(savings)}",
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
+            color = textColor,
             modifier = Modifier.padding(top = 12.dp)
           )
         }
-      }
-
-      // Category hero image, if an admin has assigned one -- anchored to the
-      // bottom of the screen rather than in the centered column above, so it
-      // reads as a closing visual rather than competing with the price for
-      // center billing.
-      if (categoryImageUrl != null) {
-        AsyncImage(
-          model = categoryImageUrl,
-          contentDescription = item.category,
-          contentScale = ContentScale.Fit,
-          modifier = Modifier
-            .align(Alignment.BottomCenter)
-            .fillMaxWidth()
-            .height(160.dp)
-            .clip(RoundedCornerShape(12.dp))
-        )
       }
     }
   }

@@ -442,3 +442,14 @@ create policy "waitlist anon insert" on public.waitlist
   with check (true);
 
 create index if not exists wishlist_call_logs_wishlist_item_idx on public.wishlist_call_logs (wishlist_item_id, called_at desc);
+
+-- Points/rewards ledger
+create table if not exists public.points_ledger (
+  id uuid primary key default gen_random_uuid(),
+  phone text not null references public.users(phone) on delete cascade,
+  points integer not null,
+  reason text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists points_ledger_phone_idx on public.points_ledger (phone, created_at desc);

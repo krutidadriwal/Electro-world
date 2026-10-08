@@ -58,6 +58,7 @@ import com.electroworld.staff.data.network.WishlistItem
 import com.electroworld.staff.data.network.WishlistAddRequest
 import com.electroworld.staff.data.network.WishlistStatusRequest
 import com.electroworld.staff.data.network.WishlistCallRequest
+import com.electroworld.staff.ui.theme.staffCardColors
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -479,7 +480,7 @@ private fun WishlistRow(
     )
   }
 
-  Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+  Card(colors = staffCardColors(), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
     Column(modifier = Modifier.padding(16.dp)) {
       Row(
         modifier = Modifier.fillMaxWidth(),

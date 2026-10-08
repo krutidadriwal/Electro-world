@@ -13,6 +13,9 @@ module.exports = async function handler(req, res) {
   if (req.query.resource === 'device-tokens') {
     return deviceTokens(req, res);
   }
+  if (req.query.resource === 'points') {
+    return points(req, res);
+  }
   return user(req, res);
 };
 
@@ -145,6 +148,36 @@ async function userDelete(req, res) {
     return res.status(200).json({ deleted: true });
   } catch (err) {
     console.error('delete user error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+async function points(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { phone, countryCode } = req.query;
+  if (typeof phone !== 'string' || !PHONE_REGEX.test(phone)) {
+    return res.status(400).json({ error: 'phone query param must be a 10-digit number' });
+  }
+
+  const normalizedPhone = `${typeof countryCode === 'string' ? countryCode : '+91'}${phone}`;
+
+  try {
+    const pool = getPool();
+    const balanceResult = await pool.query(
+      `select coalesce(sum(points), 0)::int as balance from public.points_ledger where phone = $1`,
+      [normalizedPhone]
+    );
+    const historyResult = await pool.query(
+      `select id, points, reason, created_at from public.points_ledger where phone = $1 order by created_at desc limit 50`,
+      [normalizedPhone]
+    );
+    return res.status(200).json({ balance: balanceResult.rows[0].balance, history: historyResult.rows });
+  } catch (err) {
+    console.error('get points error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

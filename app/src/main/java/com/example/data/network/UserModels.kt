@@ -189,3 +189,17 @@ data class ConfirmWishlistRequest(
   val categoryStarred: Boolean,
   val subcategoryIds: List<String>
 )
+
+@JsonClass(generateAdapter = true)
+data class PointsHistoryEntry(
+  val id: String,
+  val points: Int,
+  val reason: String,
+  @Json(name = "created_at") val createdAt: String
+)
+
+@JsonClass(generateAdapter = true)
+data class PointsResponse(
+  val balance: Int,
+  val history: List<PointsHistoryEntry>
+)

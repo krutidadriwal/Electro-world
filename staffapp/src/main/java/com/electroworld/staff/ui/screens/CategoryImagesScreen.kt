@@ -47,6 +47,7 @@ import coil.compose.AsyncImage
 import com.electroworld.staff.data.network.CategoryImage
 import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.network.UploadCategoryImageRequest
+import com.electroworld.staff.ui.theme.staffCardColors
 import kotlinx.coroutines.launch
 
 // Admin-only: assigns the hero image shown at the end of CustomerPriceScreen
@@ -158,7 +159,7 @@ fun CategoryImagesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 
 @Composable
 private fun CategoryImageRow(item: CategoryImage, isUploading: Boolean, onPick: () -> Unit) {
-  Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+  Card(colors = staffCardColors(), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
     Row(
       modifier = Modifier.fillMaxWidth().padding(16.dp),
       verticalAlignment = Alignment.CenterVertically

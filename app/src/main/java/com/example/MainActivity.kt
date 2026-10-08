@@ -35,6 +35,7 @@ import com.example.ui.screens.InstallationRequestScreen
 import com.example.ui.screens.InstallationStatusScreen
 import com.example.ui.screens.MyInvoicesScreen
 import com.example.ui.screens.OnboardingScreen
+import com.example.ui.screens.PointsScreen
 import com.example.ui.screens.ProfileScreen
 import com.example.ui.screens.RegisterComplaintScreen
 import com.example.ui.screens.WishlistScreen
@@ -49,7 +50,8 @@ enum class Screen {
   INSTALLATION_REQUEST,
   INSTALLATION_STATUS,
   MY_INVOICES,
-  PROFILE
+  PROFILE,
+  POINTS
 }
 
 class MainActivity : ComponentActivity() {
@@ -117,6 +119,14 @@ class MainActivity : ComponentActivity() {
                 onOpenRegisterComplaint = { currentScreen = Screen.REGISTER_COMPLAINT },
                 onOpenInstallation = { currentScreen = Screen.INSTALLATION_REQUEST },
                 onOpenInvoices = { currentScreen = Screen.MY_INVOICES },
+                onOpenPoints = { currentScreen = Screen.POINTS },
+                modifier = Modifier.padding(innerPadding)
+              )
+            }
+            Screen.POINTS -> {
+              PointsScreen(
+                userPhone = userPhone,
+                onBack = { currentScreen = Screen.DASHBOARD },
                 modifier = Modifier.padding(innerPadding)
               )
             }

@@ -252,6 +252,18 @@ async function setPin(req, res) {
          returning phone, name`,
         [phone, trimmedName, normalizedHowHeard, pinHash, salt]
       );
+
+      // One-time welcome bonus, new accounts only. Best-effort: a failure
+      // here must never block account creation or the session token the
+      // user is about to get back.
+      try {
+        await pool.query(
+          `insert into public.points_ledger (phone, points, reason) values ($1, 200, 'Welcome bonus')`,
+          [phone]
+        );
+      } catch (pointsErr) {
+        console.error('welcome bonus points award error', pointsErr);
+      }
     } else {
       result = await pool.query(
         `update public.users

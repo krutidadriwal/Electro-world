@@ -54,4 +54,7 @@ interface UserApi {
 
   @POST("api/wishlist")
   suspend fun confirmWishlist(@Body request: ConfirmWishlistRequest): WishlistResponse
+
+  @GET("api/points")
+  suspend fun getPoints(@Query("phone") phone: String): PointsResponse
 }

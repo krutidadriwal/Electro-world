@@ -1,6 +1,8 @@
 package com.electroworld.staff.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.CardColors
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -96,3 +98,10 @@ fun StaffAppTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composab
   val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
   MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
 }
+
+// Shared row/list card color for every tab EXCEPT Price List (which sets its
+// own per-row colors by category/group/item -- see PriceListScreen.kt). Pass
+// this to every other screen's Card(colors = ...) so a future color change
+// only has to happen here, not once per tab.
+@Composable
+fun staffCardColors(): CardColors = CardDefaults.cardColors(containerColor = Swatch8Sand.copy(alpha = 0.3f))

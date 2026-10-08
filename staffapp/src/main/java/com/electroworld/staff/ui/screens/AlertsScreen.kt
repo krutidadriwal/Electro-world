@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.electroworld.staff.data.network.NetworkModule
+import com.electroworld.staff.ui.theme.staffCardColors
 
 // Not a persisted notification log -- these counts are always the current
 // pending backlog (e.g. "4 new wishlist requests" means 4 not-yet-contacted
@@ -129,7 +130,7 @@ fun AlertsScreen(isAdmin: Boolean, onNavigate: (target: String) -> Unit, onBack:
 
 @Composable
 private fun AlertRow(title: String, message: String, onClick: () -> Unit) {
-  Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).clickable(onClick = onClick)) {
+  Card(colors = staffCardColors(), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).clickable(onClick = onClick)) {
     Row(
       modifier = Modifier.fillMaxWidth().padding(16.dp),
       horizontalArrangement = Arrangement.SpaceBetween,

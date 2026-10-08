@@ -43,6 +43,7 @@ import com.electroworld.staff.data.network.CreateStaffRequest
 import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.network.StaffMember
 import com.electroworld.staff.data.network.UpdateStaffRoleRequest
+import com.electroworld.staff.ui.theme.staffCardColors
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -121,7 +122,7 @@ fun StaffScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 @Composable
 private fun StaffRow(member: StaffMember, onRoleChange: (String) -> Unit) {
   var menuExpanded by remember { mutableStateOf(false) }
-  Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+  Card(colors = staffCardColors(), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
     Row(
       modifier = Modifier.fillMaxWidth().padding(16.dp),
       horizontalArrangement = Arrangement.SpaceBetween

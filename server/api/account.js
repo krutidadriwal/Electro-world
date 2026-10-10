@@ -6,6 +6,7 @@
 
 const { getPool } = require('../lib/db');
 const { normalizePhone } = require('../lib/phone');
+const { verifySession } = require('../lib/jwt');
 
 const PHONE_REGEX = /^\d{10}$/;
 
@@ -130,6 +131,10 @@ async function userPatch(req, res) {
 // Their invoice PDFs on Google Drive are untouched -- deleting arbitrary
 // files on someone's connected Drive from an account-deletion request is a
 // separate, deliberate decision, not a side effect.
+//
+// Requires the caller's own session token (set at login/signup) so a
+// request can only ever delete the account it's authenticated as -- phone
+// alone is not proof of ownership.
 async function userDelete(req, res) {
   const { phone, countryCode } = req.body ?? {};
 
@@ -137,7 +142,18 @@ async function userDelete(req, res) {
     return res.status(400).json({ error: 'phone must be a 10-digit number' });
   }
 
+  const authHeader = req.headers.authorization ?? '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const session = verifySession(token);
+  if (!session) {
+    return res.status(401).json({ error: 'Missing or invalid session token' });
+  }
+
   const normalizedPhone = `${typeof countryCode === 'string' ? countryCode : '+91'}${phone}`;
+
+  if (session.phone !== normalizedPhone) {
+    return res.status(403).json({ error: 'Session does not match the account being deleted' });
+  }
 
   try {
     const pool = getPool();

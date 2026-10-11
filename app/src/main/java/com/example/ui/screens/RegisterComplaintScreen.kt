@@ -3,7 +3,6 @@ package com.example.ui.screens
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -60,13 +59,13 @@ import com.example.data.network.CreateComplaintRequest
 import com.example.data.network.InvoiceFile
 import com.example.data.network.NetworkModule
 import com.example.data.network.Subcategory
-import com.example.ui.theme.Swatch2Paper
+import com.example.ui.theme.DeepSlate
 import kotlinx.coroutines.launch
 
-// Fixed Paper in light mode (matching the rest of the app's dropdowns);
-// dark mode keeps the Material default tonal surface.
+// Deep Slate, the same surface tone as cards and modals (Material's default
+// tonal menu surface isn't in the palette).
 @Composable
-private fun dropdownMenuContainerColor() = if (isSystemInDarkTheme()) MenuDefaults.containerColor else Swatch2Paper
+private fun dropdownMenuContainerColor() = DeepSlate
 
 /**
  * Full-screen Register Complaint flow (its own screen, not a dashboard

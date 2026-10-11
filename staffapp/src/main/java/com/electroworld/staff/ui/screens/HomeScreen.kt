@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Notifications
@@ -51,7 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.electroworld.staff.data.network.NetworkModule
 
-private enum class HomeTab { ALERTS, PRICE_LIST, WISHLIST, COMPLAINTS, INSTALLATIONS, INVOICE_REQUESTS, BROADCAST, STAFF, CATEGORY_IMAGES }
+private enum class HomeTab { ALERTS, PRICE_LIST, WISHLIST, COMPLAINTS, INSTALLATIONS, INVOICE_REQUESTS, BROADCAST, STAFF, CATEGORY_IMAGES, SPIN }
 
 @Composable
 fun HomeScreen(
@@ -157,6 +158,7 @@ fun HomeScreen(
       HomeTab.BROADCAST -> NotificationsScreen(isAdmin = isAdmin, onBack = onBack, modifier = modifier)
       HomeTab.STAFF -> StaffScreen(onBack = onBack, modifier = modifier)
       HomeTab.CATEGORY_IMAGES -> CategoryImagesScreen(onBack = onBack, modifier = modifier)
+      HomeTab.SPIN -> SpinScreen(onBack = onBack, modifier = modifier)
     }
     return
   }
@@ -167,7 +169,8 @@ fun HomeScreen(
     DashboardModule("INVOICE REQUESTS", Icons.Default.Receipt, "Re-send invoice requests", badgeCount = invoiceCount) { selectedTab = HomeTab.INVOICE_REQUESTS },
     DashboardModule("BROADCAST", Icons.Default.Campaign, "notify customers") { selectedTab = HomeTab.BROADCAST },
     DashboardModule("STAFF", Icons.Default.People, "Manage staff accounts") { selectedTab = HomeTab.STAFF },
-    DashboardModule("CATEGORY IMAGES", Icons.Default.Image, "Set price list hero images") { selectedTab = HomeTab.CATEGORY_IMAGES }
+    DashboardModule("CATEGORY IMAGES", Icons.Default.Image, "Set price list hero images") { selectedTab = HomeTab.CATEGORY_IMAGES },
+    DashboardModule("SPIN TO WIN", Icons.Default.Casino, "Unlock spins & manage prizes") { selectedTab = HomeTab.SPIN }
   )
 
   val serviceModules = listOf(

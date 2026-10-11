@@ -31,15 +31,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.Swatch1Charcoal
-import com.example.ui.theme.Swatch2Paper
-import com.example.ui.theme.Swatch3Amber
-import com.example.ui.theme.Swatch6DeepAmber
+import com.example.ui.theme.CrispPaper
+import com.example.ui.theme.ObsidianCharcoal
+import com.example.ui.theme.PaleGold
+import com.example.ui.theme.VividAmber
 
 // VISIT STORE sub-screen, rendered as an overlay inside DashboardScreen.
-// Explicit (theme-independent) palette per an exact design spec -- every
-// color below is a literal swatch, not a MaterialTheme role, so this reads
-// identically in light and dark mode.
+// Every color below is a literal palette color (see Color.kt), not a
+// MaterialTheme role.
 @Composable
 fun VisitStoreSubScreen() {
   val context = LocalContext.current
@@ -51,20 +50,20 @@ fun VisitStoreSubScreen() {
   val storeLongitude = com.example.BuildConfig.STORE_LONGITUDE
 
   Column(modifier = Modifier.fillMaxSize()) {
-    // Store Info Box: same Swatch2Paper as the modal and header bar.
+    // Store Info Box: Obsidian, inset into the Deep Slate modal card.
     Card(
-      colors = CardDefaults.cardColors(containerColor = Swatch2Paper),
+      colors = CardDefaults.cardColors(containerColor = ObsidianCharcoal),
       shape = RoundedCornerShape(12.dp),
       modifier = Modifier.fillMaxWidth()
     ) {
       Column(modifier = Modifier.padding(16.dp)) {
-        Text(text = storeName, color = Swatch3Amber, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-        Text(text = storeAddress, color = Swatch1Charcoal, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
-        Text(text = "Hours: $storeWorkingHours", color = Swatch1Charcoal, fontSize = 11.sp)
+        Text(text = storeName, color = VividAmber, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(text = storeAddress, color = CrispPaper, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
+        Text(text = "Hours: $storeWorkingHours", color = CrispPaper, fontSize = 11.sp)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-          Icon(Icons.Default.Phone, "Phone", tint = Swatch3Amber, modifier = Modifier.size(14.dp))
+          Icon(Icons.Default.Phone, "Phone", tint = VividAmber, modifier = Modifier.size(14.dp))
           Spacer(modifier = Modifier.width(4.dp))
-          Text(text = storePhone, color = Swatch1Charcoal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+          Text(text = storePhone, color = CrispPaper, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
       }
     }
@@ -77,13 +76,13 @@ fun VisitStoreSubScreen() {
         val uri = Uri.parse("geo:$storeLatitude,$storeLongitude?q=$storeLatitude,$storeLongitude($storeName)")
         context.startActivity(Intent(Intent.ACTION_VIEW, uri))
       },
-      colors = ButtonDefaults.buttonColors(containerColor = Swatch6DeepAmber),
+      colors = ButtonDefaults.buttonColors(containerColor = VividAmber),
       modifier = Modifier.fillMaxWidth(),
       shape = RoundedCornerShape(10.dp)
     ) {
-      Icon(Icons.Default.LocationOn, "Map", tint = Swatch1Charcoal, modifier = Modifier.size(16.dp))
+      Icon(Icons.Default.LocationOn, "Map", tint = ObsidianCharcoal, modifier = Modifier.size(16.dp))
       Spacer(modifier = Modifier.width(6.dp))
-      Text("VIEW ON MAP", color = Swatch1Charcoal, fontWeight = FontWeight.Bold)
+      Text("VIEW ON MAP", color = ObsidianCharcoal, fontWeight = FontWeight.Bold)
     }
 
     Spacer(modifier = Modifier.height(10.dp))
@@ -93,14 +92,14 @@ fun VisitStoreSubScreen() {
       onClick = {
         context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$storePhone")))
       },
-      colors = ButtonDefaults.buttonColors(containerColor = Swatch2Paper, contentColor = Swatch1Charcoal),
-      border = BorderStroke(1.dp, Swatch1Charcoal),
+      colors = ButtonDefaults.buttonColors(containerColor = ObsidianCharcoal, contentColor = CrispPaper),
+      border = BorderStroke(1.dp, PaleGold),
       modifier = Modifier.fillMaxWidth(),
       shape = RoundedCornerShape(10.dp)
     ) {
-      Icon(Icons.Default.Phone, "Call", tint = Swatch1Charcoal, modifier = Modifier.width(16.dp))
+      Icon(Icons.Default.Phone, "Call", tint = PaleGold, modifier = Modifier.width(16.dp))
       Spacer(modifier = Modifier.width(6.dp))
-      Text("CALL STORE", color = Swatch1Charcoal, fontWeight = FontWeight.Bold)
+      Text("CALL STORE", color = CrispPaper, fontWeight = FontWeight.Bold)
     }
 
     Spacer(modifier = Modifier.height(10.dp))
@@ -111,14 +110,14 @@ fun VisitStoreSubScreen() {
         val digits = storePhone.filter { it.isDigit() }
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$digits")))
       },
-      colors = ButtonDefaults.buttonColors(containerColor = Swatch2Paper, contentColor = Swatch1Charcoal),
-      border = BorderStroke(1.dp, Swatch1Charcoal),
+      colors = ButtonDefaults.buttonColors(containerColor = ObsidianCharcoal, contentColor = CrispPaper),
+      border = BorderStroke(1.dp, PaleGold),
       modifier = Modifier.fillMaxWidth(),
       shape = RoundedCornerShape(10.dp)
     ) {
-      Icon(Icons.AutoMirrored.Filled.Chat, "WhatsApp", tint = Swatch1Charcoal, modifier = Modifier.width(16.dp))
+      Icon(Icons.AutoMirrored.Filled.Chat, "WhatsApp", tint = PaleGold, modifier = Modifier.width(16.dp))
       Spacer(modifier = Modifier.width(6.dp))
-      Text("WHATSAPP STORE", color = Swatch1Charcoal, fontWeight = FontWeight.Bold)
+      Text("WHATSAPP STORE", color = CrispPaper, fontWeight = FontWeight.Bold)
     }
   }
 }

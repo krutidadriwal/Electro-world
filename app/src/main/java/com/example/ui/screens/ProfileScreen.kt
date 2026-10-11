@@ -3,7 +3,6 @@ package com.example.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,7 +49,6 @@ import androidx.compose.ui.unit.sp
 import com.example.data.network.DeleteUserRequest
 import com.example.data.network.NetworkModule
 import com.example.data.network.UpdateUserRequest
-import com.example.ui.theme.Swatch1Charcoal
 import com.example.ui.theme.appCardColors
 import kotlinx.coroutines.launch
 
@@ -278,7 +276,7 @@ fun ProfileScreen(
       text = {
         Text(
           "This permanently deletes your account, complaints, wishlist, and installation requests. This cannot be undone.",
-          color = if (isSystemInDarkTheme()) Swatch1Charcoal else MaterialTheme.colorScheme.outline,
+          color = MaterialTheme.colorScheme.outline,
           fontSize = 13.sp
         )
       },

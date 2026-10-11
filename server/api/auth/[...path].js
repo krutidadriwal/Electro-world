@@ -18,6 +18,7 @@ const CODE_EXPIRY_MS = 5 * 60 * 1000;
 const CODE_REGEX = /^\d{6}$/;
 const PIN_REGEX = /^\d{4}$/;
 const MAX_OTP_ATTEMPTS = 5;
+const MAX_OTP_SENDS_PER_DAY = 5;
 
 module.exports = async function handler(req, res) {
   // .../api/auth/<...> -- drop "api", "auth".
@@ -96,11 +97,11 @@ async function sendOtp(req, res) {
   try {
     const pool = getPool();
 
-    // One OTP per phone per calendar day (IST). This single statement is
-    // atomic (the unique constraint on phone serializes concurrent requests
-    // for the same number), so it both enforces and records the limit --
-    // send_count coming back > 1 means today's row already existed before
-    // this request, i.e. the limit was already used.
+    // MAX_OTP_SENDS_PER_DAY OTPs per phone per calendar day (IST). This
+    // single statement is atomic (the unique constraint on phone serializes
+    // concurrent requests for the same number), so it both enforces and
+    // records the limit -- send_count coming back above the cap means
+    // today's allowance was already used up before this request.
     const limitResult = await pool.query(
       `insert into public.otp_daily_limits (phone, send_date, send_count)
        values ($1, (now() at time zone 'Asia/Kolkata')::date, 1)
@@ -114,13 +115,15 @@ async function sendOtp(req, res) {
        returning send_count`,
       [normalizedPhone]
     );
-    if (limitResult.rows[0].send_count > 1) {
+    if (limitResult.rows[0].send_count > MAX_OTP_SENDS_PER_DAY) {
       // Undo this request's own increment -- a refused request must not
       // count, or retries made while an earlier (ultimately failing) send
       // is still in flight would outnumber that send's single refund and
       // leave the phone locked out for a day in which no SMS went out.
       await releaseOtpSlot(pool, normalizedPhone);
-      return res.status(429).json({ error: 'You have already requested an OTP today. Please try again tomorrow.' });
+      return res.status(429).json({
+        error: `You have reached today's limit of ${MAX_OTP_SENDS_PER_DAY} OTP requests. Please try again tomorrow.`
+      });
     }
 
     const code = crypto.randomInt(100000, 1000000).toString();

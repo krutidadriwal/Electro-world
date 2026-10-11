@@ -61,4 +61,14 @@ interface UserApi {
 
   @GET("api/points")
   suspend fun getPoints(@Query("phone") phone: String): PointsResponse
+
+  @GET("api/spin")
+  suspend fun getSpinState(@Query("phone") phone: String): SpinStateResponse
+
+  // The prize is picked by the server; the wheel only animates to it.
+  @POST("api/spin")
+  suspend fun spin(
+    @Header("Authorization") authorization: String,
+    @Body request: SpinRequest
+  ): SpinResultResponse
 }

@@ -209,3 +209,40 @@ data class PointsResponse(
   val balance: Int,
   val history: List<PointsHistoryEntry>
 )
+
+@JsonClass(generateAdapter = true)
+data class SpinPrize(
+  val id: String,
+  val name: String
+)
+
+// A spin this user has already used, and what it won.
+@JsonClass(generateAdapter = true)
+data class SpinWin(
+  val id: String,
+  val prizeName: String?,
+  val boughtItem: String,
+  val wonAt: String
+)
+
+// availableSpins is how many purchases staff have unlocked a spin for that
+// haven't been used yet; prizes is everything currently in stock (what the
+// wheel shows).
+@JsonClass(generateAdapter = true)
+data class SpinStateResponse(
+  val availableSpins: Int,
+  val prizes: List<SpinPrize>,
+  val wins: List<SpinWin>
+)
+
+@JsonClass(generateAdapter = true)
+data class SpinRequest(
+  val phone: String
+)
+
+@JsonClass(generateAdapter = true)
+data class SpinResultResponse(
+  val prize: SpinPrize,
+  val boughtItem: String,
+  val availableSpins: Int
+)

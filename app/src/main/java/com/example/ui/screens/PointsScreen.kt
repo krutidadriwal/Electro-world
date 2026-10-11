@@ -161,9 +161,8 @@ fun PointsScreen(
 
 @Composable
 private fun PointsBalanceCard(balance: Int) {
-  // primary -> secondary (the two amber swatches), with onPrimary text --
-  // that role is Charcoal in both schemes, which is exactly the contrast
-  // this gradient needs regardless of light/dark mode.
+  // primary -> secondary (Vivid Amber into Pale Gold), with onPrimary
+  // text -- Obsidian, which is exactly the contrast this gradient needs.
   val onGradient = MaterialTheme.colorScheme.onPrimary
   Box(
     modifier = Modifier

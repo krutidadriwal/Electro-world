@@ -2,30 +2,31 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// The ONLY 8 colors allowed anywhere in this app -- both the light and dark
-// schemes in Theme.kt are built exclusively from these, matching
-// staffapp/src/main/java/com/electroworld/staff/ui/theme/Color.kt exactly so
-// both apps read as the same brand. No other file should reference these
-// directly; use MaterialTheme.colorScheme.* instead, so colors actually
-// switch with the active theme.
-val Swatch1Charcoal = Color(0xFF3B3430)
-val Swatch2Paper = Color(0xFFFCFCFC)
-val Swatch3Amber = Color(0xFFE9A515)
-val Swatch4Taupe = Color(0xFF959188)
-val Swatch5Pearl = Color(0xFFDBD8D2)
-val Swatch6DeepAmber = Color(0xFFE9A515)
-val Swatch7PaleGold = Color(0xFFF0CF8C)
-val Swatch8Sand = Color(0xFFBFA995)
+// The ONLY 6 colors allowed anywhere in this app -- the single (dark) scheme
+// in Theme.kt is built exclusively from these. Prefer
+// MaterialTheme.colorScheme.* in screens; reference these directly only for
+// fixed brand artwork (e.g. the Spin to Win wheel).
+//
+// This palette is the customer app's own: the staff app
+// (staffapp/.../ui/theme/Color.kt) still uses the earlier 8-swatch set.
 
-// All 8 swatches together, for call sites that intentionally need the raw
-// palette rather than a theme role.
-val AllSwatches = listOf(
-  Swatch1Charcoal, Swatch2Paper, Swatch3Amber, Swatch4Taupe,
-  Swatch5Pearl, Swatch6DeepAmber, Swatch7PaleGold, Swatch8Sand
-)
+// Dominant dark (base): the page background everything else sits on.
+val ObsidianCharcoal = Color(0xFF1A1715)
 
-// Per the same explicit design rule used in the staff app: Charcoal and
-// Taupe are the two swatches dark/muted enough to need Paper text for
-// contrast; every other swatch reads fine with Charcoal text.
+// Surface / card (layer 1): cards, modals, top bars -- lifted off the base.
+val DeepSlate = Color(0xFF2D2825)
+// Primary gold (action): primary buttons and key highlights.
+val VividAmber = Color(0xFFFFB800)
+// Secondary gold (muted): secondary borders, icons, supporting badge text.
+val PaleGold = Color(0xFFF0CF8C)
+
+// High-contrast light (text): titles and body text on dark surfaces.
+val CrispPaper = Color(0xFFFCFCFC)
+
+// Muted support (text): captions, hints, placeholders, hairline borders.
+val PlatinumMuted = Color(0xFFA8A39D)
+
+// The two dark tones need Paper text for contrast; the golds, Paper and
+// Platinum all read fine with Obsidian text.
 fun contrastTextColor(background: Color): Color =
-  if (background == Swatch1Charcoal || background == Swatch4Taupe) Swatch2Paper else Swatch1Charcoal
+  if (background == ObsidianCharcoal || background == DeepSlate) CrispPaper else ObsidianCharcoal

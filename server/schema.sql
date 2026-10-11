@@ -31,8 +31,8 @@ create table if not exists public.otp_codes (
   created_at timestamptz not null default now()
 );
 
--- Caps OTP sends to once per calendar day per phone (see POST
--- /api/auth/send-otp), independent of otp_codes -- that row gets deleted on
+-- Caps OTP sends per calendar day per phone (the cap itself is
+-- MAX_OTP_SENDS_PER_DAY in POST /api/auth/send-otp), independent of otp_codes -- that row gets deleted on
 -- successful verification or overwritten on resend, so it can't be used to
 -- remember "already sent today" across a verify. Day boundary is IST
 -- (Asia/Kolkata), matching the app's user base.

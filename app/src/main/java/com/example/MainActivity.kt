@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -29,6 +30,7 @@ import com.example.data.SessionManager
 import com.example.data.network.NetworkModule
 import com.example.data.notifications.registerFcmToken
 import com.example.update.InAppUpdateChecker
+import com.example.ui.screens.ActiveModule
 import com.example.ui.screens.ComplaintStatusScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.InstallationRequestScreen
@@ -38,6 +40,7 @@ import com.example.ui.screens.OnboardingScreen
 import com.example.ui.screens.PointsScreen
 import com.example.ui.screens.ProfileScreen
 import com.example.ui.screens.RegisterComplaintScreen
+import com.example.ui.screens.SpinScreen
 import com.example.ui.screens.WishlistScreen
 import com.example.ui.theme.MyApplicationTheme
 
@@ -51,13 +54,20 @@ enum class Screen {
   INSTALLATION_STATUS,
   MY_INVOICES,
   PROFILE,
-  POINTS
+  POINTS,
+  SPIN
 }
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    enableEdgeToEdge()
+    // The app is dark whatever the device theme (see Theme.kt), so the
+    // system bars are pinned to light icons -- the default follows the
+    // device theme and would draw dark icons on the dark background.
+    enableEdgeToEdge(
+      statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+      navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+    )
     setContent {
       MyApplicationTheme {
         val context = LocalContext.current
@@ -67,6 +77,9 @@ class MainActivity : ComponentActivity() {
         }
         var userName by remember { mutableStateOf(sessionManager.userName) }
         var userPhone by remember { mutableStateOf(sessionManager.userPhone) }
+        // Set by Spin to Win's "Get spin access" so the dashboard opens
+        // straight onto Visit Store; cleared as soon as it has been shown.
+        var openVisitStoreOnDashboard by remember { mutableStateOf(false) }
 
         val notificationPermissionLauncher = rememberLauncherForActivityResult(
           ActivityResultContracts.RequestPermission()
@@ -120,6 +133,21 @@ class MainActivity : ComponentActivity() {
                 onOpenInstallation = { currentScreen = Screen.INSTALLATION_REQUEST },
                 onOpenInvoices = { currentScreen = Screen.MY_INVOICES },
                 onOpenPoints = { currentScreen = Screen.POINTS },
+                onOpenSpin = { currentScreen = Screen.SPIN },
+                modifier = Modifier.padding(innerPadding),
+                initialOverlay = if (openVisitStoreOnDashboard) ActiveModule.VISIT_STORE else ActiveModule.NONE
+              )
+              LaunchedEffect(Unit) { openVisitStoreOnDashboard = false }
+            }
+            Screen.SPIN -> {
+              SpinScreen(
+                userPhone = userPhone,
+                sessionToken = sessionManager.sessionToken,
+                onBack = { currentScreen = Screen.DASHBOARD },
+                onGetSpinAccess = {
+                  openVisitStoreOnDashboard = true
+                  currentScreen = Screen.DASHBOARD
+                },
                 modifier = Modifier.padding(innerPadding)
               )
             }

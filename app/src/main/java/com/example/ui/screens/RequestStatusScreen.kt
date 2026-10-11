@@ -62,9 +62,9 @@ data class RequestStatusItem(
   val assignedInfo: String? = null
 )
 
-// primary/secondary/outline rather than green/amber/gray -- the 8-swatch
-// palette has no green, so "resolved" reads as the most saturated/positive
-// swatch available (primary) instead.
+// primary/secondary/outline rather than green/amber/gray -- the palette
+// has no green, so "resolved" reads as the most saturated/positive color
+// available (primary) instead.
 @Composable
 private fun statusColor(status: String): Color = when (status) {
   "resolved", "closed" -> MaterialTheme.colorScheme.primary

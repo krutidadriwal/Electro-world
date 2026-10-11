@@ -6,7 +6,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -93,9 +92,6 @@ import com.example.data.network.CreateInvoiceRequestRequest
 import com.example.data.network.InvoiceFile
 import com.example.data.network.NetworkModule
 import com.example.data.notifications.notificationTrayId
-import com.example.ui.theme.Swatch1Charcoal
-import com.example.ui.theme.Swatch2Paper
-import com.example.ui.theme.Swatch8Sand
 import com.example.ui.theme.appCardColors
 import kotlinx.coroutines.launch
 
@@ -116,12 +112,37 @@ fun DashboardScreen(
   onOpenInstallation: () -> Unit,
   onOpenInvoices: () -> Unit,
   onOpenPoints: () -> Unit,
-  modifier: Modifier = Modifier
+  onOpenSpin: () -> Unit,
+  modifier: Modifier = Modifier,
+  // Lets another screen land here with an overlay already open (Spin to
+  // Win's "Get spin access" opens Visit Store).
+  initialOverlay: ActiveModule = ActiveModule.NONE
 ) {
   val context = LocalContext.current
   val coroutineScope = rememberCoroutineScope()
   val invoiceListCache = remember { InvoiceListCache(context) }
-  var activeOverlay by remember { mutableStateOf(ActiveModule.NONE) }
+  var activeOverlay by remember { mutableStateOf(initialOverlay) }
+  var availableSpins by remember { mutableStateOf(0) }
+  // null until the first load (or while offline) -- the header chip shows a
+  // dash rather than a misleading 0.
+  var pointsBalance by remember { mutableStateOf<Int?>(null) }
+  val displayName = remember(userName) { headerDisplayName(userName) }
+
+  LaunchedEffect(userPhone) {
+    try {
+      pointsBalance = NetworkModule.userApi.getPoints(userPhone).balance
+    } catch (e: Exception) {
+      // Offline -- leave the previous balance (or the dash) showing.
+    }
+  }
+
+  LaunchedEffect(userPhone) {
+    try {
+      availableSpins = NetworkModule.userApi.getSpinState(userPhone).availableSpins
+    } catch (e: Exception) {
+      // Offline -- the banner just keeps its default "locked" wording.
+    }
+  }
   var recentInvoices by remember { mutableStateOf(invoiceListCache.get(userPhone)?.take(3) ?: emptyList()) }
   var openingInvoiceId by remember { mutableStateOf<String?>(null) }
   val notificationReadStore = remember { NotificationReadStore(context) }
@@ -174,8 +195,7 @@ fun DashboardScreen(
     DashboardModuleItem("INSTALLATION REQUEST", Icons.Default.Settings, "Schedule a new installation", onClick = onOpenInstallation),
     DashboardModuleItem("REGISTER COMPLAINT", Icons.Default.Warning, "Report a service issue", onClick = onOpenRegisterComplaint),
     DashboardModuleItem("WISHLIST", Icons.Default.Favorite, "Browse categories you've saved", onClick = onOpenWishlist),
-    DashboardModuleItem("VISIT STORE", Icons.Default.LocationOn, "Address, map & contact", ActiveModule.VISIT_STORE),
-    DashboardModuleItem("MY POINTS", Icons.Default.Star, "View your rewards balance", onClick = onOpenPoints)
+    DashboardModuleItem("VISIT STORE", Icons.Default.LocationOn, "Address, map & contact", ActiveModule.VISIT_STORE)
   )
 
   Scaffold(
@@ -215,26 +235,31 @@ fun DashboardScreen(
               contentAlignment = Alignment.Center
             ) {
               Text(
-                text = userName.take(2).ifBlank { "EW" }.uppercase(),
+                text = displayName.take(2).ifBlank { "EW" }.uppercase(),
                 color = MaterialTheme.colorScheme.secondary,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
               )
             }
             Column(modifier = Modifier.padding(start = 12.dp)) {
-              // outline, not onSurfaceVariant -- this text sits directly on
-              // `background`, and in dark mode onSurfaceVariant is set to the
-              // same color as background (see Theme.kt), which would make it
-              // invisible there (same fix applied in the staff app).
+              // outline: the palette's muted-text tone (see Theme.kt).
               Text(text = "Welcome Back,", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp)
               Text(
-                text = userName.ifBlank { "Guest" },
+                text = displayName.ifBlank { "Guest" },
                 color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 17.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
               )
             }
           }
+
+          PointsChip(
+            balance = pointsBalance,
+            onClick = onOpenPoints,
+            modifier = Modifier.padding(start = 8.dp, end = 10.dp)
+          )
 
           Box {
             Box(
@@ -252,8 +277,8 @@ fun DashboardScreen(
               )
             }
             if (unreadNotificationCount > 0) {
-              // secondary, not a red/error color -- the 8-swatch palette has
-              // no red, same convention as the staff app's CountBadge.
+              // secondary, not a red/error color -- the palette has no red,
+              // same convention as the staff app's CountBadge.
               Box(
                 modifier = Modifier
                   .align(Alignment.TopEnd)
@@ -292,7 +317,7 @@ fun DashboardScreen(
           columns = GridCells.Fixed(2),
           modifier = Modifier
             .fillMaxWidth()
-            .height(440.dp)
+            .height(292.dp)
             .padding(horizontal = 12.dp),
           userScrollEnabled = false,
           verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -304,7 +329,7 @@ fun DashboardScreen(
                 .height(140.dp)
                 .clickable { item.onClick?.invoke() ?: run { activeOverlay = item.actionType } }
                 .testTag("module_${item.title.lowercase().replace(" ", "_")}"),
-              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)),
+              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
               shape = RoundedCornerShape(16.dp),
               border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
@@ -337,6 +362,12 @@ fun DashboardScreen(
             }
           }
         }
+
+        SpinToWinBanner(
+          availableSpins = availableSpins,
+          onClick = onOpenSpin,
+          modifier = Modifier.padding(horizontal = 16.dp).padding(top = 16.dp)
+        )
 
         Row(
           modifier = Modifier
@@ -401,10 +432,9 @@ fun DashboardScreen(
       }
 
       // Overlay portal for the active module's detail screen. Visit Store
-      // gets its own explicit (theme-independent) palette per an exact
-      // design spec -- Charcoal page backdrop, a crisp Paper card, a solid
-      // DeepAmber header bar -- rather than the theme-adaptive colors the
-      // Notifications overlay still uses.
+      // reads as a page of its own -- fully opaque backdrop, a darker header
+      // band -- where Notifications is a card floating over the dimmed
+      // dashboard.
       val isVisitStore = activeOverlay == ActiveModule.VISIT_STORE
       AnimatedVisibility(
         visible = activeOverlay != ActiveModule.NONE,
@@ -413,11 +443,7 @@ fun DashboardScreen(
         modifier = Modifier.fillMaxSize()
       ) {
         Surface(
-          color = if (isVisitStore) {
-            if (isSystemInDarkTheme()) Swatch1Charcoal else Swatch2Paper
-          } else {
-            MaterialTheme.colorScheme.scrim.copy(alpha = 0.85f)
-          },
+          color = MaterialTheme.colorScheme.scrim.copy(alpha = if (isVisitStore) 1f else 0.85f),
           modifier = Modifier.fillMaxSize()
         ) {
           Box(
@@ -430,27 +456,23 @@ fun DashboardScreen(
               modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.85f)
-                // The drop shadow's elevation layer isn't clipped to the card's
-                // rounded shape, so with a translucent (alpha 0.3) containerColor
-                // it shows through as a faint square halo around the card --
-                // skip it for Visit Store, where the background is translucent.
+                // No shadow for Visit Store: it sits on a fully opaque
+                // backdrop, where there is nothing for it to lift off.
                 .let { if (isVisitStore) it else it.shadow(16.dp, RoundedCornerShape(20.dp)) },
-              colors = CardDefaults.cardColors(
-                containerColor = if (isVisitStore) Swatch8Sand.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface
-              ),
+              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
               shape = RoundedCornerShape(20.dp),
               border = if (isVisitStore) null else BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
             ) {
               Column(modifier = Modifier.fillMaxSize()) {
-                // Modal Header Bar -- same translucent Paper as the card body for
-                // Visit Store (matching the card's own top corner radius),
-                // vs. the plain inline header the other overlay still uses.
+                // Modal Header Bar -- a darker inset band for Visit Store
+                // (matching the card's own top corner radius), vs. the plain
+                // inline header the other overlay uses.
                 Row(
                   modifier = Modifier
                     .fillMaxWidth()
                     .let {
                       if (isVisitStore) {
-                        it.background(Swatch8Sand.copy(alpha = 0.5f), RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                        it.background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
                       } else {
                         it
                       }
@@ -464,7 +486,7 @@ fun DashboardScreen(
                       Icon(
                         imageVector = getModuleIcon(activeOverlay),
                         contentDescription = "Icon",
-                        tint = Swatch1Charcoal,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(22.dp)
                       )
                     } else {
@@ -474,14 +496,9 @@ fun DashboardScreen(
                           .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape),
                         contentAlignment = Alignment.Center
                       ) {
-                        // onSurface, not a literal swatch -- this badge sits
-                        // on primary.copy(alpha=0.1f) over the overlay
-                        // card's own `surface` background, which is light
-                        // (Pearl) in light mode but dark (Taupe) in dark
-                        // mode. A hardcoded Charcoal tint read fine in light
-                        // mode but was nearly invisible in dark mode;
-                        // onSurface already resolves to Charcoal/Paper to
-                        // match.
+                        // onSurface: this badge sits on
+                        // primary.copy(alpha=0.1f) over the overlay card's
+                        // own `surface` background.
                         Icon(
                           imageVector = getModuleIcon(activeOverlay),
                           contentDescription = "Icon",
@@ -493,7 +510,7 @@ fun DashboardScreen(
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
                       text = getModuleTitle(activeOverlay),
-                      color = if (isVisitStore) Swatch1Charcoal else MaterialTheme.colorScheme.onSurface,
+                      color = MaterialTheme.colorScheme.onSurface,
                       fontSize = 18.sp,
                       fontWeight = FontWeight.Bold
                     )
@@ -502,14 +519,14 @@ fun DashboardScreen(
                   IconButton(
                     onClick = { activeOverlay = ActiveModule.NONE },
                     modifier = Modifier.background(
-                      if (isVisitStore) Swatch1Charcoal else MaterialTheme.colorScheme.surfaceVariant,
+                      if (isVisitStore) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceVariant,
                       CircleShape
                     )
                   ) {
                     Icon(
                       imageVector = Icons.Default.Close,
                       contentDescription = "Dismiss",
-                      tint = if (isVisitStore) Swatch2Paper else Swatch1Charcoal
+                      tint = MaterialTheme.colorScheme.onSurface
                     )
                   }
                 }
@@ -551,12 +568,109 @@ data class DashboardModuleItem(
   val onClick: (() -> Unit)? = null
 )
 
+// First name only for the header greeting, so it fits beside the points chip
+// and bell: leading titles are skipped and everything after the first real
+// name (middle names, surname) is dropped -- "Mr. Ajayshriraj Dada" shows as
+// "Ajayshriraj". A name that is nothing but titles is shown as typed.
+private val NameTitles = setOf(
+  "mr", "mrs", "ms", "miss", "mx", "dr", "prof", "er", "adv", "ca",
+  "shri", "shree", "sri", "smt", "shrimati", "kumari", "km"
+)
+
+private fun headerDisplayName(fullName: String): String {
+  // Split on dots as well as spaces, so "Mr.Ajay" (no space) still parts.
+  val words = fullName.trim().split(Regex("[\\s.]+")).filter { it.isNotEmpty() }
+  return words.firstOrNull { it.lowercase() !in NameTitles } ?: fullName.trim()
+}
+
+// The points balance, shown in the header to the left of the bell. Tapping
+// it opens the Points screen.
+@Composable
+private fun PointsChip(balance: Int?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+  Row(
+    modifier = modifier
+      .height(44.dp)
+      .clip(RoundedCornerShape(12.dp))
+      .background(MaterialTheme.colorScheme.surface)
+      .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+      .clickable { onClick() }
+      .padding(horizontal = 12.dp)
+      .testTag("header_points_chip"),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Icon(
+      imageVector = Icons.Default.Star,
+      contentDescription = "Points",
+      tint = MaterialTheme.colorScheme.primary,
+      modifier = Modifier.size(16.dp)
+    )
+    Text(
+      text = balance?.toString() ?: "–",
+      color = MaterialTheme.colorScheme.onSurface,
+      fontSize = 14.sp,
+      fontWeight = FontWeight.Bold,
+      maxLines = 1,
+      modifier = Modifier.padding(start = 6.dp)
+    )
+  }
+}
+
+// Entry point to SpinScreen, badged with the EW logo (the same amber one
+// that sits on the wheel's hub there).
+@Composable
+private fun SpinToWinBanner(availableSpins: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+  Card(
+    modifier = modifier
+      .fillMaxWidth()
+      .clickable { onClick() }
+      .testTag("spin_to_win_banner"),
+    colors = appCardColors(),
+    shape = RoundedCornerShape(16.dp),
+    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+  ) {
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(16.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      androidx.compose.foundation.Image(
+        painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ew_logo_amber),
+        contentDescription = null,
+        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+        modifier = Modifier.size(64.dp)
+      )
+      Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
+        Text(
+          text = "SPIN TO WIN!",
+          color = MaterialTheme.colorScheme.primary,
+          fontSize = 18.sp,
+          fontWeight = FontWeight.Black
+        )
+        Text(
+          text = when {
+            availableSpins > 1 -> "You have $availableSpins spins ready"
+            availableSpins == 1 -> "You have a spin ready"
+            else -> "Tap to get limited offers"
+          },
+          color = MaterialTheme.colorScheme.outline,
+          fontSize = 12.sp
+        )
+      }
+      Icon(
+        imageVector = Icons.Default.ChevronRight,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.secondary,
+        modifier = Modifier.size(18.dp)
+      )
+    }
+  }
+}
+
 @Composable
 private fun InvoiceChip(invoice: InvoiceFile, isOpening: Boolean, onClick: () -> Unit) {
   Column(
     modifier = Modifier
       .width(130.dp)
-      .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+      .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
       .clickable(enabled = !isOpening) { onClick() }
       .padding(12.dp)
   ) {
@@ -942,7 +1056,7 @@ fun NotificationsSubScreen() {
           val isRead = notification.id in readIds
           Card(
             colors = CardDefaults.cardColors(
-              containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isRead) 0.15f else 0.3f)
+              containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isRead) 0.4f else 1f)
             ),
             modifier = Modifier
               .fillMaxWidth()
@@ -972,7 +1086,7 @@ fun NotificationsSubScreen() {
               Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
                 Text(
                   text = notification.message.substringBefore('\n'),
-                  color = if (isRead) (Swatch1Charcoal.copy(alpha = 0.3f)) else Swatch1Charcoal,
+                  color = if (isRead) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
                   fontSize = 13.sp,
                   fontWeight = if (isRead) FontWeight.Normal else FontWeight.Bold,
                   maxLines = 1,
@@ -980,7 +1094,7 @@ fun NotificationsSubScreen() {
                 )
                 Text(
                   text = formatInvoiceDate(notification.createdAt),
-                  color = if (isRead) Swatch1Charcoal.copy(alpha = 0.5f) else Swatch1Charcoal,
+                  color = MaterialTheme.colorScheme.outline,
                   fontSize = 11.sp,
                   modifier = Modifier.padding(top = 4.dp)
                 )

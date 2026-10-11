@@ -10,6 +10,7 @@ const { syncPriceList } = require('../../lib/priceList');
 const { uploadCategoryImage } = require('../../lib/categoryImages');
 const { normalizePhone } = require('../../lib/phone');
 const { sendToTokens } = require('../../lib/fcm');
+const { spinOverview, spinPrize, spinPurchaseItem, spinGrant } = require('../../lib/staffSpin');
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // base64 inflates ~33%; Vercel caps request bodies at 4.5MB
 
@@ -132,6 +133,14 @@ module.exports = async function handler(req, res) {
       return staffDeviceToken(req, res);
     case 'customer-lookup':
       return customerLookup(req, res);
+    case 'spin-overview':
+      return spinOverview(req, res);
+    case 'spin-prize':
+      return spinPrize(req, res);
+    case 'spin-purchase-item':
+      return spinPurchaseItem(req, res);
+    case 'spin-grant':
+      return spinGrant(req, res);
     default:
       return res.status(404).json({ error: 'Not found' });
   }

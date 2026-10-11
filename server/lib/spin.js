@@ -5,9 +5,12 @@
 // Ported from the old standalone spinner page, where the browser itself
 // picked the prize and wrote the stock/used-flag updates with the anon key.
 // Here the server is the only thing that ever decides or records a win:
-//   GET  /api/spin?phone=  -> how many spins are unlocked, what's on the
-//                             wheel, and what this customer has already won
+//   GET  /api/spin?phone=  -> how many spins are unlocked and what this
+//                             customer has already won
 //   POST /api/spin         -> consume one unlocked spin and return the prize
+//
+// The prizes on offer are never sent to the app -- a customer only ever
+// learns a prize's name by winning it.
 
 const { getPool } = require('./db');
 const { normalizePhone } = require('./phone');
@@ -36,12 +39,6 @@ async function spinGet(req, res) {
       `select count(*)::int as count from public.spin_grants where phone = $1 and used_at is null`,
       [normalizedPhone]
     );
-    // Everything currently in stock goes on the wheel, whether or not this
-    // customer's purchase is mapped to a narrower set -- the mapping only
-    // limits what they can actually land on (see spinPost).
-    const prizesResult = await pool.query(
-      `select id, name from public.spin_prizes where quantity > 0 order by name`
-    );
     const winsResult = await pool.query(
       `select id, prize_name as "prizeName", bought_item as "boughtItem", used_at as "wonAt"
        from public.spin_grants
@@ -52,7 +49,6 @@ async function spinGet(req, res) {
     );
     return res.status(200).json({
       availableSpins: pendingResult.rows[0].count,
-      prizes: prizesResult.rows,
       wins: winsResult.rows
     });
   } catch (err) {

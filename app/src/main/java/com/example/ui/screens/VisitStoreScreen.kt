@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.Button
@@ -100,6 +101,24 @@ fun VisitStoreSubScreen() {
       Icon(Icons.Default.Phone, "Call", tint = Swatch1Charcoal, modifier = Modifier.width(16.dp))
       Spacer(modifier = Modifier.width(6.dp))
       Text("CALL STORE", color = Swatch1Charcoal, fontWeight = FontWeight.Bold)
+    }
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+    // WhatsApp CTA: same outlined style and number as Call Store.
+    Button(
+      onClick = {
+        val digits = storePhone.filter { it.isDigit() }
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$digits")))
+      },
+      colors = ButtonDefaults.buttonColors(containerColor = Swatch2Paper, contentColor = Swatch1Charcoal),
+      border = BorderStroke(1.dp, Swatch1Charcoal),
+      modifier = Modifier.fillMaxWidth(),
+      shape = RoundedCornerShape(10.dp)
+    ) {
+      Icon(Icons.AutoMirrored.Filled.Chat, "WhatsApp", tint = Swatch1Charcoal, modifier = Modifier.width(16.dp))
+      Spacer(modifier = Modifier.width(6.dp))
+      Text("WHATSAPP STORE", color = Swatch1Charcoal, fontWeight = FontWeight.Bold)
     }
   }
 }

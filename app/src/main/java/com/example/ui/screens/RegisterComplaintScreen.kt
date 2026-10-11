@@ -52,7 +52,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.CategoryCache
 import com.example.data.InvoiceFileCache
+import com.example.data.InvoiceListCache
 import com.example.data.network.Category
 import com.example.data.network.CreateComplaintRequest
 import com.example.data.network.InvoiceFile
@@ -82,8 +84,10 @@ fun RegisterComplaintScreen(
 
   val context = LocalContext.current
   val coroutineScope = rememberCoroutineScope()
+  val invoiceListCache = remember { InvoiceListCache(context) }
+  val categoryCache = remember { CategoryCache(context) }
 
-  var invoices by remember { mutableStateOf<List<InvoiceFile>>(emptyList()) }
+  var invoices by remember { mutableStateOf(invoiceListCache.get(userPhone) ?: emptyList()) }
   var selectedInvoice by remember { mutableStateOf<InvoiceFile?>(null) }
   var invoiceMenuExpanded by remember { mutableStateOf(false) }
   var openingInvoiceId by remember { mutableStateOf<String?>(null) }
@@ -107,7 +111,7 @@ fun RegisterComplaintScreen(
     }
   }
 
-  var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
+  var categories by remember { mutableStateOf(categoryCache.get() ?: emptyList()) }
   var selectedCategory by remember { mutableStateOf<Category?>(null) }
   var categoryMenuExpanded by remember { mutableStateOf(false) }
 
@@ -122,16 +126,27 @@ fun RegisterComplaintScreen(
   var submitError by remember { mutableStateOf<String?>(null) }
   var submitSuccess by remember { mutableStateOf(false) }
 
+  // Both lists render instantly from cache above; this just refreshes them
+  // from Supabase in the background and updates the cache (and the visible
+  // list) only once the fresh copy actually arrives, instead of blocking the
+  // form behind a network round-trip every time it's opened.
   LaunchedEffect(userPhone) {
     try {
-      invoices = NetworkModule.userApi.getInvoices(userPhone).invoices
+      val fresh = NetworkModule.userApi.getInvoices(userPhone).invoices
+      invoiceListCache.save(userPhone, fresh)
+      invoices = fresh
     } catch (e: Exception) {
-      // Invoice list is optional context for a complaint; silently allow filing without it.
+      // Invoice list is optional context for a complaint; silently keep
+      // whatever was cached (or empty) rather than blocking the form.
     }
     try {
-      categories = NetworkModule.userApi.getCategories().categories
+      val fresh = NetworkModule.userApi.getCategories().categories
+      categoryCache.save(fresh)
+      categories = fresh
     } catch (e: Exception) {
-      submitError = "Unable to load product categories. Please check your connection and try again."
+      if (categories.isEmpty()) {
+        submitError = "Unable to load product categories. Please check your connection and try again."
+      }
     }
   }
 

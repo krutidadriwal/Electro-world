@@ -115,6 +115,11 @@ async function sendOtp(req, res) {
       [normalizedPhone]
     );
     if (limitResult.rows[0].send_count > 1) {
+      // Undo this request's own increment -- a refused request must not
+      // count, or retries made while an earlier (ultimately failing) send
+      // is still in flight would outnumber that send's single refund and
+      // leave the phone locked out for a day in which no SMS went out.
+      await releaseOtpSlot(pool, normalizedPhone);
       return res.status(429).json({ error: 'You have already requested an OTP today. Please try again tomorrow.' });
     }
 
@@ -139,11 +144,7 @@ async function sendOtp(req, res) {
       // The SMS never actually went out, so don't let this attempt count
       // against today's limit -- otherwise a transient gateway failure
       // would lock the user out for the rest of the day.
-      await pool.query(
-        `update public.otp_daily_limits set send_count = send_count - 1
-         where phone = $1 and send_date = (now() at time zone 'Asia/Kolkata')::date`,
-        [normalizedPhone]
-      );
+      await releaseOtpSlot(pool, normalizedPhone);
       throw smsErr;
     }
 
@@ -152,6 +153,15 @@ async function sendOtp(req, res) {
     console.error('send-otp error', err);
     return res.status(500).json({ error: 'Unable to send verification code. Please try again.' });
   }
+}
+
+// Gives back one unit of today's OTP allowance for this phone.
+function releaseOtpSlot(pool, normalizedPhone) {
+  return pool.query(
+    `update public.otp_daily_limits set send_count = send_count - 1
+     where phone = $1 and send_date = (now() at time zone 'Asia/Kolkata')::date`,
+    [normalizedPhone]
+  );
 }
 
 async function verifyOtp(req, res) {

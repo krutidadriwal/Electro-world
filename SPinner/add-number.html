@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Electroworld - Enter to Win</title>
+   <script src="https://cdn.tailwindcss.com"></script>
+   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+   <style>
+       @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;800&display=swap');
+
+       body {
+           font-family: 'Inter', sans-serif;
+           background-color: #0f172a;
+           color: white;
+           min-height: 100vh;
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+           justify-content: center;
+           overflow: hidden;
+       }
+
+       /* Animated Background */
+       .animated-bg {
+           position: fixed;
+           top: -50%; left: -50%; width: 200%; height: 200%;
+           background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 40%, #020617 100%);
+           z-index: -2;
+       }
+       .glow-orb {
+           position: fixed;
+           border-radius: 50%;
+           filter: blur(80px);
+           z-index: -1;
+           opacity: 0.5;
+           animation: float 10s infinite alternate ease-in-out;
+       }
+       .orb-1 { top: 10%; left: 20%; width: 300px; height: 300px; background: #00f2fe; }
+       .orb-2 { bottom: 10%; right: 20%; width: 400px; height: 400px; background: #ec4899; animation-delay: -5s; }
+
+       @keyframes float {
+           0% { transform: translate(0, 0) scale(1); }
+           100% { transform: translate(30px, 50px) scale(1.2); }
+       }
+      
+       /* Glassmorphism Card */
+       .glass-card {
+           background: rgba(15, 23, 42, 0.6);
+           backdrop-filter: blur(20px);
+           -webkit-backdrop-filter: blur(20px);
+           border: 1px solid rgba(255, 255, 255, 0.1);
+           box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 242, 254, 0.05);
+       }
+
+       .orbitron { font-family: 'Orbitron', sans-serif; }
+      
+       /* Vibrant Button */
+       .btn-glow {
+           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+           background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+           box-shadow: 0 10px 25px -5px rgba(0, 242, 254, 0.5);
+       }
+       .btn-glow:hover {
+           box-shadow: 0 15px 35px -5px rgba(0, 242, 254, 0.7);
+           transform: translateY(-3px) scale(1.02);
+       }
+       .btn-glow:active { transform: translateY(1px); }
+       .btn-glow:disabled { opacity: 0.5; cursor: not-allowed; }
+      
+       /* Success Animation */
+       .success-ring { border: 3px solid #22c55e; animation: pulseRing 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+       @keyframes pulseRing {
+           0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+           70% { box-shadow: 0 0 0 25px rgba(34, 197, 94, 0); }
+           100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+       }
+      
+       .hidden-section { display: none !important; }
+       .fade-in { animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+       @keyframes fadeIn {
+           from { opacity: 0; transform: scale(0.9) translateY(10px); }
+           to { opacity: 1; transform: scale(1) translateY(0); }
+       }
+
+       /* Custom Input Styling */
+       input[type="tel"] {
+           font-variant-numeric: tabular-nums;
+           letter-spacing: 0.1em;
+       }
+       
+       /* Dropdown Styling */
+       select option {
+           background: #0f172a;
+           color: white;
+       }
+   </style>
+</head>
+<body class="p-4">
+   <div class="animated-bg"></div>
+   <div class="glow-orb orb-1"></div>
+   <div class="glow-orb orb-2"></div>
+
+   <div class="w-full max-w-md z-10">
+      
+       <div class="text-center mb-8 fade-in" style="animation-delay: 0.1s;">
+           <h2 class="orbitron text-cyan-400 font-black tracking-widest text-xl drop-shadow-lg">ELECTROWORLD</h2>
+           <p class="text-slate-300 text-xs tracking-[0.3em] uppercase mt-2 opacity-80">Customer Rewards</p>
+       </div>
+
+       <div class="glass-card p-8 md:p-10 rounded-[2rem] text-center mb-6 relative overflow-hidden fade-in" style="animation-delay: 0.2s;">
+           <div class="absolute top-0 left-0 w-24 h-24 border-t-4 border-l-4 border-cyan-500/40 rounded-tl-[2rem]"></div>
+           <div class="absolute bottom-0 right-0 w-24 h-24 border-b-4 border-r-4 border-pink-500/40 rounded-br-[2rem]"></div>
+
+           <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-cyan-500/20 to-blue-600/20 rounded-full mb-6 border border-cyan-400/30 shadow-[0_0_30px_rgba(0,242,254,0.2)]">
+               <i class="fas fa-gift text-4xl text-cyan-400"></i>
+           </div>
+          
+           <h1 class="orbitron text-3xl font-black mb-2 tracking-wider text-white">PLAY & <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-400">WIN!</span></h1>
+           <p class="text-slate-300 text-sm mb-8 leading-relaxed">Select purchase and enter mobile number to unlock the lucky spin.</p>
+
+           <div class="space-y-4">
+               <div class="relative group">
+                   <div class="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
+                       <i class="fas fa-shopping-cart text-slate-500 group-focus-within:text-cyan-400 transition-colors text-xl"></i>
+                   </div>
+                   <select id="user-bought" required class="w-full bg-slate-900/60 border-2 border-slate-700/80 rounded-2xl pl-14 pr-6 py-4 text-left text-lg font-bold focus:outline-none focus:border-cyan-400 focus:bg-slate-900 transition-all text-white appearance-none placeholder-slate-600 shadow-inner">
+                       <option value="" disabled selected>What are they buying?</option>
+                       </select>
+               </div>
+
+               <div class="relative group">
+                   <div class="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
+                       <i class="fas fa-mobile-alt text-slate-500 group-focus-within:text-cyan-400 transition-colors text-xl"></i>
+                   </div>
+                   <input type="tel" id="phone-input" autocomplete="off" maxlength="15" class="w-full bg-slate-900/60 border-2 border-slate-700/80 rounded-2xl pl-14 pr-6 py-4 text-center text-2xl font-bold focus:outline-none focus:border-cyan-400 focus:bg-slate-900 transition-all text-white placeholder-slate-600 shadow-inner" placeholder="00000 00000">
+               </div>
+              
+               <button id="add-btn" class="w-full btn-glow text-slate-900 font-black py-4 rounded-2xl orbitron tracking-widest text-lg flex items-center justify-center gap-3 mt-4">
+                   UNLOCK SPIN <i class="fas fa-arrow-right"></i>
+               </button>
+           </div>
+
+           <div id="success-overlay" class="absolute inset-0 bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center hidden-section fade-in rounded-[2rem] z-20">
+               <div class="w-28 h-28 bg-green-500/20 rounded-full flex items-center justify-center mb-6 success-ring">
+                   <i class="fas fa-check text-6xl text-green-400 drop-shadow-[0_0_15px_rgba(34,197,94,0.5)]"></i>
+               </div>
+               <h2 class="orbitron text-3xl font-black text-white mb-3 tracking-wider">YOU'RE IN!</h2>
+               <p class="text-slate-300 text-lg">Your number is ready.</p>
+               <p class="text-cyan-400 font-semibold mt-2">Open the link on your phone to spin!</p>
+           </div>
+       </div>
+      
+       <div class="text-center mt-8 opacity-60 fade-in" style="animation-delay: 0.3s;">
+           <p class="text-[10px] text-slate-400 tracking-widest uppercase flex items-center justify-center gap-2">
+               <i class="fas fa-lock"></i> Secure & Private Entry
+           </p>
+       </div>
+   </div>
+
+   <script>
+       // --- SUPABASE CONFIGURATION ---
+       const SUPABASE_URL = 'https://zpykzpzpekkwclswatuc.supabase.co';
+       const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpweWt6cHpwZWtrd2Nsc3dhdHVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzMDQxODgsImV4cCI6MjA4Njg4MDE4OH0.uUxeKBVhB4OAde6xxeS3ZdLx-Wwl8MQq2vKkrTD1Wbg';
+       const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+       // Auto-format phone number
+       const phoneInput = document.getElementById('phone-input');
+       phoneInput.addEventListener('input', function (e) {
+           let val = e.target.value.replace(/\D/g, ''); 
+           if (val.length > 5) {
+               val = val.slice(0, 5) + ' ' + val.slice(5, 10);
+           }
+           e.target.value = val;
+       });
+
+       // Fetch items from bought_products table to populate the dropdown
+       async function loadProductsDropdown() {
+           const select = document.getElementById('user-bought');
+           try {
+               const { data, error } = await supabaseClient.from('bought_products').select('name, mapped_prize').order('name');
+               if (error) throw error;
+               
+               if (data && data.length > 0) {
+                   data.forEach(p => {
+                       const mappedAttr = p.mapped_prize ? `data-mapped="${p.mapped_prize.replace(/"/g, '&quot;')}"` : '';
+                       select.innerHTML += `<option value="${p.name}" ${mappedAttr}>${p.name}</option>`;
+                   });
+               } else {
+                   select.innerHTML = `<option value="" disabled selected>No products configured.</option>`;
+               }
+           } catch (err) {
+               console.error("Failed to load products dropdown:", err);
+           }
+       }
+
+       // Load dropdown on page start
+       loadProductsDropdown();
+
+       document.getElementById('add-btn').onclick = async () => {
+           const btn = document.getElementById('add-btn');
+           const selectEl = document.getElementById('user-bought');
+           
+           let phone = phoneInput.value.replace(/\s/g, '');
+           let boughtItem = selectEl.value;
+
+           // Validate Dropdown
+           if (!boughtItem) {
+               selectEl.classList.add('border-red-500', 'bg-red-500/10');
+               setTimeout(() => selectEl.classList.remove('border-red-500', 'bg-red-500/10'), 1000);
+               return;
+           }
+
+           // Validate Phone
+           if (!phone || phone.length < 5) {
+               phoneInput.classList.add('border-red-500', 'bg-red-500/10');
+               setTimeout(() => phoneInput.classList.remove('border-red-500', 'bg-red-500/10'), 1000);
+               return;
+           }
+
+           btn.disabled = true;
+           btn.innerHTML = '<i class="fas fa-circle-notch fa-spin text-2xl"></i>';
+
+           // Get the mapped prize if one exists
+           const selectedOption = selectEl.options[selectEl.selectedIndex];
+           const mappedPrizeName = selectedOption.getAttribute('data-mapped') || null;
+
+           try {
+               // Insert into database with the new columns
+               const { error } = await supabaseClient.from('valid_code').insert([{ 
+                   code: phone, 
+                   used: false,
+                   bought_item: boughtItem,
+                   mapped_prize: mappedPrizeName
+               }]);
+               
+               if (error) throw error;
+
+               // Success UI Flow
+               const overlay = document.getElementById('success-overlay');
+               overlay.classList.remove('hidden-section');
+              
+               // Clear inputs
+               phoneInput.value = '';
+               selectEl.value = '';
+
+               // Reset back to start after 3.5 seconds
+               setTimeout(() => {
+                   overlay.classList.add('hidden-section');
+                   btn.disabled = false;
+                   btn.innerHTML = 'UNLOCK SPIN <i class="fas fa-arrow-right"></i>';
+               }, 3500);
+
+           } catch (err) {
+               alert("Oops! Something went wrong. Check database columns.");
+               console.error(err);
+               btn.disabled = false;
+               btn.innerHTML = 'UNLOCK SPIN <i class="fas fa-arrow-right"></i>';
+           }
+       };
+   </script>
+</body>
+</html>

@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electroworld - Management Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: white; min-height: 100vh; }
+        .orbitron { font-family: 'Orbitron', sans-serif; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .hidden-section { display: none !important; }
+        .tab-active { border-bottom: 2px solid #22d3ee; color: #22d3ee; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        
+        /* Custom Tag Select Styling */
+        .prize-tag {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        .prize-tag.selected {
+            background-color: #eab308; /* Yellow-500 */
+            color: #0f172a;
+            border-color: #ca8a04;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div id="login-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 px-4">
+        <div class="glass-card p-8 rounded-2xl w-full max-w-md text-center">
+            <h1 class="orbitron text-2xl font-bold text-cyan-400 mb-6">HQ LOGIN</h1>
+            <input type="password" id="admin-pass" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:border-cyan-400 text-center" placeholder="Enter Master Password">
+            <button id="login-btn" class="w-full bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl font-bold transition-all tracking-widest">ACCESS DASHBOARD</button>
+            <p id="login-err" class="text-red-400 text-sm mt-4 hidden-section">Incorrect password.</p>
+        </div>
+    </div>
+
+    <div id="dashboard-content" class="max-w-7xl mx-auto hidden-section">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+            <div>
+                <h1 class="orbitron text-3xl font-bold tracking-wider text-cyan-400">ELECTROWORLD <span class="text-white text-sm opacity-50 bg-slate-800 px-2 py-1 rounded">ADMIN</span></h1>
+                <p class="text-slate-400 text-xs uppercase tracking-widest mt-1">Spin Wheel Management System</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="add-number.html" target="_blank" class="bg-cyan-600/20 text-cyan-400 hover:bg-cyan-600/40 px-4 py-2 rounded-lg border border-cyan-500/30 transition-all flex items-center gap-2 text-sm font-bold">
+                    <i class="fas fa-external-link-alt"></i> Open Staff Page
+                </a>
+                <button id="refresh-btn" class="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg border border-slate-600 transition-all flex items-center gap-2 text-sm">
+                    <i class="fas fa-sync-alt"></i> Refresh Data
+                </button>
+                <button onclick="logout()" class="text-slate-500 hover:text-white px-3 py-2 text-sm"><i class="fas fa-power-off"></i></button>
+            </div>
+        </header>
+
+        <div class="flex border-b border-slate-800 mb-8 gap-8">
+            <button onclick="switchTab('leads')" id="tab-leads" class="pb-4 font-semibold transition-all tab-active">Winners & Leads</button>
+            <button onclick="switchTab('inventory')" id="tab-inventory" class="pb-4 font-semibold transition-all text-slate-500">Products & Access Logs</button>
+        </div>
+
+        <div id="section-leads" class="fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Recent Wheel Winners</h2>
+                <button id="export-btn" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded border border-slate-700 flex items-center gap-2 font-bold text-slate-300">
+                    <i class="fas fa-file-csv text-cyan-400"></i> Export to CSV
+                </button>
+            </div>
+            <div class="glass-card rounded-2xl overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900/80 text-slate-400 text-xs uppercase tracking-widest border-b border-slate-700">
+                                <th class="px-6 py-4">Spin Date</th>
+                                <th class="px-6 py-4">Customer Details</th>
+                                <th class="px-6 py-4">Bought Item</th>
+                                <th class="px-6 py-4">Prize Won</th>
+                                <th class="px-6 py-4">Auth Number</th>
+                                <th class="px-6 py-4 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leads-table-body" class="divide-y divide-slate-800/50">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="loading-state" class="p-12 text-center text-slate-500">
+                    <i class="fas fa-circle-notch fa-spin text-3xl text-cyan-500/50"></i>
+                </div>
+            </div>
+        </div>
+
+        <div id="section-inventory" class="hidden-section grid grid-cols-1 lg:grid-cols-3 gap-8 fade-in">
+            
+            <div class="glass-card p-6 rounded-2xl h-fit border-t-4 border-t-yellow-500 flex flex-col">
+                <h3 class="orbitron text-lg font-bold mb-4 text-white flex items-center gap-3">
+                    <i class="fas fa-shopping-cart text-yellow-400"></i> Items For Sale
+                </h3>
+                <p class="text-[10px] text-slate-400 mb-4 leading-relaxed">Populate the customer dropdown. Map prizes to guarantee they win one of those specific gifts.</p>
+                
+                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800 mb-6 flex flex-col h-full">
+                    <div class="space-y-4 flex-1">
+                        <div>
+                            <label class="text-[10px] text-slate-400 uppercase tracking-widest mb-1 block">Product Name</label>
+                            <input type="text" id="new-sale-name" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-yellow-400 focus:outline-none" placeholder="e.g. Washing Machine">
+                        </div>
+                        
+                        <div class="flex flex-col h-full">
+                            <label class="text-[10px] text-slate-400 uppercase tracking-widest mb-2 block flex justify-between items-center">
+                                <span>Select Mapped Prizes</span>
+                                <span class="text-[9px] text-slate-500 lowercase normal-case">(Click to toggle)</span>
+                            </label>
+                            
+                            <div id="custom-prize-selector" class="flex flex-wrap gap-2 mb-4 p-3 bg-slate-800/50 border border-slate-700 rounded-lg min-h-[100px] max-h-[150px] overflow-y-auto content-start">
+                                <p class="text-slate-500 text-xs italic w-full text-center mt-4">Loading inventory...</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex gap-2 mt-auto">
+                            <button id="add-sale-btn" class="w-full bg-yellow-600 hover:bg-yellow-500 px-4 py-3 rounded-lg font-bold text-sm transition-colors text-slate-900 flex justify-center items-center">
+                                <i class="fas fa-plus mr-2"></i> Add to Dropdown
+                            </button>
+                            <button id="cancel-edit-btn" class="hidden-section bg-slate-600 hover:bg-slate-500 px-4 py-3 rounded-lg font-bold text-sm transition-colors text-white">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-xs uppercase text-slate-500 mb-4 flex justify-between items-center">
+                        <span>Dropdown List</span>
+                        <span id="sale-status" class="hidden text-yellow-400 text-[10px] animate-pulse">Updating...</span>
+                    </h4>
+                    <div id="sale-list" class="space-y-2 max-h-[200px] overflow-y-auto pr-2">
+                        </div>
+                </div>
+            </div>
+
+            <div class="glass-card p-6 rounded-2xl h-fit border-t-4 border-t-cyan-500">
+                <h3 class="orbitron text-lg font-bold mb-6 text-white flex items-center gap-3">
+                    <i class="fas fa-box-open text-cyan-400"></i> Prize Stock
+                </h3>
+                <p class="text-[10px] text-slate-400 mb-4 leading-relaxed">Add stock for the items. These items will appear as selectable tags in the mapping list on the left.</p>
+                
+                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800 mb-6">
+                    <div class="flex gap-2">
+                        <input type="text" id="new-prod-name" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none" placeholder="Prize Name">
+                        <input type="number" id="new-prod-qty" class="w-16 bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-sm focus:border-cyan-400 focus:outline-none" placeholder="Qty">
+                        <button id="add-prod-btn" class="bg-cyan-600 hover:bg-cyan-500 px-4 py-2 rounded-lg font-bold text-sm transition-colors"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-xs uppercase text-slate-500 mb-4 flex justify-between items-center">
+                        <span>Live Stock</span>
+                        <span id="product-status" class="hidden text-cyan-400 text-[10px] animate-pulse">Updating...</span>
+                    </h4>
+                    <div id="stock-list" class="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                        </div>
+                </div>
+            </div>
+
+            <div class="glass-card p-6 rounded-2xl h-fit border-t-4 border-t-pink-500">
+                <h3 class="orbitron text-lg font-bold mb-6 text-white flex items-center gap-3">
+                    <i class="fas fa-mobile-alt text-pink-400"></i> Access Logs
+                </h3>
+                <p class="text-[10px] text-slate-400 mb-4 leading-relaxed">Numbers added via the Staff Page appear here. You can monitor or revoke access before they play.</p>
+
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800 text-center">
+                        <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Pending Spins</p>
+                        <p class="text-2xl font-bold text-green-400" id="active-codes-count">0</p>
+                    </div>
+                    <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800 text-center">
+                        <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Played</p>
+                        <p class="text-2xl font-bold text-slate-400" id="used-codes-count">0</p>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-xs uppercase text-slate-500 mb-3 flex justify-between items-center">
+                        <span>Database Log</span>
+                        <span id="code-status" class="hidden text-pink-400 text-[10px] animate-pulse">Updating...</span>
+                    </h4>
+                    <div id="codes-list" class="space-y-2 max-h-[250px] overflow-y-auto pr-2">
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://zpykzpzpekkwclswatuc.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpweWt6cHpwZWtrd2Nsc3dhdHVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzMDQxODgsImV4cCI6MjA4Njg4MDE4OH0.uUxeKBVhB4OAde6xxeS3ZdLx-Wwl8MQq2vKkrTD1Wbg';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Variables for custom UI and Editing State
+        let currentSelectedPrizes = [];
+        let allProductNames = [];
+        let editingSaleId = null;
+
+        document.getElementById('login-btn').onclick = () => {
+            const pass = document.getElementById('admin-pass').value;
+            if (pass === 'Sme@21087') {
+                document.getElementById('login-overlay').classList.add('hidden-section');
+                document.getElementById('dashboard-content').classList.remove('hidden-section');
+                refreshAll();
+            } else {
+                const err = document.getElementById('login-err');
+                err.classList.remove('hidden-section');
+                setTimeout(() => err.classList.add('hidden-section'), 2000);
+            }
+        };
+
+        function logout() { location.reload(); }
+
+        function switchTab(tab) {
+            document.getElementById('section-leads').classList.toggle('hidden-section', tab !== 'leads');
+            document.getElementById('section-inventory').classList.toggle('hidden-section', tab !== 'inventory');
+            document.getElementById('tab-leads').classList.toggle('tab-active', tab === 'leads');
+            document.getElementById('tab-leads').classList.toggle('text-slate-500', tab !== 'leads');
+            document.getElementById('tab-inventory').classList.toggle('tab-active', tab === 'inventory');
+            document.getElementById('tab-inventory').classList.toggle('text-slate-500', tab !== 'inventory');
+        }
+
+        async function fetchLeads() {
+            const tableBody = document.getElementById('leads-table-body');
+            const loader = document.getElementById('loading-state');
+            loader.classList.remove('hidden-section');
+            try {
+                const { data, error } = await supabaseClient.from('leads').select('*').order('id', { ascending: false });
+                if (error) throw error;
+                tableBody.innerHTML = '';
+                if (!data || data.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-500">No winners recorded yet.</td></tr>';
+                } else {
+                    data.forEach(item => {
+                        const safeName = item.name ? item.name.replace(/'/g, "\\'") : 'Unknown';
+                        const safePrize = item.prize ? item.prize.replace(/'/g, "\\'") : '';
+                        const safePhone = item.code || '';
+                        const safeBought = item.bought_item || 'N/A';
+                        
+                        const spinDateVal = item.date || item.created_at; 
+                        const displayDate = spinDateVal ? new Date(spinDateVal).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) : 'N/A';
+                        const safeDob = item.dob ? item.dob : 'N/A';
+
+                        tableBody.innerHTML += `
+                            <tr class="hover:bg-slate-800/30 transition-colors">
+                                <td class="px-6 py-4 text-xs text-slate-400 whitespace-nowrap">${displayDate}</td>
+                                <td class="px-6 py-4">
+                                    <div class="font-bold text-white">${item.name}</div>
+                                    <div class="flex gap-4 mt-1">
+                                        <div class="text-slate-400 text-xs"><i class="fas fa-phone text-[10px] mr-1 text-cyan-400/70"></i> <span class="lead-phone">${item.phone}</span></div>
+                                        <div class="text-slate-400 text-xs"><i class="fas fa-birthday-cake text-[10px] mr-1 text-pink-400/70"></i> <span class="lead-dob">${safeDob}</span></div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="text-yellow-400 text-sm font-semibold lead-bought">${safeBought}</span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="bg-cyan-900/40 text-cyan-300 border border-cyan-700/50 px-3 py-1 rounded-full text-xs font-bold uppercase shadow-sm whitespace-nowrap">
+                                        <i class="fas fa-gift mr-1"></i> <span class="lead-prize">${item.prize}</span>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-xs font-mono text-slate-500 lead-auth">${item.code || '—'}</td>
+                                <td class="px-6 py-4 text-center">
+                                    <button onclick="deleteLead('${item.id}', '${safeName}', '${safePrize}', '${safePhone}')" class="text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded transition-all w-8 h-8 inline-flex items-center justify-center" title="Delete Win & Revert Stock">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            } catch (err) { console.error(err); } finally { loader.classList.add('hidden-section'); }
+        }
+
+        async function deleteLead(leadId, leadName, prizeName, authPhone) {
+            if (confirm(`Delete win record for ${leadName}?\n\nThis will:\n1. Delete this lead.\n2. Return "${prizeName}" back to stock inventory (+1).\n3. Reactivate their phone number so they can play again.`)) {
+                const loader = document.getElementById('loading-state');
+                loader.classList.remove('hidden-section');
+                try {
+                    const { data: prodData } = await supabaseClient.from('products').select('id, quantity').eq('name', prizeName).single();
+                    if (prodData) {
+                        await supabaseClient.from('products').update({ quantity: prodData.quantity + 1 }).eq('id', prodData.id);
+                    }
+                    if (authPhone) {
+                        await supabaseClient.from('valid_code').update({ used: false }).eq('code', authPhone);
+                    }
+                    await supabaseClient.from('leads').delete().eq('id', leadId);
+                    refreshAll();
+                } catch (err) {
+                    alert("Failed to delete lead: " + err.message);
+                } finally {
+                    loader.classList.add('hidden-section');
+                }
+            }
+        }
+
+        // --- FETCH BOUGHT PRODUCTS (DROPDOWN ITEMS WITH MULTI-MAPPING) ---
+        async function fetchBoughtProducts() {
+            const list = document.getElementById('sale-list');
+            try {
+                const { data, error } = await supabaseClient.from('bought_products').select('*').order('name');
+                if (error) throw error;
+                list.innerHTML = data.map(p => {
+                    let mappedHtml = `<span class="text-[10px] text-slate-500 block mt-0.5"><i class="fas fa-random mr-1"></i>Random Prize</span>`;
+                    
+                    if (p.mapped_prize && p.mapped_prize.trim() !== '') {
+                        const prizes = p.mapped_prize.split(',').map(name => `<span class="bg-pink-900/40 text-pink-300 px-1.5 py-0.5 rounded mr-1 mb-1 inline-block border border-pink-700/50">${name.trim()}</span>`).join('');
+                        mappedHtml = `<div class="mt-1">${prizes}</div>`;
+                    }
+
+                    const safeName = p.name.replace(/'/g, "\\'");
+                    const safeMapped = p.mapped_prize ? p.mapped_prize.replace(/'/g, "\\'") : '';
+
+                    return `
+                    <div class="flex justify-between items-center bg-slate-900/60 p-2 pl-3 rounded-lg border border-slate-800 hover:border-slate-700 transition-all group">
+                        <div class="flex-1 pr-2">
+                            <span class="text-sm font-semibold text-slate-200 block">${p.name}</span>
+                            ${mappedHtml}
+                        </div>
+                        <div class="flex gap-1 items-center">
+                            <button onclick="startEditSale('${p.id}', '${safeName}', '${safeMapped}')" class="text-slate-500 hover:text-yellow-400 transition-colors w-7 h-7 flex items-center justify-center flex-shrink-0" title="Edit Mapping"><i class="fas fa-edit text-xs"></i></button>
+                            <button onclick="deleteBoughtProduct('${p.id}', '${safeName}')" class="text-slate-600 hover:text-red-400 transition-colors w-7 h-7 flex items-center justify-center flex-shrink-0" title="Delete Item"><i class="fas fa-trash-alt text-xs"></i></button>
+                        </div>
+                    </div>
+                `}).join('') || '<p class="text-slate-600 text-xs italic text-center p-2">No items configured.</p>';
+            } catch (err) { console.error(err); }
+        }
+
+        // --- EDIT MAPPING LOGIC ---
+        window.startEditSale = function(id, name, mappedStr) {
+            editingSaleId = id;
+            document.getElementById('new-sale-name').value = name;
+            
+            // Load existing mapped string into our current array
+            currentSelectedPrizes = mappedStr ? mappedStr.split(',').map(s => s.trim()) : [];
+            renderPrizeSelector();
+
+            // Update UI to reflect "Edit Mode"
+            const btn = document.getElementById('add-sale-btn');
+            btn.innerHTML = '<i class="fas fa-save mr-2"></i> Update Item';
+            btn.classList.remove('bg-yellow-600', 'hover:bg-yellow-500', 'text-slate-900');
+            btn.classList.add('bg-green-600', 'hover:bg-green-500', 'text-white');
+            
+            document.getElementById('cancel-edit-btn').classList.remove('hidden-section');
+            
+            // Scroll to the top of that specific panel to show the user they are editing
+            document.getElementById('new-sale-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            document.getElementById('new-sale-name').focus();
+        };
+
+        document.getElementById('cancel-edit-btn').onclick = () => {
+            resetSaleForm();
+        };
+
+        function resetSaleForm() {
+            editingSaleId = null;
+            document.getElementById('new-sale-name').value = '';
+            currentSelectedPrizes = [];
+            renderPrizeSelector();
+            
+            const btn = document.getElementById('add-sale-btn');
+            btn.innerHTML = '<i class="fas fa-plus mr-2"></i> Add to Dropdown';
+            btn.classList.remove('bg-green-600', 'hover:bg-green-500', 'text-white');
+            btn.classList.add('bg-yellow-600', 'hover:bg-yellow-500', 'text-slate-900');
+            
+            document.getElementById('cancel-edit-btn').classList.add('hidden-section');
+        }
+
+        document.getElementById('add-sale-btn').onclick = async () => {
+            const nameInput = document.getElementById('new-sale-name');
+            const name = nameInput.value.trim();
+            
+            // Format selected array into comma-separated string
+            const mapped_prize = currentSelectedPrizes.length > 0 ? currentSelectedPrizes.join(', ') : null;
+
+            if (!name) {
+                nameInput.classList.add('border-red-500');
+                setTimeout(() => nameInput.classList.remove('border-red-500'), 1000);
+                return;
+            }
+            
+            document.getElementById('add-sale-btn').disabled = true;
+            try {
+                if (editingSaleId) {
+                    // Update existing record
+                    await supabaseClient.from('bought_products')
+                        .update({ name, mapped_prize })
+                        .eq('id', editingSaleId);
+                } else {
+                    // Insert new record
+                    await supabaseClient.from('bought_products')
+                        .insert([{ name, mapped_prize }]);
+                }
+                
+                resetSaleForm();
+                await fetchBoughtProducts();
+            } catch (err) { 
+                alert(err.message); 
+            } finally { 
+                document.getElementById('add-sale-btn').disabled = false; 
+            }
+        };
+
+        async function deleteBoughtProduct(id, name) {
+            if (confirm(`Remove "${name}" from the customer dropdown?`)) {
+                const status = document.getElementById('sale-status');
+                status.classList.remove('hidden');
+                try {
+                    await supabaseClient.from('bought_products').delete().eq('id', id);
+                    if (editingSaleId === id) resetSaleForm(); // If deleting what we're editing
+                    await fetchBoughtProducts();
+                } catch (err) { alert("Failed to delete."); } finally { status.classList.add('hidden'); }
+            }
+        }
+
+        // --- FETCH WHEEL PRIZES (INVENTORY) ---
+        async function fetchProducts() {
+            const list = document.getElementById('stock-list');
+            try {
+                const { data, error } = await supabaseClient.from('products').select('*').order('created_at', { ascending: false });
+                if (error) throw error;
+                
+                // 1. Update the Stock List UI
+                list.innerHTML = data.map(p => `
+                    <div class="flex justify-between items-center bg-slate-900/60 p-2 pl-3 rounded-lg border border-slate-800 hover:border-slate-700 transition-all group">
+                        <div class="flex-1"><span class="text-sm font-semibold text-slate-200 block">${p.name}</span></div>
+                        <div class="flex items-center gap-2">
+                            <div class="flex items-center bg-slate-950 rounded border border-slate-800">
+                                <button onclick="updateQty('${p.id}', ${p.quantity - 1})" class="w-6 h-6 flex items-center justify-center hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><i class="fas fa-minus text-[10px]"></i></button>
+                                <span class="w-6 text-center font-bold ${p.quantity > 0 ? 'text-cyan-400' : 'text-red-400'} font-mono text-xs">${p.quantity || 0}</span>
+                                <button onclick="updateQty('${p.id}', ${p.quantity + 1})" class="w-6 h-6 flex items-center justify-center hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><i class="fas fa-plus text-[10px]"></i></button>
+                            </div>
+                            <button onclick="confirmDeleteProd('${p.id}', '${p.name.replace(/'/g, "\\'")}')" class="text-slate-600 hover:text-red-400 transition-colors w-7 h-7 flex items-center justify-center"><i class="fas fa-trash-alt text-xs"></i></button>
+                        </div>
+                    </div>
+                `).join('') || '<p class="text-slate-600 text-xs italic text-center p-2">No inventory added.</p>';
+
+                // 2. Update the custom UI multi-selector
+                allProductNames = data.map(p => p.name);
+                renderPrizeSelector();
+
+            } catch (err) { console.error(err); }
+        }
+
+        // Custom UI function to handle tag selection
+        function renderPrizeSelector() {
+            const container = document.getElementById('custom-prize-selector');
+            if (allProductNames.length === 0) {
+                container.innerHTML = '<p class="text-slate-500 text-xs italic w-full text-center mt-4">Add products to Prize Stock first.</p>';
+                return;
+            }
+            
+            container.innerHTML = allProductNames.map(name => {
+                const isSelected = currentSelectedPrizes.includes(name);
+                return `<span onclick="togglePrizeSelection('${name.replace(/'/g, "\\'")}')" class="prize-tag px-2 py-1 text-xs rounded border ${isSelected ? 'selected' : 'border-slate-600 text-slate-400 hover:border-slate-400'}">${name}</span>`;
+            }).join('');
+        }
+
+        // Toggle selection state and re-render
+        window.togglePrizeSelection = function(name) {
+            const index = currentSelectedPrizes.indexOf(name);
+            if (index > -1) {
+                currentSelectedPrizes.splice(index, 1); // Remove if exists
+            } else {
+                currentSelectedPrizes.push(name); // Add if doesn't exist
+            }
+            renderPrizeSelector();
+        };
+
+        async function updateQty(id, newQty) {
+            if (newQty < 0) return;
+            const status = document.getElementById('product-status');
+            status.classList.remove('hidden');
+            try {
+                await supabaseClient.from('products').update({ quantity: newQty }).eq('id', id);
+                await fetchProducts(); 
+            } catch (err) { console.error(err); } finally { status.classList.add('hidden'); }
+        }
+
+        async function confirmDeleteProd(id, name) {
+            if (confirm(`Delete "${name}" from inventory?`)) {
+                const status = document.getElementById('product-status');
+                status.classList.remove('hidden');
+                try {
+                    await supabaseClient.from('products').delete().eq('id', id);
+                    // Remove from current selection if it was selected
+                    currentSelectedPrizes = currentSelectedPrizes.filter(p => p !== name);
+                    await fetchProducts();
+                } catch (err) { alert("Failed to delete."); } finally { status.classList.add('hidden'); }
+            }
+        }
+
+        document.getElementById('add-prod-btn').onclick = async () => {
+            const nameInput = document.getElementById('new-prod-name');
+            const qtyInput = document.getElementById('new-prod-qty');
+            const btn = document.getElementById('add-prod-btn');
+            const name = nameInput.value.trim();
+            const quantity = parseInt(qtyInput.value) || 0;
+            if (!name) return;
+            btn.disabled = true;
+            try {
+                await supabaseClient.from('products').insert([{ name, quantity }]);
+                nameInput.value = ''; qtyInput.value = '';
+                await fetchProducts();
+            } catch (err) { alert(err.message); } finally { btn.disabled = false; }
+        };
+
+        // --- FETCH CODES (ACCESS LOGS) ---
+        async function fetchCodes() {
+            const list = document.getElementById('codes-list');
+            const countDisplay = document.getElementById('active-codes-count');
+            const usedDisplay = document.getElementById('used-codes-count');
+            try {
+                const { data, error } = await supabaseClient.from('valid_code').select('*').order('created_at', { ascending: false });
+                if (error) throw error;
+                
+                const used = data.filter(c => c.used === true);
+                const active = data.filter(c => !c.used);
+                
+                countDisplay.innerText = active.length;
+                usedDisplay.innerText = used.length;
+                
+                list.innerHTML = data.slice(0, 50).map(c => `
+                    <div class="flex justify-between items-center bg-slate-900/60 p-2 pl-3 rounded-lg border border-slate-800 hover:border-slate-700 transition-all">
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm font-mono ${c.used ? 'text-slate-600 line-through' : 'text-slate-200 font-bold'}">${c.code}</span>
+                            <span class="text-[9px] uppercase font-bold px-2 py-0.5 rounded ${c.used ? 'bg-slate-800 text-slate-500' : 'bg-green-500/20 text-green-400'}">${c.used ? 'Played' : 'Pending'}</span>
+                        </div>
+                        <button onclick="deleteCode('${c.id}', '${c.code}')" class="text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded transition-all w-7 h-7 flex items-center justify-center" title="Revoke Access">
+                            <i class="fas fa-times text-xs"></i>
+                        </button>
+                    </div>
+                `).join('') || '<p class="text-slate-600 text-xs italic text-center p-4">No access logs.</p>';
+            } catch (err) { console.error(err); }
+        }
+
+        async function deleteCode(id, code) {
+            if (confirm(`Revoke access for phone number: ${code}?`)) {
+                const status = document.getElementById('code-status');
+                status.classList.remove('hidden');
+                try {
+                    await supabaseClient.from('valid_code').delete().eq('id', id);
+                    await fetchCodes();
+                } catch (err) { alert("Failed to delete code."); } finally { status.classList.add('hidden'); }
+            }
+        }
+
+        // --- GLOBAL ACTIONS ---
+        function refreshAll() { 
+            fetchLeads(); 
+            fetchProducts(); // Must call this before fetchBoughtProducts so mapping tags populate
+            setTimeout(fetchBoughtProducts, 300); // Slight delay to ensure products exist
+            fetchCodes(); 
+        }
+        
+        document.getElementById('refresh-btn').onclick = refreshAll;
+
+        document.getElementById('export-btn').onclick = () => {
+            let csv = "Spin Date,Name,Phone,DOB,Bought Item,Prize,Auth Phone\n";
+            document.querySelectorAll("#leads-table-body tr").forEach(row => {
+                const cells = row.querySelectorAll("td");
+                if (cells.length > 1) {
+                    const date = cells[0].innerText.trim();
+                    const name = cells[1].querySelector('.font-bold').innerText.trim();
+                    const phone = cells[1].querySelector('.lead-phone').innerText.trim().replace(/\s+/g, '');
+                    const dob = cells[1].querySelector('.lead-dob').innerText.trim();
+                    const bought = cells[2].querySelector('.lead-bought').innerText.trim();
+                    const prize = cells[3].querySelector('.lead-prize').innerText.trim();
+                    const authPhone = cells[4].innerText.trim();
+                    
+                    csv += `"${date}","${name}","${phone}","${dob}","${bought}","${prize}","${authPhone}"\n`;
+                }
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'electroworld_winners.csv');
+            a.click();
+        };
+    </script>
+</body>
+</html>

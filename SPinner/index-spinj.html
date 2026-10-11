@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electroworld - Enter to Win</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;800&display=swap');
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #0f172a; 
+            color: white; 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            overflow-x: hidden; 
+            overflow-y: auto;
+        }
+
+        .animated-bg { 
+            position: fixed; 
+            top: -50%; left: -50%; width: 200%; height: 200%; 
+            background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 40%, #020617 100%);
+            z-index: -2;
+        }
+        .glow-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.5;
+            animation: float 10s infinite alternate ease-in-out;
+        }
+        .orb-1 { top: 10%; left: 20%; width: 300px; height: 300px; background: #00f2fe; }
+        .orb-2 { bottom: 10%; right: 20%; width: 400px; height: 400px; background: #ec4899; animation-delay: -5s; }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(30px, 50px) scale(1.2); }
+        }
+        
+        .glass-card { 
+            background: rgba(15, 23, 42, 0.6); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 242, 254, 0.05); 
+        }
+
+        .orbitron { font-family: 'Orbitron', sans-serif; }
+        
+        .btn-glow { 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); 
+            box-shadow: 0 10px 25px -5px rgba(0, 242, 254, 0.5); 
+        }
+        .btn-glow:hover { 
+            box-shadow: 0 15px 35px -5px rgba(0, 242, 254, 0.7); 
+            transform: translateY(-3px) scale(1.02); 
+        }
+        .btn-glow:active { transform: translateY(1px); }
+        .btn-glow:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .success-ring { border: 3px solid #22c55e; animation: pulseRing 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+        @keyframes pulseRing { 
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 
+            70% { box-shadow: 0 0 0 25px rgba(34, 197, 94, 0); } 
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } 
+        }
+        
+        .hidden-section { display: none !important; }
+        .fade-in { animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: scale(0.9) translateY(10px); } 
+            to { opacity: 1; transform: scale(1) translateY(0); } 
+        }
+
+        .wheel-wrapper {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 0 auto;
+            border-radius: 50%;
+            border: 4px solid #00f2fe;
+            box-shadow: 0 0 25px rgba(0, 242, 254, 0.4);
+            background-color: #1e293b;
+            overflow: hidden;
+        }
+
+        #wheel-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .wheel-pointer {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 35px solid #ec4899;
+            z-index: 20;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+        }
+
+        .wheel-center-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70px;
+            height: 70px;
+            background: #0f172a;
+            border: 3px solid #00f2fe;
+            border-radius: 50%;
+            z-index: 30;
+            color: #00f2fe;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+            transition: 0.2s;
+        }
+        
+        .wheel-center-btn:hover:not(:disabled) {
+            background: #00f2fe;
+            color: #0f172a;
+            box-shadow: 0 0 15px #00f2fe;
+        }
+
+        .wheel-center-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            border-color: #64748b;
+            color: #64748b;
+        }
+        
+        .slice-label {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 120px;
+            height: 50%;
+            margin-left: -60px;
+            transform-origin: bottom center;
+            text-align: center;
+            padding-top: 15px;
+            display: flex;
+            justify-content: center;
+        }
+        
+        input[type="tel"] {
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.1em;
+        }
+        select option {
+            background: #0f172a;
+            color: white;
+        }
+    </style>
+</head>
+<body class="p-4 py-8">
+    <div class="animated-bg"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <div class="w-full max-w-md z-10 my-auto">
+        <div class="text-center mb-6 fade-in">
+            <h2 class="orbitron text-cyan-400 font-black tracking-widest text-xl drop-shadow-lg">ELECTROWORLD</h2>
+            <p class="text-slate-300 text-xs tracking-[0.3em] uppercase mt-1 opacity-80">Customer Rewards</p>
+        </div>
+
+        <section id="login-section" class="glass-card p-8 md:p-10 rounded-[2rem] fade-in relative overflow-hidden text-center">
+            <div class="absolute top-0 left-0 w-24 h-24 border-t-4 border-l-4 border-cyan-500/40 rounded-tl-[2rem]"></div>
+            <div class="absolute bottom-0 right-0 w-24 h-24 border-b-4 border-r-4 border-pink-500/40 rounded-br-[2rem]"></div>
+
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-cyan-500/20 to-blue-600/20 rounded-full mb-6 border border-cyan-400/30 shadow-[0_0_30px_rgba(0,242,254,0.2)]">
+                <i class="fas fa-gift text-4xl text-cyan-400"></i>
+            </div>
+            
+            <h1 class="orbitron text-3xl font-black mb-2 tracking-wider text-white">PLAY & <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-400">WIN!</span></h1>
+            <p class="text-slate-300 text-sm mb-8 leading-relaxed">Enter your mobile number below to unlock your lucky spin.</p>
+
+            <div class="space-y-6">
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
+                        <i class="fas fa-mobile-alt text-slate-500 group-focus-within:text-cyan-400 transition-colors text-xl"></i>
+                    </div>
+                    <input type="tel" id="phone-login-input" autocomplete="off" maxlength="15" class="w-full bg-slate-900/60 border-2 border-slate-700/80 rounded-2xl pl-14 pr-6 py-5 text-center text-3xl font-bold focus:outline-none focus:border-cyan-400 focus:bg-slate-900 transition-all text-white placeholder-slate-600 shadow-inner" placeholder="00000 00000">
+                    <p id="phone-error" class="text-red-400 text-xs mt-2 text-center hidden-section">Number not activated. Ask staff for help.</p>
+                </div>
+                
+                <button id="verify-phone-btn" class="w-full btn-glow text-slate-900 font-black py-5 rounded-2xl orbitron tracking-widest text-lg flex items-center justify-center gap-3 mt-4">
+                    VERIFY ACCESS <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <section id="register-section" class="glass-card p-6 md:p-8 rounded-[2rem] fade-in hidden-section">
+            <div class="text-center mb-5">
+                <div class="inline-block p-2 bg-cyan-500/20 rounded-full mb-2">
+                    <i class="fas fa-user-check text-xl text-cyan-400"></i>
+                </div>
+                <h1 class="orbitron text-xl font-bold mb-1 tracking-wider">CONFIRM DETAILS</h1>
+                <p class="text-slate-400 text-xs">Fill this out to prepare your wheel.</p>
+            </div>
+
+            <form id="lead-form" class="space-y-3">
+                <div>
+                    <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1 ml-1">Phone Number (Verified)</label>
+                    <input type="tel" id="user-phone" disabled class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-400 cursor-not-allowed">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1 ml-1">Full Name</label>
+                    <input type="text" required id="user-name" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cyan-400 transition-colors" placeholder="Enter Name">
+                </div>
+                
+                <div>
+                    <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1 ml-1">Date Of Birth</label>
+                    <input type="date" required id="user-dob" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cyan-400 transition-colors text-white">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1 ml-1">Email (Optional)</label>
+                    <input type="email" id="user-email" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cyan-400 transition-colors" placeholder="email@example.com">
+                </div>
+
+                <button type="submit" id="submit-btn" class="w-full btn-glow text-slate-900 font-bold py-3 rounded-xl mt-2 orbitron tracking-widest text-sm">
+                    LOAD SPIN WHEEL
+                </button>
+                <p id="db-error" class="text-red-400 text-[10px] text-center mt-2 hidden-section"></p>
+            </form>
+        </section>
+
+        <section id="wheel-section" class="glass-card p-8 rounded-[2rem] fade-in hidden-section text-center">
+            <h2 class="orbitron text-2xl font-bold mb-2">LUCKY SPIN</h2>
+            <p class="text-slate-400 mb-8" id="wheel-instructions">Spin to reveal your prize!</p>
+
+            <div class="relative mb-8 mt-4">
+                <div class="wheel-pointer"></div>
+                <div class="wheel-wrapper">
+                    <div id="wheel-inner">
+                        </div>
+                    <button id="spin-btn" class="wheel-center-btn">SPIN</button>
+                </div>
+            </div>
+
+            <div id="prize-reveal" class="hidden-section fade-in">
+                <span class="text-slate-400 text-xs uppercase font-bold mb-1 block">You Won!</span>
+                <h3 id="prize-text" class="text-2xl font-black text-cyan-400 uppercase mb-4 drop-shadow-lg">...</h3>
+                <button id="finish-btn" class="w-full btn-glow text-slate-900 font-bold py-4 rounded-xl orbitron tracking-widest mt-2">
+                    VIEW RECEIPT
+                </button>
+            </div>
+        </section>
+
+        <section id="success-section" class="glass-card p-8 rounded-[2rem] fade-in hidden-section text-center">
+            <div class="mb-6">
+                <div class="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-green-500/50">
+                    <i class="fas fa-check text-5xl text-green-400"></i>
+                </div>
+                <h2 class="orbitron text-2xl font-bold mb-2">CLAIMED!</h2>
+                <p id="greeting-text" class="text-slate-300">Take a screenshot now!</p>
+            </div>
+
+            <div class="bg-slate-900/80 p-6 rounded-2xl border border-slate-700 mb-8 shadow-inner">
+                <p class="text-xs text-slate-500 uppercase tracking-widest mb-2">Free Gift With Purchase</p>
+                <p id="final-prize" class="text-xl font-bold text-cyan-400 uppercase drop-shadow">---</p>
+                <p id="final-phone" class="text-[10px] text-slate-500 mt-4 font-mono bg-slate-800 py-1 rounded inline-block px-3"></p>
+            </div>
+
+            <div class="space-y-6">
+                <div class="flex justify-center space-x-6 text-slate-400">
+                    <a href="https://www.instagram.com/electroworld_gondia/" target="_blank" class="hover:text-pink-500 transition-colors">
+                        <i class="fab fa-instagram text-3xl"></i>
+                    </a>
+                </div>
+                <hr class="border-slate-800">
+                <div class="text-left space-y-3">
+                    <p class="text-sm text-slate-300">
+                        <i class="fas fa-map-marker-alt text-cyan-400 mr-2 w-4"></i> 
+                        Electroworld (By Mahalaxmi), Gondia
+                    </p>
+                    <p class="text-sm text-slate-300">
+                        <i class="fas fa-phone text-cyan-400 mr-2 w-4"></i> 
+                        +91 9322576500
+                    </p>
+                </div>
+            </div>
+        </section>
+        
+        <div class="text-center mt-6 opacity-60 fade-in">
+            <p class="text-[10px] text-slate-400 tracking-widest uppercase flex items-center justify-center gap-2">
+                <i class="fas fa-lock"></i> Secure & Private Entry
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // --- SUPABASE CONFIGURATION ---
+        const SUPABASE_URL = 'https://zpykzpzpekkwclswatuc.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpweWt6cHpwZWtrd2Nsc3dhdHVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzMDQxODgsImV4cCI6MjA4Njg4MDE4OH0.uUxeKBVhB4OAde6xxeS3ZdLx-Wwl8MQq2vKkrTD1Wbg';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const state = { 
+            name: '', 
+            phone: '', 
+            dob: '', 
+            email: '',
+            boughtItem: '',   
+            mappedPrize: '',  // Can now contain a comma-separated list of items
+            prize: '', 
+            prizeId: null,
+            dbRecordId: null, 
+            wheelPrizes: [] 
+        };
+
+        const phoneLoginInput = document.getElementById('phone-login-input');
+        phoneLoginInput.addEventListener('input', function (e) {
+            let val = e.target.value.replace(/\D/g, '');
+            if (val.length > 5) val = val.slice(0, 5) + ' ' + val.slice(5, 10);
+            e.target.value = val;
+        });
+
+        // STEP 0: Verify Phone & Pull Database Info
+        document.getElementById('verify-phone-btn').onclick = async () => {
+            const btn = document.getElementById('verify-phone-btn');
+            const phoneInputRaw = phoneLoginInput.value.replace(/\s/g, '');
+            const errorEl = document.getElementById('phone-error');
+            
+            if (!phoneInputRaw || phoneInputRaw.length < 5) return;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin text-2xl"></i>';
+            errorEl.classList.add('hidden-section');
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('valid_code')
+                    .select('*')
+                    .eq('code', phoneInputRaw)
+                    .eq('used', false)
+                    .single();
+
+                if (error || !data) {
+                    throw new Error("Number not activated. Ask staff for help.");
+                }
+
+                // Store code, bought item, and all mapped prizes from database
+                state.phone = data.code;
+                state.dbRecordId = data.id;
+                state.boughtItem = data.bought_item || 'General Purchase';
+                state.mappedPrize = data.mapped_prize || ''; 
+                
+                document.getElementById('user-phone').value = state.phone;
+
+                document.getElementById('login-section').classList.add('hidden-section');
+                document.getElementById('register-section').classList.remove('hidden-section');
+            } catch (err) {
+                errorEl.innerText = err.message;
+                errorEl.classList.remove('hidden-section');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'VERIFY ACCESS <i class="fas fa-arrow-right"></i>';
+            }
+        };
+
+        // STEP 1: Submit Form & Prepare Rigged Wheel (MULTI-PRIZE LOGIC)
+        document.getElementById('lead-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submit-btn');
+            const dbError = document.getElementById('db-error');
+            
+            submitBtn.disabled = true;
+            submitBtn.innerText = "PREPARING WHEEL...";
+            dbError.classList.add('hidden-section');
+
+            try {
+                // Capture all user inputs
+                state.name = document.getElementById('user-name').value;
+                state.dob = document.getElementById('user-dob').value;
+                state.email = document.getElementById('user-email').value;
+
+                // Step 1: Fetch available products in inventory
+                const { data: products, error: pError } = await supabaseClient
+                    .from('products')
+                    .select('*')
+                    .gt('quantity', 0);
+
+                if (pError) throw pError;
+                if (!products || products.length === 0) {
+                    throw new Error("No prizes available currently.");
+                }
+
+                let prizeItem = null;
+
+                // Step 2: NEW MULTI-PRIZE LOGIC
+                if (state.mappedPrize && state.mappedPrize.trim() !== '') {
+                    // Split comma-separated string into an array and lowercase for comparison
+                    const mappedNamesArray = state.mappedPrize.split(',').map(n => n.trim().toLowerCase());
+                    
+                    // Filter the available products to ONLY include items from the mapped array
+                    const availableMappedPrizes = products.filter(p => mappedNamesArray.includes(p.name.toLowerCase().trim()));
+                    
+                    if (availableMappedPrizes.length === 0) {
+                        throw new Error(`The specific gifts mapped to your purchase are completely out of stock!`);
+                    }
+                    
+                    // Pick a RANDOM prize from the available mapped options
+                    prizeItem = availableMappedPrizes[Math.floor(Math.random() * availableMappedPrizes.length)];
+
+                } else {
+                    // No mapped gift found: Pick a random gift from ALL available stock
+                    prizeItem = products[Math.floor(Math.random() * products.length)];
+                }
+                
+                // Finalize the prize
+                state.prize = prizeItem.name;
+                state.prizeId = prizeItem.id;
+
+                // Step 3: Mark valid_code as used
+                const { error: codeUpdateErr } = await supabaseClient
+                    .from('valid_code')
+                    .update({ used: true })
+                    .eq('id', state.dbRecordId);
+                
+                if (codeUpdateErr) throw codeUpdateErr;
+
+                // Step 4: Decrement Product Quantity for the won prize
+                const { error: qtyUpdateErr } = await supabaseClient
+                    .from('products')
+                    .update({ quantity: prizeItem.quantity - 1 })
+                    .eq('id', state.prizeId);
+                
+                if (qtyUpdateErr) throw qtyUpdateErr;
+
+                // Step 5: Insert Lead Record
+                const { error: leadErr } = await supabaseClient
+                    .from('leads')
+                    .insert([{
+                        name: state.name,
+                        phone: state.phone,
+                        email: state.email,
+                        dob: state.dob,
+                        bought_item: state.boughtItem,
+                        prize: state.prize,
+                        code: state.phone
+                    }]);
+
+                if (leadErr) throw leadErr;
+
+                // Setup the Wheel Visuals
+                buildWheelUI();
+                
+                document.getElementById('register-section').classList.add('hidden-section');
+                document.getElementById('wheel-section').classList.remove('hidden-section');
+
+            } catch (err) {
+                console.error(err);
+                dbError.innerText = "Error: " + err.message;
+                dbError.classList.remove('hidden-section');
+                submitBtn.disabled = false;
+                submitBtn.innerText = "RETRY";
+            }
+        };
+
+        // Build the Wheel UI (Mystery Gifts)
+        function buildWheelUI() {
+            const wheel = document.getElementById('wheel-inner');
+            wheel.innerHTML = '';
+            const total = 6; 
+            const sliceAngle = 360 / total;
+
+            let gradientStr = 'conic-gradient(';
+            const colors = ['#1e293b', '#0f172a']; 
+            
+            for(let i=0; i<total; i++) {
+                const startAngle = i * sliceAngle;
+                const endAngle = (i+1) * sliceAngle;
+                gradientStr += `${colors[i % 2]} ${startAngle}deg ${endAngle}deg${i < total - 1 ? ',' : ''}`;
+                
+                const label = document.createElement('div');
+                label.className = 'slice-label';
+                label.style.transform = `rotate(${i * sliceAngle + (sliceAngle / 2)}deg)`;
+                label.innerHTML = '<i class="fas fa-gift text-3xl text-cyan-500/50 mt-4"></i>';
+                wheel.appendChild(label);
+            }
+            gradientStr += ')';
+            wheel.style.background = gradientStr;
+        }
+
+        // Spin Logic
+        document.getElementById('spin-btn').onclick = () => {
+            const wheel = document.getElementById('wheel-inner');
+            const spinBtn = document.getElementById('spin-btn');
+            
+            spinBtn.disabled = true;
+            document.getElementById('wheel-instructions').innerText = "Good luck...";
+
+            const randomRotation = 1800 + Math.floor(Math.random() * 360);
+
+            wheel.style.transition = 'transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)';
+            wheel.style.transform = `rotate(${randomRotation}deg)`;
+
+            setTimeout(() => {
+                document.getElementById('wheel-instructions').innerText = "Winner!";
+                document.getElementById('prize-text').innerText = state.prize;
+                document.getElementById('prize-reveal').classList.remove('hidden-section');
+                
+                confetti({
+                    particleCount: 150,
+                    spread: 80,
+                    origin: { y: 0.6 },
+                    colors: ['#00f2fe', '#4facfe', '#ec4899', '#ffffff']
+                });
+
+            }, 4200);
+        };
+
+        // Final Success Screen
+        document.getElementById('finish-btn').onclick = () => {
+            document.getElementById('wheel-section').classList.add('hidden-section');
+            document.getElementById('success-section').classList.remove('hidden-section');
+            document.getElementById('greeting-text').innerText = `Congratulations, ${state.name}!`;
+            document.getElementById('final-prize').innerText = state.prize;
+            document.getElementById('final-phone').innerText = `Verified Phone: ${state.phone}`;
+        };
+    </script>
+</body>
+</html>

@@ -63,6 +63,7 @@ import kotlinx.coroutines.launch
 fun ProfileScreen(
   userName: String,
   userPhone: String,
+  sessionToken: String,
   onBack: () -> Unit,
   onNameUpdated: (String) -> Unit,
   onAccountDeleted: () -> Unit,
@@ -110,7 +111,7 @@ fun ProfileScreen(
     isDeleting = true
     coroutineScope.launch {
       try {
-        NetworkModule.userApi.deleteUser(DeleteUserRequest(phone = userPhone))
+        NetworkModule.userApi.deleteUser("Bearer $sessionToken", DeleteUserRequest(phone = userPhone))
         isDeleting = false
         showDeleteConfirm = false
         onAccountDeleted()

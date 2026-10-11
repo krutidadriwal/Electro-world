@@ -141,6 +141,7 @@ class MainActivity : ComponentActivity() {
               ProfileScreen(
                 userName = userName,
                 userPhone = userPhone,
+                sessionToken = sessionManager.sessionToken,
                 onBack = { currentScreen = Screen.DASHBOARD },
                 onNameUpdated = { updatedName ->
                   sessionManager.updateName(updatedName)

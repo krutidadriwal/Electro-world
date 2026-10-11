@@ -7,6 +7,7 @@
 const { getPool } = require('../lib/db');
 const { normalizePhone } = require('../lib/phone');
 const { verifySession } = require('../lib/jwt');
+const spin = require('../lib/spin');
 
 const PHONE_REGEX = /^\d{10}$/;
 
@@ -16,6 +17,9 @@ module.exports = async function handler(req, res) {
   }
   if (req.query.resource === 'points') {
     return points(req, res);
+  }
+  if (req.query.resource === 'spin') {
+    return spin(req, res);
   }
   return user(req, res);
 };

@@ -49,6 +49,29 @@ test('POST /api/device-tokens without fcmToken returns 400', async () => {
   assert.match(res.body.error, /fcmToken/);
 });
 
+test('GET /api/spin without a phone query param returns 400', async () => {
+  const req = mockReq({ method: 'GET', query: { resource: 'spin' } });
+  const res = mockRes();
+  await handler(req, res);
+  assert.equal(res.statusCode, 400);
+  assert.match(res.body.error, /phone/i);
+});
+
+test('POST /api/spin without a session token returns 401', async () => {
+  const req = mockReq({ method: 'POST', query: { resource: 'spin' }, body: { phone: '9326763315' } });
+  const res = mockRes();
+  await handler(req, res);
+  assert.equal(res.statusCode, 401);
+});
+
+test('unsupported method on /api/spin returns 405', async () => {
+  const req = mockReq({ method: 'DELETE', query: { resource: 'spin' } });
+  const res = mockRes();
+  await handler(req, res);
+  assert.equal(res.statusCode, 405);
+  assert.equal(res.headers.Allow, 'GET, POST');
+});
+
 test('GET /api/device-tokens is not allowed', async () => {
   const req = mockReq({ method: 'GET', query: { resource: 'device-tokens' } });
   const res = mockRes();

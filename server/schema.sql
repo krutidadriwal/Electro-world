@@ -501,3 +501,58 @@ create table if not exists public.points_ledger (
 );
 
 create index if not exists points_ledger_phone_idx on public.points_ledger (phone, created_at desc);
+
+-- Spin to Win (see server/lib/spin.js). Three tables, ported from the old
+-- standalone spinner's products / bought_products / valid_code + leads.
+--
+-- Unlike the tables above, RLS is switched ON for these (with no policies,
+-- so anon/authenticated get nothing): the old spinner let the browser read
+-- and write prize stock directly with the anon key, which is exactly what
+-- this replaces. The server's own connection owns the tables and so isn't
+-- subject to RLS.
+
+-- Prize stock. A prize is only ever on the wheel / winnable while quantity > 0;
+-- each win decrements it.
+create table if not exists public.spin_prizes (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  quantity integer not null default 0 check (quantity >= 0),
+  created_at timestamptz not null default now()
+);
+
+alter table public.spin_prizes enable row level security;
+
+-- What staff pick from when unlocking a spin ("what did they buy?"), each
+-- optionally mapped to the specific prizes that purchase can win. An empty
+-- mapping means any in-stock prize.
+create table if not exists public.spin_purchase_items (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  mapped_prize_ids uuid[] not null default '{}',
+  created_at timestamptz not null default now()
+);
+
+alter table public.spin_purchase_items enable row level security;
+
+-- One row per spin unlocked for a customer, and -- once used_at is set --
+-- the record of what it won. phone deliberately has no FK to users: staff
+-- unlock a spin at the counter, possibly before the customer has installed
+-- the app, and it's waiting for them when they sign up with that number.
+-- bought_item / mapped_prize_ids / prize_name are copied at grant/win time
+-- (not just referenced), so later edits to the purchase item or prize don't
+-- rewrite what a customer was promised or won.
+create table if not exists public.spin_grants (
+  id uuid primary key default gen_random_uuid(),
+  phone text not null,             -- E.164 format, e.g. +919876543210
+  bought_item text not null,
+  mapped_prize_ids uuid[] not null default '{}',
+  granted_by uuid references public.staff_profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  used_at timestamptz,
+  prize_id uuid references public.spin_prizes(id) on delete set null,
+  prize_name text
+);
+
+alter table public.spin_grants enable row level security;
+
+create index if not exists spin_grants_phone_idx on public.spin_grants (phone, created_at);

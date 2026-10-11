@@ -8,6 +8,7 @@
     { "source": "/api/user", "destination": "/api/account" },
     { "source": "/api/device-tokens", "destination": "/api/account?resource=device-tokens" },
     { "source": "/api/points", "destination": "/api/account?resource=points" },
+    { "source": "/api/spin", "destination": "/api/account?resource=spin" },
     { "source": "/api/invoice-file", "destination": "/api/invoices?resource=invoice-file" }
   ]
 }

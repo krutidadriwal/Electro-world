@@ -226,12 +226,11 @@ data class SpinWin(
 )
 
 // availableSpins is how many purchases staff have unlocked a spin for that
-// haven't been used yet; prizes is everything currently in stock (what the
-// wheel shows).
+// haven't been used yet. Deliberately no list of what can be won: prize
+// names stay secret until a spin lands on one.
 @JsonClass(generateAdapter = true)
 data class SpinStateResponse(
   val availableSpins: Int,
-  val prizes: List<SpinPrize>,
   val wins: List<SpinWin>
 )
 

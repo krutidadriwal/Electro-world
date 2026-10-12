@@ -63,8 +63,6 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
@@ -85,11 +83,10 @@ import kotlin.random.Random
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
-// The wheel repeats a short prize list until it has at least MIN_SEGMENTS
-// slices (one or two prizes would otherwise be a half-and-half disc), and
-// shows at most MAX_SEGMENTS before the labels stop fitting.
-private const val MIN_SEGMENTS = 6
-private const val MAX_SEGMENTS = 10
+// The wheel never shows what the prizes are -- every slice is a mystery
+// "?" -- so the slice count is purely cosmetic.
+private const val SEGMENT_COUNT = 8
+private const val MYSTERY_LABEL = "?"
 
 private const val SPIN_DURATION_MS = 4200
 private const val SPIN_FULL_TURNS = 6
@@ -102,22 +99,12 @@ private val SpinEasing = CubicBezierEasing(0.17f, 0.67f, 0.12f, 0.99f)
 // don't vanish into the page background behind the wheel.
 private val WheelColors = listOf(VividAmber, DeepSlate, PaleGold, PlatinumMuted)
 
-// Shown when nothing is in stock yet, so the wheel still has something to
-// draw. Never a possible result -- the server refuses to spin with no stock.
-private val PlaceholderSegments = List(MIN_SEGMENTS) { SpinPrize(id = "", name = "Mystery Gift") }
-
-private fun buildSegments(prizes: List<SpinPrize>): List<SpinPrize> {
-  if (prizes.isEmpty()) return PlaceholderSegments
-  val capped = prizes.take(MAX_SEGMENTS)
-  val segments = capped.toMutableList()
-  while (segments.size < MIN_SEGMENTS) segments += capped
-  return segments
-}
-
 /**
  * Spin to Win: a spin is unlocked by staff when the customer makes a
- * purchase, and the prize is decided by the server (POST /api/spin) -- the
- * wheel here only animates to whatever came back.
+ * purchase, and the prize is decided by the server (POST /api/spin). Prize
+ * names are kept secret until then: the wheel is all mystery slices, its
+ * spin is pure theatre, and the name only appears in the "You Won" dialog
+ * (and afterwards under My Prizes).
  */
 @Composable
 fun SpinScreen(
@@ -132,10 +119,6 @@ fun SpinScreen(
   val context = LocalContext.current
   val coroutineScope = rememberCoroutineScope()
   var spinState by remember { mutableStateOf<SpinStateResponse?>(null) }
-  // Held apart from spinState on purpose: refreshing after a win must not
-  // rebuild the wheel (a prize that just sold out would drop off it and
-  // shift every slice under the pointer while the result is on screen).
-  var segments by remember { mutableStateOf(PlaceholderSegments) }
   var isLoading by remember { mutableStateOf(true) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
   var isSpinning by remember { mutableStateOf(false) }
@@ -147,7 +130,6 @@ fun SpinScreen(
     try {
       val fresh = NetworkModule.userApi.getSpinState(userPhone)
       spinState = fresh
-      segments = buildSegments(fresh.prizes)
       errorMessage = null
     } catch (e: Exception) {
       errorMessage = "Unable to load Spin to Win. Please check your connection and try again."
@@ -175,19 +157,11 @@ fun SpinScreen(
         return@launch
       }
 
-      // Stock can change between loading the wheel and spinning, so the
-      // prize that came back may not be on it -- swap it onto a slice
-      // rather than land on something the customer didn't win.
-      var index = segments.indexOfFirst { it.id == result.prize.id }
-      if (index < 0) {
-        segments = segments.toMutableList().also { it[0] = result.prize }
-        index = 0
-      }
-
-      // Slice i is centred (i + 0.5) * sweep clockwise from the pointer, so
-      // turning the wheel by 360 - that brings it under the pointer. Jitter
-      // keeps it from always stopping dead-centre.
-      val sweep = 360f / segments.size
+      // Every slice is the same mystery "?", so where the wheel stops
+      // means nothing -- it just stops somewhere random, away from the
+      // slice edges so the pointer never rests on a dividing line.
+      val sweep = 360f / SEGMENT_COUNT
+      val index = Random.nextInt(SEGMENT_COUNT)
       val jitter = (Random.nextFloat() - 0.5f) * sweep * 0.6f
       val base = (floor(rotation.value / 360f) + SPIN_FULL_TURNS) * 360f
       rotation.animateTo(
@@ -272,7 +246,6 @@ fun SpinScreen(
           Spacer(modifier = Modifier.height(24.dp))
 
           SpinWheel(
-            segments = segments,
             rotationDegrees = rotation.value,
             modifier = Modifier
               .fillMaxWidth()
@@ -428,17 +401,12 @@ private const val HUB_RADIUS = 0.28f
 private const val LOGO_SIZE = 0.19f
 
 /**
- * The wheel itself. Slice 0 starts at 12 o'clock and slices run clockwise;
- * the pointer is fixed at 12 o'clock and only the disc turns. The EW logo
- * sits on the hub and stays upright while the disc spins under it.
+ * The wheel itself: SEGMENT_COUNT identical mystery slices. The pointer is
+ * fixed at 12 o'clock and only the disc turns; the EW logo sits on the hub
+ * and stays upright while the disc spins under it.
  */
 @Composable
-fun SpinWheel(
-  segments: List<SpinPrize>,
-  rotationDegrees: Float,
-  modifier: Modifier = Modifier,
-  showLabels: Boolean = true
-) {
+private fun SpinWheel(rotationDegrees: Float, modifier: Modifier = Modifier) {
   val textMeasurer = rememberTextMeasurer()
   val pointerColor = MaterialTheme.colorScheme.onBackground
 
@@ -451,36 +419,31 @@ fun SpinWheel(
       val rim = size.minDimension * 0.035f
       val radius = size.minDimension / 2f - rim
       val topLeft = Offset(center.x - radius, center.y - radius)
-      val sweep = 360f / segments.size
+      val sweep = 360f / SEGMENT_COUNT
 
-      segments.forEachIndexed { index, segment ->
-        // An odd slice count would otherwise put the last slice next to
-        // slice 0 in the same color.
-        val isWrapClash = index == segments.lastIndex && index % WheelColors.size == 0
-        val color = WheelColors[if (isWrapClash) 2 else index % WheelColors.size]
+      repeat(SEGMENT_COUNT) { index ->
+        // SEGMENT_COUNT is a multiple of WheelColors.size, so the last
+        // slice never lands next to slice 0 in the same color.
+        val color = WheelColors[index % WheelColors.size]
         val startAngle = -90f + index * sweep
         drawArc(color = color, startAngle = startAngle, sweepAngle = sweep, useCenter = true, topLeft = topLeft, size = Size(radius * 2, radius * 2))
 
-        if (showLabels) {
-          val label = textMeasurer.measure(
-            text = segment.name,
-            style = TextStyle(
-              color = contrastTextColor(color),
-              fontSize = (radius * 0.085f).toSp(),
-              fontWeight = FontWeight.Bold,
-              textAlign = TextAlign.Center
-            ),
-            maxLines = if (segments.size > 8) 1 else 2,
-            overflow = TextOverflow.Ellipsis,
-            constraints = Constraints.fixedWidth((radius * 0.60f).toInt())
+        val label = textMeasurer.measure(
+          text = MYSTERY_LABEL,
+          style = TextStyle(
+            color = contrastTextColor(color),
+            fontSize = (radius * 0.24f).toSp(),
+            fontWeight = FontWeight.Black,
+            textAlign = TextAlign.Center
           )
-          // Rotated so the label reads outward along the slice's centre line.
-          rotate(degrees = startAngle + sweep / 2f, pivot = center) {
-            drawText(
-              textLayoutResult = label,
-              topLeft = Offset(center.x + radius * 0.34f, center.y - label.size.height / 2f)
-            )
-          }
+        )
+        // Centred on the slice's middle line, about two-thirds of the way
+        // out, and turned so its top points at the rim.
+        rotate(degrees = startAngle + sweep / 2f + 90f, pivot = center) {
+          drawText(
+            textLayoutResult = label,
+            topLeft = Offset(center.x - label.size.width / 2f, center.y - radius * 0.66f - label.size.height / 2f)
+          )
         }
       }
 

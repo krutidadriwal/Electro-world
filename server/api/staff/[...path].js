@@ -11,6 +11,7 @@ const { uploadCategoryImage } = require('../../lib/categoryImages');
 const { normalizePhone } = require('../../lib/phone');
 const { sendToTokens } = require('../../lib/fcm');
 const { spinOverview, spinPrize, spinPurchaseItem, spinGrant } = require('../../lib/staffSpin');
+const { syncInvoicePoints } = require('../../lib/invoicePoints');
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // base64 inflates ~33%; Vercel caps request bodies at 4.5MB
 
@@ -129,6 +130,10 @@ module.exports = async function handler(req, res) {
       return invoiceRequestsList(req, res);
     case 'invoice-requests-status':
       return invoiceRequestsStatus(req, res);
+    case 'unreadable-invoices-list':
+      return unreadableInvoicesList(req, res);
+    case 'unreadable-invoices-retry':
+      return unreadableInvoicesRetry(req, res);
     case 'device-token':
       return staffDeviceToken(req, res);
     case 'customer-lookup':
@@ -1150,6 +1155,97 @@ async function invoiceRequestsStatus(req, res) {
       return res.status(err.status).json({ error: err.message });
     }
     console.error('update invoice request status error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Invoices whose total couldn't be read off the PDF, so earned the customer
+// no points (see lib/invoicePoints.js). Admin-only, same reasoning as
+// invoiceRequestsList -- it's billing/accounts territory.
+async function unreadableInvoicesList(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    await requireAdmin(req);
+
+    const pool = getPool();
+    const result = await pool.query(
+      `select
+         ip.file_id,
+         ip.invoice_name,
+         ip.phone as customer_phone,
+         u.name as customer_name,
+         ip.processed_at
+       from public.invoice_points ip
+       join public.users u on u.phone = ip.phone
+       where ip.amount is null
+       order by ip.processed_at desc`
+    );
+    return res.status(200).json({ items: result.rows });
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('list unreadable invoices error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Forgets that an invoice was unreadable and immediately runs the customer's
+// points sync again, so it's re-read if it's still in their Drive folder.
+// outcome tells the admin what happened:
+//   credited   -- readable this time, points added
+//   unreadable -- still can't be read
+//   cleared    -- not looked at again: the file is gone from the folder
+//                 (e.g. replaced by a corrected PDF, which is credited as
+//                 its own file) or Drive couldn't be reached just now, in
+//                 which case it's picked up on the customer's next sync.
+async function unreadableInvoicesRetry(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { fileId } = req.body ?? {};
+  if (typeof fileId !== 'string' || fileId.trim().length === 0) {
+    return res.status(400).json({ error: 'fileId is required' });
+  }
+
+  try {
+    await requireAdmin(req);
+
+    const pool = getPool();
+    const deleted = await pool.query(
+      `delete from public.invoice_points where file_id = $1 and amount is null returning phone`,
+      [fileId]
+    );
+    if (deleted.rowCount === 0) {
+      return res.status(404).json({ error: 'Unreadable invoice not found' });
+    }
+
+    try {
+      await syncInvoicePoints(pool, deleted.rows[0].phone, { notify: false });
+    } catch (syncErr) {
+      console.error('unreadable invoice retry sync error', syncErr);
+    }
+
+    const recheck = await pool.query(
+      `select amount, points from public.invoice_points where file_id = $1`,
+      [fileId]
+    );
+    if (recheck.rowCount === 0) {
+      return res.status(200).json({ fileId, outcome: 'cleared', points: 0 });
+    }
+    const { amount, points } = recheck.rows[0];
+    return res.status(200).json({ fileId, outcome: amount === null ? 'unreadable' : 'credited', points });
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('retry unreadable invoice error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

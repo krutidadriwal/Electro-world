@@ -2,12 +2,15 @@ package com.example.data.notifications
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.example.MainActivity
 import com.example.R
 import com.example.data.SessionManager
 import com.example.data.network.NetworkModule
@@ -77,11 +80,26 @@ private fun ensureChannel(context: Context) {
 
 private fun showNotification(context: Context, trayId: Int, title: String, body: String, image: Bitmap?) {
   ensureChannel(context)
+
+  // Tapping lands on the dashboard's Notifications overlay (see MainActivity),
+  // so Back from there returns to the home page rather than leaving the app.
+  val intent = Intent(context, MainActivity::class.java).apply {
+    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    putExtra(MainActivity.EXTRA_OPEN_NOTIFICATIONS, true)
+  }
+  val pendingIntent = PendingIntent.getActivity(
+    context,
+    trayId,
+    intent,
+    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+  )
+
   val builder = NotificationCompat.Builder(context, CHANNEL_ID)
     .setSmallIcon(R.mipmap.ic_launcher)
     .setContentTitle(title)
     .setContentText(body)
     .setAutoCancel(true)
+    .setContentIntent(pendingIntent)
     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 
   builder.setStyle(

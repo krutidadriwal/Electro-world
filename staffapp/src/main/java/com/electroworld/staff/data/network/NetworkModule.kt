@@ -109,6 +109,7 @@ object NetworkModule {
   val complaintsApi: ComplaintsApi by lazy { serverRetrofit.create(ComplaintsApi::class.java) }
   val installationsApi: InstallationsApi by lazy { serverRetrofit.create(InstallationsApi::class.java) }
   val invoiceRequestsApi: InvoiceRequestsApi by lazy { serverRetrofit.create(InvoiceRequestsApi::class.java) }
-  val customerLookupApi: CustomerLookupApi by lazy { serverRetrofit.create(CustomerLookupApi::class.java) }
+  val unreadableInvoicesApi: UnreadableInvoicesApi by lazy { serverRetrofit.create(UnreadableInvoicesApi::class.java) }
+  val customerLookupApi:CustomerLookupApi by lazy { serverRetrofit.create(CustomerLookupApi::class.java) }
   val spinApi: SpinApi by lazy { serverRetrofit.create(SpinApi::class.java) }
 }

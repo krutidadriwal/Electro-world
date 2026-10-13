@@ -1,6 +1,7 @@
 package com.example
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -59,8 +60,18 @@ enum class Screen {
 }
 
 class MainActivity : ComponentActivity() {
+  // Set when the activity is opened by tapping a tray notification (see
+  // EWFirebaseMessagingService) -- on a cold start via onCreate, or via
+  // singleTop + onNewIntent when the app is already running.
+  private val openNotificationsRequested = mutableStateOf(false)
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    // Only on a fresh launch: a recreated activity (e.g. rotation) still
+    // carries the original intent and would reopen the overlay.
+    if (savedInstanceState == null) {
+      openNotificationsRequested.value = intent?.getBooleanExtra(EXTRA_OPEN_NOTIFICATIONS, false) == true
+    }
     // The app is dark whatever the device theme (see Theme.kt), so the
     // system bars are pinned to light icons -- the default follows the
     // device theme and would draw dark icons on the dark background.
@@ -77,9 +88,19 @@ class MainActivity : ComponentActivity() {
         }
         var userName by remember { mutableStateOf(sessionManager.userName) }
         var userPhone by remember { mutableStateOf(sessionManager.userPhone) }
-        // Set by Spin to Win's "Get spin access" so the dashboard opens
-        // straight onto Visit Store; cleared as soon as it has been shown.
-        var openVisitStoreOnDashboard by remember { mutableStateOf(false) }
+        // Set by Spin to Win's "Get spin access" (Visit Store) or a tapped
+        // tray notification (Notifications) so the dashboard opens straight
+        // onto that overlay; cleared as soon as it has been shown.
+        var dashboardOverlay by remember { mutableStateOf(ActiveModule.NONE) }
+
+        LaunchedEffect(openNotificationsRequested.value) {
+          if (!openNotificationsRequested.value) return@LaunchedEffect
+          openNotificationsRequested.value = false
+          if (sessionManager.isLoggedIn) {
+            dashboardOverlay = ActiveModule.NOTIFICATIONS
+            currentScreen = Screen.DASHBOARD
+          }
+        }
 
         val notificationPermissionLauncher = rememberLauncherForActivityResult(
           ActivityResultContracts.RequestPermission()
@@ -135,9 +156,9 @@ class MainActivity : ComponentActivity() {
                 onOpenPoints = { currentScreen = Screen.POINTS },
                 onOpenSpin = { currentScreen = Screen.SPIN },
                 modifier = Modifier.padding(innerPadding),
-                initialOverlay = if (openVisitStoreOnDashboard) ActiveModule.VISIT_STORE else ActiveModule.NONE
+                initialOverlay = dashboardOverlay,
+                onInitialOverlayShown = { dashboardOverlay = ActiveModule.NONE }
               )
-              LaunchedEffect(Unit) { openVisitStoreOnDashboard = false }
             }
             Screen.SPIN -> {
               SpinScreen(
@@ -145,7 +166,7 @@ class MainActivity : ComponentActivity() {
                 sessionToken = sessionManager.sessionToken,
                 onBack = { currentScreen = Screen.DASHBOARD },
                 onGetSpinAccess = {
-                  openVisitStoreOnDashboard = true
+                  dashboardOverlay = ActiveModule.VISIT_STORE
                   currentScreen = Screen.DASHBOARD
                 },
                 modifier = Modifier.padding(innerPadding)
@@ -227,6 +248,18 @@ class MainActivity : ComponentActivity() {
         }
       }
     }
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    if (intent.getBooleanExtra(EXTRA_OPEN_NOTIFICATIONS, false)) {
+      openNotificationsRequested.value = true
+    }
+  }
+
+  companion object {
+    const val EXTRA_OPEN_NOTIFICATIONS = "open_notifications"
   }
 }
 

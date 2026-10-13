@@ -114,14 +114,21 @@ fun DashboardScreen(
   onOpenPoints: () -> Unit,
   onOpenSpin: () -> Unit,
   modifier: Modifier = Modifier,
-  // Lets another screen land here with an overlay already open (Spin to
-  // Win's "Get spin access" opens Visit Store).
-  initialOverlay: ActiveModule = ActiveModule.NONE
+  // Lets the caller land here with an overlay already open (Spin to Win's
+  // "Get spin access" opens Visit Store, a tapped tray notification opens
+  // Notifications) -- also while the dashboard is already showing.
+  initialOverlay: ActiveModule = ActiveModule.NONE,
+  onInitialOverlayShown: () -> Unit = {}
 ) {
   val context = LocalContext.current
   val coroutineScope = rememberCoroutineScope()
   val invoiceListCache = remember { InvoiceListCache(context) }
   var activeOverlay by remember { mutableStateOf(initialOverlay) }
+  LaunchedEffect(initialOverlay) {
+    if (initialOverlay == ActiveModule.NONE) return@LaunchedEffect
+    activeOverlay = initialOverlay
+    onInitialOverlayShown()
+  }
   var availableSpins by remember { mutableStateOf(0) }
   // null until the first load (or while offline) -- the header chip shows a
   // dash rather than a misleading 0.

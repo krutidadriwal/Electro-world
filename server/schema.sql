@@ -502,6 +502,24 @@ create table if not exists public.points_ledger (
 
 create index if not exists points_ledger_phone_idx on public.points_ledger (phone, created_at desc);
 
+-- One row per invoice PDF already considered for purchase points (see
+-- server/lib/invoicePoints.js), keyed by its Drive file id so an invoice is
+-- only ever credited once. amount is the invoice total read off the PDF --
+-- null if it couldn't be read, in which case points is 0 and nothing was
+-- credited; delete such a row to have that invoice retried.
+create table if not exists public.invoice_points (
+  file_id text primary key,
+  phone text not null references public.users(phone) on delete cascade,
+  invoice_name text not null,
+  amount numeric,
+  points integer not null default 0,
+  processed_at timestamptz not null default now()
+);
+
+alter table public.invoice_points enable row level security;
+
+create index if not exists invoice_points_phone_idx on public.invoice_points (phone);
+
 -- Spin to Win (see server/lib/spin.js). Three tables, ported from the old
 -- standalone spinner's products / bought_products / valid_code + leads.
 --

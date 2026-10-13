@@ -187,6 +187,13 @@ private fun PointsBalanceCard(balance: Int) {
         fontWeight = FontWeight.Black,
         modifier = Modifier.padding(top = 6.dp)
       )
+      Text(
+        text = "Earn 50 points for every ₹50,000 you spend in store",
+        color = onGradient.copy(alpha = 0.8f),
+        fontSize = 11.sp,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(top = 8.dp)
+      )
     }
   }
 }

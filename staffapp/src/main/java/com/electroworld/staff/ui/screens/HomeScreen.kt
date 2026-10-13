@@ -74,7 +74,8 @@ fun HomeScreen(
   var complaintsCount by remember { mutableStateOf(0) }
   var installationsCount by remember { mutableStateOf(0) }
   var invoiceCount by remember { mutableStateOf(0) }
-  val unreadAlertCount = wishlistCount + complaintsCount + installationsCount + invoiceCount
+  var unreadableInvoiceCount by remember { mutableStateOf(0) }
+  val unreadAlertCount = wishlistCount + complaintsCount + installationsCount + invoiceCount + unreadableInvoiceCount
 
   // Preset filters applied the next time the relevant tab is entered --
   // consumed by each screen's own `initialStatusFilter` param at the moment
@@ -127,6 +128,8 @@ fun HomeScreen(
       installationsCount = NetworkModule.installationsApi.list().items.count { it.status == "open" }
       if (isAdmin) {
         invoiceCount = NetworkModule.invoiceRequestsApi.list().items.count { it.status == "open" }
+        // Last, so a failure here can't hold back the counts above.
+        unreadableInvoiceCount = NetworkModule.unreadableInvoicesApi.list().items.size
       }
     } catch (e: Exception) {
       // Leave the previous badge counts showing rather than clearing them.

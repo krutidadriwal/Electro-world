@@ -6,7 +6,8 @@
 
 const { getPool } = require('../lib/db');
 const { normalizePhone } = require('../lib/phone');
-const { findUserFolder, listPdfFiles, getFileMetadata, downloadFile } = require('../lib/drive');
+const { listPdfFiles, getFileMetadata, downloadFile } = require('../lib/drive');
+const { resolveInvoiceFolderId } = require('../lib/invoiceFolder');
 
 module.exports = async function handler(req, res) {
   if (req.query.resource === 'invoice-file') {
@@ -29,27 +30,12 @@ async function invoicesList(req, res) {
 
   try {
     const pool = getPool();
-    const userResult = await pool.query(
-      `select drive_folder_id from public.users where phone = $1`,
-      [normalizedPhone]
-    );
-    if (userResult.rowCount === 0) {
+    const folderId = await resolveInvoiceFolderId(pool, normalizedPhone);
+    if (folderId === undefined) {
       return res.status(404).json({ error: 'User not found' });
     }
-
-    let folderId = userResult.rows[0].drive_folder_id;
-
     if (!folderId) {
-      const rootFolderId = process.env.DRIVE_ROOT_FOLDER_ID;
-      if (!rootFolderId) {
-        throw new Error('DRIVE_ROOT_FOLDER_ID environment variable is not set.');
-      }
-      const folder = await findUserFolder(rootFolderId, phone);
-      if (!folder) {
-        return res.status(200).json({ invoices: [] });
-      }
-      folderId = folder.id;
-      await pool.query(`update public.users set drive_folder_id = $1 where phone = $2`, [folderId, normalizedPhone]);
+      return res.status(200).json({ invoices: [] });
     }
 
     const files = await listPdfFiles(folderId);

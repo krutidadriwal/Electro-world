@@ -8,6 +8,7 @@ const { getPool } = require('../lib/db');
 const { normalizePhone } = require('../lib/phone');
 const { verifySession } = require('../lib/jwt');
 const spin = require('../lib/spin');
+const { syncInvoicePoints } = require('../lib/invoicePoints');
 
 const PHONE_REGEX = /^\d{10}$/;
 
@@ -187,6 +188,16 @@ async function points(req, res) {
 
   try {
     const pool = getPool();
+
+    // Credit any invoices added to the user's Drive folder since the last
+    // call before reading the balance. Best-effort: a Drive/PDF failure
+    // must never stop the user seeing the points they already have.
+    try {
+      await syncInvoicePoints(pool, normalizedPhone);
+    } catch (syncErr) {
+      console.error('invoice points sync error', syncErr);
+    }
+
     const balanceResult = await pool.query(
       `select coalesce(sum(points), 0)::int as balance from public.points_ledger where phone = $1`,
       [normalizedPhone]

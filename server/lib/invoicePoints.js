@@ -8,10 +8,10 @@ const { listPdfFiles, downloadFile } = require('./drive');
 const { resolveInvoiceFolderId } = require('./invoiceFolder');
 const { notifyStaff } = require('./staffNotify');
 
-// 50 points per Rs 50,000 spent, pro rata (so Rs 1,000 = 1 point), rounded
-// down to a whole point.
-const POINTS_PER_BLOCK = 50;
-const AMOUNT_PER_BLOCK = 50000;
+// 1 point per Rs 100 spent, rounded down to a whole point -- but only on
+// invoices of Rs 5,000 or more; a smaller invoice earns nothing.
+const RUPEES_PER_POINT = 100;
+const MIN_INVOICE_AMOUNT = 5000;
 
 // Each new invoice costs a Drive download plus a PDF parse, all inside one
 // request -- a backlog bigger than this is worked through over the next
@@ -19,10 +19,10 @@ const AMOUNT_PER_BLOCK = 50000;
 const MAX_INVOICES_PER_SYNC = 10;
 
 function pointsForAmount(amount) {
-  if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
+  if (typeof amount !== 'number' || !Number.isFinite(amount) || amount < MIN_INVOICE_AMOUNT) {
     return 0;
   }
-  return Math.floor((amount * POINTS_PER_BLOCK) / AMOUNT_PER_BLOCK);
+  return Math.floor(amount / RUPEES_PER_POINT);
 }
 
 const SMALL_NUMBERS = {

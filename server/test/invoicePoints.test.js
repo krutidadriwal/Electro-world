@@ -2,12 +2,18 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { parseInvoiceAmount, pointsForAmount, wordsToNumber } = require('../lib/invoicePoints');
 
-test('pointsForAmount gives 50 points per 50,000, pro rata and rounded down', () => {
-  assert.equal(pointsForAmount(50000), 50);
-  assert.equal(pointsForAmount(100000), 100);
-  assert.equal(pointsForAmount(84500), 84);
-  assert.equal(pointsForAmount(17000), 17);
-  assert.equal(pointsForAmount(999), 0);
+test('pointsForAmount gives 1 point per 100 rupees, rounded down', () => {
+  assert.equal(pointsForAmount(5000), 50);
+  assert.equal(pointsForAmount(22000), 220);
+  assert.equal(pointsForAmount(55500), 555);
+  assert.equal(pointsForAmount(120000), 1200);
+  assert.equal(pointsForAmount(6850), 68);
+});
+
+test('pointsForAmount gives nothing for an invoice under 5,000', () => {
+  assert.equal(pointsForAmount(4999), 0);
+  assert.equal(pointsForAmount(4999.99), 0);
+  assert.equal(pointsForAmount(100), 0);
 });
 
 test('pointsForAmount gives nothing for a missing or non-positive amount', () => {

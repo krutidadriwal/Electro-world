@@ -188,7 +188,7 @@ private fun PointsBalanceCard(balance: Int) {
         modifier = Modifier.padding(top = 6.dp)
       )
       Text(
-        text = "Earn 50 points for every ₹50,000 you spend in store",
+        text = "Earn 1 point for every ₹100 on purchases of ₹5,000 or more",
         color = onGradient.copy(alpha = 0.8f),
         fontSize = 11.sp,
         textAlign = TextAlign.Center,

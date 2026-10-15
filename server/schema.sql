@@ -518,6 +518,18 @@ create table if not exists public.invoice_points (
 
 alter table public.invoice_points enable row level security;
 
+-- The invoice date printed on the PDF (null if it couldn't be read) --
+-- decides whether the invoice earns points at all, and is what the app's
+-- invoice list shows instead of the Drive upload date. Rows recorded before
+-- this column existed are filled in by scripts/backfill-invoice-points.js.
+alter table public.invoice_points add column if not exists invoice_date date;
+
+-- Set when an admin needs to look at the invoice: its date couldn't be read,
+-- or it's recent enough to earn points but its total couldn't be (see
+-- needsReview in lib/invoicePoints.js). These are what the staff app lists
+-- under "Invoices without points".
+alter table public.invoice_points add column if not exists unreadable boolean not null default false;
+
 create index if not exists invoice_points_phone_idx on public.invoice_points (phone);
 
 -- Spin to Win (see server/lib/spin.js). Three tables, ported from the old

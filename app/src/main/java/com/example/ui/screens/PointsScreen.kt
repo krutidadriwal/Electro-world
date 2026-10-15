@@ -9,15 +9,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -25,6 +27,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,8 +37,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.network.NetworkModule
@@ -61,7 +70,7 @@ fun PointsScreen(
 
   LaunchedEffect(userPhone) {
     try {
-      val response = NetworkModule.userApi.getPoints(userPhone)
+      val response = NetworkModule.userApi.getPoints(userPhone, sync = true)
       balance = response.balance
       history = response.history
       errorMessage = null
@@ -164,6 +173,7 @@ private fun PointsBalanceCard(balance: Int) {
   // primary -> secondary (Vivid Amber into Pale Gold), with onPrimary
   // text -- Obsidian, which is exactly the contrast this gradient needs.
   val onGradient = MaterialTheme.colorScheme.onPrimary
+  var showTerms by remember { mutableStateOf(false) }
   Box(
     modifier = Modifier
       .fillMaxWidth()
@@ -188,7 +198,18 @@ private fun PointsBalanceCard(balance: Int) {
         modifier = Modifier.padding(top = 6.dp)
       )
       Text(
-        text = "Earn 1 point for every ₹100 on purchases of ₹5,000 or more",
+        text = buildAnnotatedString {
+          append("Earn 50 points for every ₹5,000 spent on purchases from 11 Oct 2026. ")
+          withLink(
+            LinkAnnotation.Clickable(
+              tag = "points_terms",
+              styles = TextLinkStyles(SpanStyle(color = onGradient, fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline)),
+              linkInteractionListener = { showTerms = true }
+            )
+          ) {
+            append("T&C apply")
+          }
+        },
         color = onGradient.copy(alpha = 0.8f),
         fontSize = 11.sp,
         textAlign = TextAlign.Center,
@@ -196,6 +217,49 @@ private fun PointsBalanceCard(balance: Int) {
       )
     }
   }
+
+  if (showTerms) {
+    PointsTermsDialog(onDismiss = { showTerms = false })
+  }
+}
+
+// The points programme's terms, shown from the balance card's "T&C apply"
+// link. Placeholder: these just restate how points are currently awarded
+// (see server/lib/invoicePoints.js) until the store's own T&C text replaces
+// them -- swap the list, nothing else reads it.
+private val POINTS_TERMS = listOf(
+  "Points are earned on purchase invoices dated on or after 11 October 2026.",
+  "Every full ₹5,000 of an invoice's total earns 50 points. Invoices under ₹5,000 do not earn points.",
+  "Points are added once the invoice appears in your Store Invoices & Bills."
+)
+
+@Composable
+private fun PointsTermsDialog(onDismiss: () -> Unit) {
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    containerColor = MaterialTheme.colorScheme.surface,
+    title = {
+      Text(text = "Terms & Conditions", color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    },
+    text = {
+      Column(
+        modifier = Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+      ) {
+        POINTS_TERMS.forEachIndexed { index, term ->
+          Row {
+            Text(text = "${index + 1}.", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp, modifier = Modifier.padding(end = 8.dp))
+            Text(text = term, color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp)
+          }
+        }
+      }
+    },
+    confirmButton = {
+      TextButton(onClick = onDismiss) {
+        Text(text = "Close", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+      }
+    }
+  )
 }
 
 // Server timestamps are full ISO-8601 (e.g. "2024-05-01T12:34:56.789Z");
@@ -207,6 +271,14 @@ private fun formatPointsDate(isoTimestamp: String): String {
   val parts = datePart.split("-")
   return if (parts.size == 3) "${parts[2]}-${parts[1]}-${parts[0]}" else isoTimestamp
 }
+
+// A hyphen is normally a place a line may wrap, which would split an invoice
+// number like "RS2-0242" across two lines. A word joiner (U+2060, zero-width)
+// after each in-word hyphen forbids that, so the whole number moves to the
+// next line together. The spaced hyphen in "Purchase - Invoice" is left alone.
+private val inWordHyphen = Regex("(?<=\\S)-(?=\\S)")
+
+private fun keepHyphenatedWordsWhole(text: String): String = text.replace(inWordHyphen, "-\u2060")
 
 @Composable
 private fun PointsHistoryRow(entry: PointsHistoryEntry) {
@@ -220,18 +292,12 @@ private fun PointsHistoryRow(entry: PointsHistoryEntry) {
       horizontalArrangement = Arrangement.SpaceBetween,
       verticalAlignment = Alignment.CenterVertically
     ) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-          modifier = Modifier
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape)
-            .padding(8.dp)
-        ) {
-          Icon(Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.height(16.dp))
-        }
-        Column(modifier = Modifier.padding(start = 12.dp)) {
-          Text(text = entry.reason, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-          Text(text = formatPointsDate(entry.createdAt), color = MaterialTheme.colorScheme.outline, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
-        }
+      // weight(1f) gives the reason whatever width the points don't need, so
+      // a long invoice name wraps onto a second line instead of squeezing
+      // the points off the row.
+      Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+        Text(text = keepHyphenatedWordsWhole(entry.reason), color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(text = formatPointsDate(entry.createdAt), color = MaterialTheme.colorScheme.outline, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
       }
       Text(
         text = if (entry.points >= 0) "+${entry.points}" else entry.points.toString(),

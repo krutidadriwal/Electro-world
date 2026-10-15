@@ -39,12 +39,38 @@ async function invoicesList(req, res) {
     }
 
     const files = await listPdfFiles(folderId);
-    const invoices = files.map((f) => ({
-      id: f.id,
-      name: f.name,
-      createdAt: f.createdTime,
-      sizeBytes: f.size ? Number(f.size) : null
-    }));
+
+    // Printed invoice dates, for whichever invoices have been read so far --
+    // that only happens when the customer opens the Points tab (see
+    // lib/invoicePoints.js), not here, so this stays a quick list. The rest
+    // fall back to the Drive upload date until then.
+    const invoiceDates = new Map();
+    try {
+      // ::text keeps it a plain "YYYY-MM-DD" -- node-pg would otherwise turn
+      // a date into a local-midnight Date, which can serialize as the day before.
+      const datesResult = await pool.query(
+        `select file_id, invoice_date::text as invoice_date from public.invoice_points
+         where file_id = any($1) and invoice_date is not null`,
+        [files.map((f) => f.id)]
+      );
+      for (const row of datesResult.rows) {
+        invoiceDates.set(row.file_id, row.invoice_date);
+      }
+    } catch (datesErr) {
+      console.error('invoice dates lookup error', datesErr);
+    }
+
+    // invoiceDate is the date printed on the invoice -- what the app shows,
+    // when known. createdAt (the Drive upload date) stays as the fallback.
+    const invoices = files
+      .map((f) => ({
+        id: f.id,
+        name: f.name,
+        createdAt: f.createdTime,
+        invoiceDate: invoiceDates.get(f.id) ?? null,
+        sizeBytes: f.size ? Number(f.size) : null
+      }))
+      .sort((a, b) => (b.invoiceDate ?? b.createdAt).localeCompare(a.invoiceDate ?? a.createdAt));
 
     return res.status(200).json({ invoices });
   } catch (err) {

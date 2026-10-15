@@ -38,9 +38,18 @@ data class DeleteUserResponse(
 data class InvoiceFile(
   val id: String,
   val name: String,
+  // Drive upload time -- only a fallback for display, see displayDate.
   val createdAt: String?,
-  val sizeBytes: Long?
-)
+  val sizeBytes: Long?,
+  // The date printed on the invoice ("YYYY-MM-DD"), read off the PDF by the
+  // server. Null until it's been read (or if it couldn't be), and absent
+  // from invoice lists cached by app versions before this field existed.
+  val invoiceDate: String? = null
+) {
+  // What to show as the invoice's date: the purchase date when known, since
+  // staff often upload older invoices long after the purchase.
+  val displayDate: String? get() = invoiceDate ?: createdAt
+}
 
 @JsonClass(generateAdapter = true)
 data class InvoicesResponse(

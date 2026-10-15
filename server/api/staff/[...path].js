@@ -1159,8 +1159,9 @@ async function invoiceRequestsStatus(req, res) {
   }
 }
 
-// Invoices whose total couldn't be read off the PDF, so earned the customer
-// no points (see lib/invoicePoints.js). Admin-only, same reasoning as
+// Invoices whose date (or, for one recent enough to earn points, total)
+// couldn't be read off the PDF, so earned the customer no points (see
+// needsReview in lib/invoicePoints.js). Admin-only, same reasoning as
 // invoiceRequestsList -- it's billing/accounts territory.
 async function unreadableInvoicesList(req, res) {
   if (req.method !== 'GET') {
@@ -1181,7 +1182,7 @@ async function unreadableInvoicesList(req, res) {
          ip.processed_at
        from public.invoice_points ip
        join public.users u on u.phone = ip.phone
-       where ip.amount is null
+       where ip.unreadable
        order by ip.processed_at desc`
     );
     return res.status(200).json({ items: result.rows });
@@ -1198,6 +1199,8 @@ async function unreadableInvoicesList(req, res) {
 // points sync again, so it's re-read if it's still in their Drive folder.
 // outcome tells the admin what happened:
 //   credited   -- readable this time, points added
+//   read       -- readable this time, but earns no points (dated before
+//                 points started, or under the minimum total)
 //   unreadable -- still can't be read
 //   cleared    -- not looked at again: the file is gone from the folder
 //                 (e.g. replaced by a corrected PDF, which is credited as
@@ -1219,7 +1222,9 @@ async function unreadableInvoicesRetry(req, res) {
 
     const pool = getPool();
     const deleted = await pool.query(
-      `delete from public.invoice_points where file_id = $1 and amount is null returning phone`,
+      // points = 0 always holds for a flagged invoice; checked anyway, since
+      // re-reading a credited one as new would credit it a second time.
+      `delete from public.invoice_points where file_id = $1 and unreadable and points = 0 returning phone`,
       [fileId]
     );
     if (deleted.rowCount === 0) {
@@ -1233,14 +1238,15 @@ async function unreadableInvoicesRetry(req, res) {
     }
 
     const recheck = await pool.query(
-      `select amount, points from public.invoice_points where file_id = $1`,
+      `select unreadable, points from public.invoice_points where file_id = $1`,
       [fileId]
     );
     if (recheck.rowCount === 0) {
       return res.status(200).json({ fileId, outcome: 'cleared', points: 0 });
     }
-    const { amount, points } = recheck.rows[0];
-    return res.status(200).json({ fileId, outcome: amount === null ? 'unreadable' : 'credited', points });
+    const { unreadable, points } = recheck.rows[0];
+    const outcome = unreadable ? 'unreadable' : points > 0 ? 'credited' : 'read';
+    return res.status(200).json({ fileId, outcome, points });
   } catch (err) {
     if (err instanceof StaffAuthError) {
       return res.status(err.status).json({ error: err.message });

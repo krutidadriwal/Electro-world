@@ -60,7 +60,10 @@ interface UserApi {
   suspend fun confirmWishlist(@Body request: ConfirmWishlistRequest): WishlistResponse
 
   @GET("api/points")
-  suspend fun getPoints(@Query("phone") phone: String): PointsResponse
+  // sync = true makes the server first read any new invoice PDFs and credit
+  // them (slow) -- only the Points tab asks for that; the dashboard's
+  // balance just reads what's already credited.
+  suspend fun getPoints(@Query("phone") phone: String, @Query("sync") sync: Boolean? = null): PointsResponse
 
   @GET("api/spin")
   suspend fun getSpinState(@Query("phone") phone: String): SpinStateResponse

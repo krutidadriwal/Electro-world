@@ -28,14 +28,15 @@ data class UnreadableInvoiceRetryRequest(
 @JsonClass(generateAdapter = true)
 data class UnreadableInvoiceRetryResponse(
   val fileId: String,
-  // "credited", "unreadable" or "cleared" -- see unreadableInvoicesRetry in
+  // "credited", "read", "unreadable" or "cleared" -- see unreadableInvoicesRetry in
   // server/api/staff/[...path].js.
   val outcome: String,
   val points: Int = 0
 )
 
-// Admin-only (see requireAdmin in the server route): invoices whose total
-// couldn't be read off the PDF, so earned the customer no purchase points.
+// Admin-only (see requireAdmin in the server route): invoices whose date
+// (or, for a recent one, total) couldn't be read off the PDF, so earned the
+// customer no purchase points.
 interface UnreadableInvoicesApi {
   @GET("api/staff/unreadable-invoices-list")
   suspend fun list(): UnreadableInvoicesResponse

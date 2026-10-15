@@ -189,13 +189,18 @@ async function points(req, res) {
   try {
     const pool = getPool();
 
-    // Credit any invoices added to the user's Drive folder since the last
-    // call before reading the balance. Best-effort: a Drive/PDF failure
-    // must never stop the user seeing the points they already have.
-    try {
-      await syncInvoicePoints(pool, normalizedPhone);
-    } catch (syncErr) {
-      console.error('invoice points sync error', syncErr);
+    // ?sync=true (sent only by the app's Points tab): first read any
+    // invoices added to the user's Drive folder since the last time and
+    // credit them, before reading the balance. Everything else that just
+    // shows the balance (the dashboard) skips it -- reading PDFs is slow.
+    // Best-effort: a Drive/PDF failure must never stop the user seeing the
+    // points they already have.
+    if (req.query.sync === 'true') {
+      try {
+        await syncInvoicePoints(pool, normalizedPhone);
+      } catch (syncErr) {
+        console.error('invoice points sync error', syncErr);
+      }
     }
 
     const balanceResult = await pool.query(

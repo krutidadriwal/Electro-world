@@ -622,8 +622,10 @@ private fun PointsChip(balance: Int?, onClick: () -> Unit, modifier: Modifier = 
   }
 }
 
-// Entry point to SpinScreen, badged with the EW logo (the same amber one
-// that sits on the wheel's hub there).
+// Entry point to SpinScreen, badged with the EW logo (the same one that
+// sits on the wheel's hub there, amber in the file -- it's a flat
+// single-colour mark, so it's tinted Pale Gold here to match the border
+// and title).
 @Composable
 private fun SpinToWinBanner(availableSpins: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
   Card(
@@ -633,7 +635,7 @@ private fun SpinToWinBanner(availableSpins: Int, onClick: () -> Unit, modifier: 
       .testTag("spin_to_win_banner"),
     colors = appCardColors(),
     shape = RoundedCornerShape(16.dp),
-    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+    border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary)
   ) {
     Row(
       modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -643,12 +645,13 @@ private fun SpinToWinBanner(availableSpins: Int, onClick: () -> Unit, modifier: 
         painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ew_logo_amber),
         contentDescription = null,
         contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(MaterialTheme.colorScheme.secondary),
         modifier = Modifier.size(64.dp)
       )
       Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
         Text(
           text = "SPIN TO WIN!",
-          color = MaterialTheme.colorScheme.primary,
+          color = MaterialTheme.colorScheme.secondary,
           fontSize = 18.sp,
           fontWeight = FontWeight.Black
         )
@@ -706,7 +709,7 @@ private fun InvoiceChip(invoice: InvoiceFile, isOpening: Boolean, onClick: () ->
       maxLines = 1,
       overflow = TextOverflow.Ellipsis
     )
-    invoice.createdAt?.let {
+    invoice.displayDate?.let {
       Text(
         text = formatInvoiceDate(it),
         color = MaterialTheme.colorScheme.outline,
@@ -734,8 +737,9 @@ private fun getModuleTitle(module: ActiveModule): String {
   }
 }
 
-// Google Drive returns full ISO-8601 timestamps (createdTime, e.g.
-// "2024-05-01T12:34:56.789Z"); invoices only need the date, as DD-MM-YYYY.
+// Takes either a bare "YYYY-MM-DD" (an invoice's printed date) or a full
+// ISO-8601 timestamp (Drive's createdTime, notifications, e.g.
+// "2024-05-01T12:34:56.789Z"); only the date is shown, as DD-MM-YYYY.
 // minSdk 24 predates java.time (API 26) with no desugaring configured, so
 // this parses the "yyyy-MM-dd" prefix directly rather than via java.time.
 private fun formatInvoiceDate(isoTimestamp: String): String {
@@ -875,7 +879,7 @@ fun MyInvoicesSubScreen(userPhone: String) {
                   maxLines = 1,
                   overflow = TextOverflow.Ellipsis
                 )
-                inv.createdAt?.let {
+                inv.displayDate?.let {
                   Text(text = formatInvoiceDate(it), color = MaterialTheme.colorScheme.outline, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
                 }
               }

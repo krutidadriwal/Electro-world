@@ -99,6 +99,7 @@ fun AlertsScreen(isAdmin: Boolean, onNavigate: (target: String) -> Unit, onBack:
         val invoiceNumber = item.invoiceName.removeSuffix(".pdf")
         unreadableMessage = when (result.outcome) {
           "credited" -> "$invoiceNumber read successfully. ${result.points} points added for ${item.customerName}."
+          "read" -> "$invoiceNumber read successfully. It earns no points (dated before 11 Oct 2026, or under ₹5,000)."
           "unreadable" -> "$invoiceNumber still can't be read. Replace the PDF in the customer's folder."
           else -> "$invoiceNumber cleared. It will be checked again if it's still in the customer's folder."
         }
@@ -180,7 +181,7 @@ fun AlertsScreen(isAdmin: Boolean, onNavigate: (target: String) -> Unit, onBack:
             )
             if (unreadableInvoices.isNotEmpty()) {
               Text(
-                "The total on these invoices couldn't be read, so no points were given.",
+                "The date or total on these invoices couldn't be read, so no points were given.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(bottom = 8.dp)

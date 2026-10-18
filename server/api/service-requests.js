@@ -8,6 +8,7 @@
 const { getPool } = require('../lib/db');
 const { normalizePhone } = require('../lib/phone');
 const { notifyStaff } = require('../lib/staffNotify');
+const { visibleInAppSql } = require('../lib/closedRequests');
 
 module.exports = async function handler(req, res) {
   switch (req.query.resource) {
@@ -46,7 +47,7 @@ async function complaintsGet(req, res) {
               contact_phone, status, complaint_request_id as complaint_number, technician_name, technician_mobile,
               created_at, updated_at, resolved_at
        from public.complaints
-       where phone = $1
+       where phone = $1 and ${visibleInAppSql()}
        order by created_at desc`,
       [normalizedPhone]
     );
@@ -176,7 +177,7 @@ async function installationsGet(req, res) {
               contact_phone, status, installation_request_id as installation_number, technician_name, technician_mobile,
               created_at, updated_at, resolved_at
        from public.installations
-       where phone = $1
+       where phone = $1 and ${visibleInAppSql()}
        order by created_at desc`,
       [normalizedPhone]
     );

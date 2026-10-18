@@ -12,6 +12,7 @@ const { normalizePhone } = require('../../lib/phone');
 const { sendToTokens } = require('../../lib/fcm');
 const { spinOverview, spinPrize, spinPurchaseItem, spinGrant } = require('../../lib/staffSpin');
 const { syncInvoicePoints } = require('../../lib/invoicePoints');
+const { visibleInAppSql } = require('../../lib/closedRequests');
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // base64 inflates ~33%; Vercel caps request bodies at 4.5MB
 
@@ -683,6 +684,7 @@ async function complaintsList(req, res) {
          c.resolved_at
        from public.complaints c
        join public.users u on u.phone = c.phone
+       where ${visibleInAppSql('c')}
        order by c.created_at desc`
     );
     return res.status(200).json({ items: result.rows });
@@ -877,6 +879,7 @@ async function installationsList(req, res) {
          i.resolved_at
        from public.installations i
        join public.users u on u.phone = i.phone
+       where ${visibleInAppSql('i')}
        order by i.created_at desc`
     );
     return res.status(200).json({ items: result.rows });

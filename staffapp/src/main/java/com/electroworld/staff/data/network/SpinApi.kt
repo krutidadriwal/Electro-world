@@ -26,7 +26,8 @@ data class SpinPurchaseItem(
   val mappedPrizeIds: List<String>
 )
 
-// One unlocked spin. usedAt/prizeName are null until the customer plays it.
+// One unlocked spin. usedAt/prizeName are null until the customer plays it;
+// deliveredAt is null until staff mark the won prize as handed over.
 @JsonClass(generateAdapter = true)
 data class SpinGrant(
   val id: String,
@@ -36,7 +37,8 @@ data class SpinGrant(
   val createdAt: String,
   val usedAt: String? = null,
   val prizeName: String? = null,
-  val grantedByEmail: String? = null
+  val grantedByEmail: String? = null,
+  val deliveredAt: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -45,7 +47,8 @@ data class SpinOverviewResponse(
   val purchaseItems: List<SpinPurchaseItem>,
   val grants: List<SpinGrant>,
   val pendingCount: Int,
-  val playedCount: Int
+  val playedCount: Int,
+  val deliveredCount: Int = 0
 )
 
 @JsonClass(generateAdapter = true)
@@ -80,6 +83,18 @@ data class UndoSpinGrantRequest(
 )
 
 @JsonClass(generateAdapter = true)
+data class DeliverSpinGrantRequest(
+  val id: String,
+  val action: String = "deliver"
+)
+
+@JsonClass(generateAdapter = true)
+data class DeliverSpinGrantResponse(
+  val id: String,
+  val deliveredAt: String
+)
+
+@JsonClass(generateAdapter = true)
 data class CreateSpinGrantResponse(
   val id: String
 )
@@ -111,8 +126,13 @@ interface SpinApi {
   suspend fun unlock(@Body request: CreateSpinGrantRequest): CreateSpinGrantResponse
 
   // Reverses a played spin: prize back into stock, spin playable again.
+  // Refused once the prize has been delivered.
   @PATCH("api/staff/spin-grant")
   suspend fun undoWin(@Body request: UndoSpinGrantRequest)
+
+  // Marks a won prize as handed over to the customer, stamped with now.
+  @PATCH("api/staff/spin-grant")
+  suspend fun markDelivered(@Body request: DeliverSpinGrantRequest): DeliverSpinGrantResponse
 
   // Takes away a spin that hasn't been played yet.
   @DELETE("api/staff/spin-grant")

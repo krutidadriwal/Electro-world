@@ -64,3 +64,11 @@ test('DELETE /api/staff/spin-grant without an id returns 400', async () => {
   await handler(req, res);
   assert.equal(res.statusCode, 400);
 });
+
+test('PATCH /api/staff/spin-grant deliver without an id returns 400', async () => {
+  const req = mockReq({ method: 'PATCH', url: '/api/staff/spin-grant', body: { action: 'deliver' } });
+  const res = mockRes();
+  await handler(req, res);
+  assert.equal(res.statusCode, 400);
+  assert.match(res.body.error, /id/);
+});

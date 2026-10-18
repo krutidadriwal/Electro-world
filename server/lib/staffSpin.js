@@ -70,6 +70,7 @@ async function spinOverview(req, res) {
               g.created_at as "createdAt",
               g.used_at as "usedAt",
               g.prize_name as "prizeName",
+              g.delivered_at as "deliveredAt",
               s.email as "grantedByEmail"
        from public.spin_grants g
        left join public.users u on u.phone = g.phone
@@ -79,7 +80,8 @@ async function spinOverview(req, res) {
     );
     const counts = await pool.query(
       `select count(*) filter (where used_at is null)::int as pending,
-              count(*) filter (where used_at is not null)::int as played
+              count(*) filter (where used_at is not null)::int as played,
+              count(*) filter (where delivered_at is not null)::int as delivered
        from public.spin_grants`
     );
     return res.status(200).json({
@@ -87,7 +89,8 @@ async function spinOverview(req, res) {
       purchaseItems: purchaseItems.rows,
       grants: grants.rows,
       pendingCount: counts.rows[0].pending,
-      playedCount: counts.rows[0].played
+      playedCount: counts.rows[0].played,
+      deliveredCount: counts.rows[0].delivered
     });
   } catch (err) {
     return handleError(res, err, 'spin overview error');
@@ -248,12 +251,18 @@ async function spinPurchaseItem(req, res) {
 
 // POST   { phone, purchaseItemId }  unlock a spin for a customer
 // PATCH  { id }                     undo a played spin
+// PATCH  { id, action: 'deliver' }  mark a won prize as handed over
 // DELETE ?id=                       revoke a spin that hasn't been played
 async function spinGrant(req, res) {
   if (req.method === 'POST') {
     return spinGrantCreate(req, res);
   }
   if (req.method === 'PATCH') {
+    // No action means undo -- what staff app builds from before "deliver"
+    // existed send.
+    if ((req.body ?? {}).action === 'deliver') {
+      return spinGrantDeliver(req, res);
+    }
     return spinGrantUndo(req, res);
   }
   if (req.method === 'DELETE') {
@@ -319,9 +328,46 @@ async function notifyCustomer(pool, normalizedPhone, boughtItem) {
   }
 }
 
+// Records that a won prize was handed over to the customer, stamped with
+// the time it was marked. Only a played spin can be delivered, and only once.
+async function spinGrantDeliver(req, res) {
+  const { id } = req.body ?? {};
+  if (!isUuid(id)) {
+    return res.status(400).json({ error: 'id is required' });
+  }
+
+  try {
+    await requireAdmin(req);
+
+    const pool = getPool();
+    const result = await pool.query(
+      `update public.spin_grants set delivered_at = now()
+       where id = $1 and used_at is not null and delivered_at is null
+       returning delivered_at as "deliveredAt"`,
+      [id]
+    );
+    if (result.rowCount === 0) {
+      const existing = await pool.query(`select used_at, delivered_at from public.spin_grants where id = $1`, [id]);
+      if (existing.rowCount === 0) {
+        return res.status(404).json({ error: 'Spin not found' });
+      }
+      return res.status(409).json({
+        error: existing.rows[0].used_at === null
+          ? 'This spin has not been played yet'
+          : 'This prize has already been marked as delivered'
+      });
+    }
+    return res.status(200).json({ id, deliveredAt: result.rows[0].deliveredAt });
+  } catch (err) {
+    return handleError(res, err, 'deliver spin prize error');
+  }
+}
+
 // Reverses a win: the prize goes back into stock and the spin becomes
 // playable again (the customer spins afresh -- they aren't handed the same
-// prize back). Revoke it afterwards to take the spin away entirely.
+// prize back). Revoke it afterwards to take the spin away entirely. Not
+// once the prize is delivered: it has physically left the store, so putting
+// it back into stock would overstate what's there.
 async function spinGrantUndo(req, res) {
   const { id } = req.body ?? {};
   if (!isUuid(id)) {
@@ -335,7 +381,7 @@ async function spinGrantUndo(req, res) {
     client = await getPool().connect();
     await client.query('begin');
     const grantResult = await client.query(
-      `select prize_id, used_at from public.spin_grants where id = $1 for update`,
+      `select prize_id, used_at, delivered_at from public.spin_grants where id = $1 for update`,
       [id]
     );
     if (grantResult.rowCount === 0) {
@@ -346,6 +392,10 @@ async function spinGrantUndo(req, res) {
     if (grant.used_at === null) {
       await client.query('rollback');
       return res.status(409).json({ error: 'This spin has not been played yet' });
+    }
+    if (grant.delivered_at !== null) {
+      await client.query('rollback');
+      return res.status(409).json({ error: 'This prize has already been delivered, so the win can no longer be undone' });
     }
     // prize_id is null if the prize was deleted since -- nothing to restock.
     if (grant.prize_id !== null) {

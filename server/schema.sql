@@ -586,3 +586,9 @@ create table if not exists public.spin_grants (
 alter table public.spin_grants enable row level security;
 
 create index if not exists spin_grants_phone_idx on public.spin_grants (phone, created_at);
+
+-- When staff marked the won prize as handed over to the customer (null
+-- until then). Set once from the staff app's Spins tab; a delivered win
+-- can no longer be undone (see spinGrantDeliver / spinGrantUndo in
+-- lib/staffSpin.js).
+alter table public.spin_grants add column if not exists delivered_at timestamptz;

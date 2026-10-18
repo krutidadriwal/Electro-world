@@ -55,6 +55,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.electroworld.staff.data.network.CreateSpinGrantRequest
 import com.electroworld.staff.data.network.CreateSpinPrizeRequest
+import com.electroworld.staff.data.network.DeliverSpinGrantRequest
 import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.network.SaveSpinPurchaseItemRequest
 import com.electroworld.staff.data.network.SpinGrant
@@ -67,6 +68,9 @@ import com.electroworld.staff.ui.theme.staffCardColors
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import retrofit2.HttpException
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 private enum class SpinTab(val label: String) { SPINS("Spins"), PRIZES("Prizes"), ITEMS("Purchase items") }
 
@@ -268,7 +272,7 @@ fun SpinScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         SpinTab.SPINS -> LazyColumn(contentPadding = listPadding) {
           item {
             Text(
-              "${loaded.pendingCount} pending  ·  ${loaded.playedCount} played",
+              "${loaded.pendingCount} pending  ·  ${loaded.playedCount} played  ·  ${loaded.deliveredCount} delivered",
               style = MaterialTheme.typography.labelLarge,
               modifier = Modifier.padding(bottom = 12.dp)
             )
@@ -292,6 +296,13 @@ fun SpinScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                     "and the customer can spin again.",
                   failure = "Failed to undo the win."
                 ) { NetworkModule.spinApi.undoWin(UndoSpinGrantRequest(grant.id)) }
+              },
+              onDeliver = {
+                pendingConfirm = PendingConfirm(
+                  message = "Mark \"${grant.prizeName ?: "the prize"}\" as delivered to ${grant.customerName ?: grant.phone}? " +
+                    "The win can't be undone after this.",
+                  failure = "Failed to mark the prize as delivered."
+                ) { NetworkModule.spinApi.markDelivered(DeliverSpinGrantRequest(grant.id)) }
               }
             )
           }
@@ -355,9 +366,21 @@ private fun formatSpinDate(isoTimestamp: String): String {
   return if (parts.size == 3) "${parts[2]}-${parts[1]}-${parts[0]}" else isoTimestamp
 }
 
+// Delivery is shown with its time too, in IST (the store's timezone) --
+// the timestamps arrive as UTC ISO-8601. Falls back to the date alone.
+private fun formatSpinDateTime(isoTimestamp: String): String = try {
+  val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
+  val date = parser.parse(isoTimestamp.substringBefore('.').substringBefore('Z'))
+  val formatter = SimpleDateFormat("dd-MM-yyyy, h:mm a", Locale.US).apply { timeZone = TimeZone.getTimeZone("Asia/Kolkata") }
+  if (date != null) formatter.format(date) else formatSpinDate(isoTimestamp)
+} catch (e: Exception) {
+  formatSpinDate(isoTimestamp)
+}
+
 @Composable
-private fun GrantRow(grant: SpinGrant, enabled: Boolean, onRevoke: () -> Unit, onUndo: () -> Unit) {
+private fun GrantRow(grant: SpinGrant, enabled: Boolean, onRevoke: () -> Unit, onUndo: () -> Unit, onDeliver: () -> Unit) {
   val isPlayed = grant.usedAt != null
+  val isDelivered = grant.deliveredAt != null
   Card(colors = staffCardColors(), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
     Row(
       modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 8.dp),
@@ -378,9 +401,24 @@ private fun GrantRow(grant: SpinGrant, enabled: Boolean, onRevoke: () -> Unit, o
           style = MaterialTheme.typography.labelMedium,
           fontWeight = if (isPlayed) FontWeight.Bold else FontWeight.Normal
         )
+        grant.deliveredAt?.let {
+          Text(
+            "Delivered on ${formatSpinDateTime(it)}",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold
+          )
+        }
       }
-      TextButton(onClick = if (isPlayed) onUndo else onRevoke, enabled = enabled) {
-        Text(if (isPlayed) "Undo win" else "Revoke")
+      // Pending: revoke. Played: delivered or undo. Delivered: nothing left
+      // to do -- the prize has left the store.
+      when {
+        isDelivered -> Unit
+        isPlayed -> Column(horizontalAlignment = Alignment.End) {
+          TextButton(onClick = onDeliver, enabled = enabled) { Text("Delivered") }
+          TextButton(onClick = onUndo, enabled = enabled) { Text("Undo win") }
+        }
+        else -> TextButton(onClick = onRevoke, enabled = enabled) { Text("Revoke") }
       }
     }
   }

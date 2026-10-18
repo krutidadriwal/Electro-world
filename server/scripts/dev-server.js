@@ -9,6 +9,7 @@ const invoices = require('../api/invoices');
 const auth = require('../api/auth/[...path]');
 const staff = require('../api/staff/[...path]');
 const notifications = require('../api/notifications/[...path]');
+const tasks = require('../api/tasks/[...path]'); // experimental task tracker
 
 // Exact-path routes, same as Vercel's static api/*.js file routing.
 const routes = {
@@ -28,7 +29,8 @@ const routes = {
 const catchAllRoutes = {
   '/api/auth': auth,
   '/api/staff': staff,
-  '/api/notifications': notifications
+  '/api/notifications': notifications,
+  '/api/tasks': tasks
 };
 
 // Consolidated endpoints (categories, wishlist, complaints, installations,

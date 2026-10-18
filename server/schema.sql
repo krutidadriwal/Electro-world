@@ -614,3 +614,31 @@ create index if not exists spin_grants_phone_idx on public.spin_grants (phone, c
 -- can no longer be undone (see spinGrantDeliver / spinGrantUndo in
 -- lib/staffSpin.js).
 alter table public.spin_grants add column if not exists delivered_at timestamptz;
+
+-- ===== TASK TRACKER (experimental) — start =====
+-- Backs api/tasks/[...path].js, only reachable when the server's
+-- TASK_TRACKER_MODE env var is "true". Admin-only for now (owner <->
+-- developer work board); assigned_to is there for the later "all
+-- employees" version. status/priority are text + check constraints rather
+-- than enums so values can be added or dropped without enum migrations.
+--
+-- To remove the feature: delete this whole block and run
+--   drop table if exists public.tracker_tasks;
+create table if not exists public.tracker_tasks (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text not null default '',
+  status text not null default 'todo'
+    check (status in ('todo', 'in_progress', 'testing', 'done', 'wont_do')),
+  priority text not null default 'normal'
+    check (priority in ('low', 'normal', 'high', 'urgent')),
+  assigned_to uuid references public.staff_profiles(id) on delete set null,
+  created_by uuid references public.staff_profiles(id) on delete set null,
+  updated_by uuid references public.staff_profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  completed_at timestamptz
+);
+
+alter table public.tracker_tasks enable row level security;
+-- ===== TASK TRACKER (experimental) — end =====

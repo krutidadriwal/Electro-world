@@ -309,26 +309,52 @@ fun SpinScreen(
     AlertDialog(
       onDismissRequest = { wonPrize = null },
       containerColor = MaterialTheme.colorScheme.surface,
-      title = { Text("You Won!", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) },
+      // Everything centred, with extra room above the title and around the
+      // prize so the popup doesn't feel cramped.
+      title = {
+        Text(
+          text = "You Won!",
+          color = MaterialTheme.colorScheme.onSurface,
+          fontWeight = FontWeight.Bold,
+          textAlign = TextAlign.Center,
+          modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp)
+        )
+      },
       text = {
-        Column {
+        Column(
+          horizontalAlignment = Alignment.CenterHorizontally,
+          modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
+        ) {
           Text(
             text = prize.name,
             color = MaterialTheme.colorScheme.onSurface,
             fontSize = 22.sp,
-            fontWeight = FontWeight.Black
+            fontWeight = FontWeight.Black,
+            textAlign = TextAlign.Center
           )
           Text(
-            text = "Free gift with your purchase of $wonForItem. Show this at the Electroworld counter to collect it -- it's also saved under My Prizes.",
+            text = "Free with your $wonForItem. Show this at the Electroworld counter to collect it.",
             color = MaterialTheme.colorScheme.onSurface,
             fontSize = 13.sp,
-            modifier = Modifier.padding(top = 10.dp)
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 14.dp)
+          )
+          Text(
+            text = "Saved under My Prizes.",
+            color = MaterialTheme.colorScheme.outline,
+            fontSize = 12.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp)
           )
         }
       },
       confirmButton = {
-        TextButton(onClick = { wonPrize = null }) {
-          Text("Done", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+        // The button slot is end-aligned by default; filling the width and
+        // centring the button lines it up with the text above.
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+          TextButton(onClick = { wonPrize = null }) {
+            Text("Done", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+          }
         }
       }
     )

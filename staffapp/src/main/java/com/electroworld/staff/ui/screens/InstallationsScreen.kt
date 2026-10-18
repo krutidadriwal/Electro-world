@@ -285,7 +285,7 @@ private fun InstallationRow(
       )
 
       Box(modifier = Modifier.padding(top = 8.dp)) {
-        StatusAssistChip(currentStatus = item.status, onConfirmed = onStatusSelected)
+        StatusAssistChip(currentStatus = item.status, referenceLabel = "Installation request ID", onConfirmed = onStatusSelected)
       }
     }
   }
@@ -329,7 +329,7 @@ private fun InstallationDetailScreen(
       item.invoiceFileName?.takeIf { it.isNotBlank() }?.let { DetailField("Invoice", it) }
       DetailField("Requested on", formatIst(item.createdAt) ?: item.createdAt)
       item.resolvedAt?.let { DetailField("Resolved", formatIst(it) ?: it) }
-      item.installationNumber?.takeIf { it.isNotBlank() }?.let { DetailField("Service center no.", it) }
+      item.installationNumber?.takeIf { it.isNotBlank() }?.let { DetailField("Installation request ID", it) }
       if (!item.technicianName.isNullOrBlank() || !item.technicianMobile.isNullOrBlank()) {
         DetailField("Technician", listOfNotNull(item.technicianName, item.technicianMobile).joinToString(" - "))
       }
@@ -338,7 +338,7 @@ private fun InstallationDetailScreen(
       item.closedDate?.let { DetailField("Closed date", it) }
 
       Spacer(modifier = Modifier.height(16.dp))
-      StatusAssistChip(currentStatus = item.status, onConfirmed = onStatusSelected)
+      StatusAssistChip(currentStatus = item.status, referenceLabel = "Installation request ID", onConfirmed = onStatusSelected)
     }
   }
 }

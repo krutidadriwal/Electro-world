@@ -86,7 +86,9 @@ data class StatusChangeFields(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatusAssistChip(currentStatus: String, onConfirmed: (String, StatusChangeFields) -> Unit) {
+// referenceLabel names the reference number asked for on "Assigned to
+// Service Center" -- "Installation request ID" or "Complaint request ID".
+fun StatusAssistChip(currentStatus: String, referenceLabel: String, onConfirmed: (String, StatusChangeFields) -> Unit) {
   var menuExpanded by remember { mutableStateOf(false) }
   var pendingStatus by remember { mutableStateOf<String?>(null) }
 
@@ -112,6 +114,7 @@ fun StatusAssistChip(currentStatus: String, onConfirmed: (String, StatusChangeFi
   pendingStatus?.let { status ->
     ServiceRequestStatusDialog(
       status = status,
+      referenceLabel = referenceLabel,
       onDismiss = { pendingStatus = null },
       onConfirm = { fields ->
         onConfirmed(status, fields)
@@ -123,7 +126,7 @@ fun StatusAssistChip(currentStatus: String, onConfirmed: (String, StatusChangeFi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ServiceRequestStatusDialog(status: String, onDismiss: () -> Unit, onConfirm: (StatusChangeFields) -> Unit) {
+private fun ServiceRequestStatusDialog(status: String, referenceLabel: String, onDismiss: () -> Unit, onConfirm: (StatusChangeFields) -> Unit) {
   var referenceNumber by remember { mutableStateOf("") }
   var technicianName by remember { mutableStateOf("") }
   var technicianMobile by remember { mutableStateOf("") }
@@ -160,7 +163,7 @@ private fun ServiceRequestStatusDialog(status: String, onDismiss: () -> Unit, on
             OutlinedTextField(
               value = referenceNumber,
               onValueChange = { referenceNumber = it },
-              label = { Text("Complaint/Installation No.") },
+              label = { Text(referenceLabel) },
               singleLine = true,
               modifier = Modifier.fillMaxWidth()
             )

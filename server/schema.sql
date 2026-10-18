@@ -176,8 +176,19 @@ alter table public.complaints add column if not exists address text;
 -- Staff-assigned reference number (e.g. a service ticket/job number from
 -- their own tracking system), set from the staff app when they update a
 -- complaint's status. Null until assigned -- the customer app only shows
--- this section once a number exists.
-alter table public.complaints add column if not exists complaint_number text;
+-- this section once a number exists. Shown in both apps as "Complaint
+-- request ID".
+--
+-- Originally complaint_number; renamed in place (data kept) for databases
+-- that still have the old name. The API still sends it as
+-- "complaint_number", so app builds from before the rename keep working.
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'complaints' and column_name = 'complaint_number')
+     and not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'complaints' and column_name = 'complaint_request_id') then
+    alter table public.complaints rename column complaint_number to complaint_request_id;
+  end if;
+end $$;
+alter table public.complaints add column if not exists complaint_request_id text;
 
 -- Extends the original 4-value status set with a staff-driven workflow:
 -- each of these requires a specific field to be filled on the staff app
@@ -256,8 +267,19 @@ create table if not exists public.installations (
 
 -- Staff-assigned reference number, set from the staff app when they update
 -- an installation request's status. Null until assigned -- the customer app
--- only shows this section once a number exists.
-alter table public.installations add column if not exists installation_number text;
+-- only shows this section once a number exists. Shown in both apps as
+-- "Installation request ID".
+--
+-- Originally installation_number; renamed in place (data kept), same as
+-- complaints.complaint_request_id above. The API still sends it as
+-- "installation_number".
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'installations' and column_name = 'installation_number')
+     and not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'installations' and column_name = 'installation_request_id') then
+    alter table public.installations rename column installation_number to installation_request_id;
+  end if;
+end $$;
+alter table public.installations add column if not exists installation_request_id text;
 
 -- Same staff-driven status workflow as complaints (see the comment above
 -- complaint_status's add value statements).

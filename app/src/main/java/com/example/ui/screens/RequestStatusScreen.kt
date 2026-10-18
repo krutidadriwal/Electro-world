@@ -55,8 +55,8 @@ data class RequestStatusItem(
   val address: String,
   val status: String,
   val createdAt: String,
-  // Only ever populated for assigned_to_service_center ("Service center
-  // no. X") and assigned_to_technician ("Technician: Name - Mobile") --
+  // Only ever populated for assigned_to_service_center ("Installation
+  // request ID: X" / "Complaint request ID: X") and assigned_to_technician ("Technician: Name - Mobile") --
   // blocked/cancelled reasons are staff-internal and deliberately never
   // surfaced here.
   val assignedInfo: String? = null
@@ -264,9 +264,17 @@ fun InstallationStatusScreen(userPhone: String, onBack: () -> Unit, modifier: Mo
 // Mirrors the staff app's status values (see ServiceRequestStatus.kt) --
 // only these two ever have customer-facing info to show; blocked/cancelled
 // reasons are staff-internal.
-private fun assignedInfoFor(status: String, serviceCenterNo: String?, technicianName: String?, technicianMobile: String?): String? =
+// referenceLabel: "Installation request ID" or "Complaint request ID" --
+// what the staff-assigned reference number is called for that request type.
+private fun assignedInfoFor(
+  status: String,
+  referenceLabel: String,
+  referenceNumber: String?,
+  technicianName: String?,
+  technicianMobile: String?
+): String? =
   when (status) {
-    "assigned_to_service_center" -> serviceCenterNo?.takeIf { it.isNotBlank() }?.let { "Service center no. $it" }
+    "assigned_to_service_center" -> referenceNumber?.takeIf { it.isNotBlank() }?.let { "$referenceLabel: $it" }
     "assigned_to_technician" -> listOfNotNull(
       technicianName?.takeIf { it.isNotBlank() },
       technicianMobile?.takeIf { it.isNotBlank() }
@@ -281,7 +289,7 @@ private fun Complaint.toStatusItem() = RequestStatusItem(
   address = address,
   status = status,
   createdAt = createdAt,
-  assignedInfo = assignedInfoFor(status, complaintNumber, technicianName, technicianMobile)
+  assignedInfo = assignedInfoFor(status, "Complaint request ID", complaintNumber, technicianName, technicianMobile)
 )
 
 private fun Installation.toStatusItem() = RequestStatusItem(
@@ -294,5 +302,5 @@ private fun Installation.toStatusItem() = RequestStatusItem(
   address = address,
   status = status,
   createdAt = createdAt,
-  assignedInfo = assignedInfoFor(status, installationNumber, technicianName, technicianMobile)
+  assignedInfo = assignedInfoFor(status, "Installation request ID", installationNumber, technicianName, technicianMobile)
 )

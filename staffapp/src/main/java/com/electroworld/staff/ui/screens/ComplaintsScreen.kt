@@ -279,7 +279,7 @@ private fun ComplaintRow(
       )
 
       Box(modifier = Modifier.padding(top = 8.dp)) {
-        StatusAssistChip(currentStatus = item.status, onConfirmed = onStatusSelected)
+        StatusAssistChip(currentStatus = item.status, referenceLabel = "Complaint request ID", onConfirmed = onStatusSelected)
       }
     }
   }
@@ -322,7 +322,7 @@ private fun ComplaintDetailScreen(
       item.invoiceFileName?.takeIf { it.isNotBlank() }?.let { DetailField("Invoice", it) }
       DetailField("Reported", formatIst(item.createdAt) ?: item.createdAt)
       item.resolvedAt?.let { DetailField("Resolved", formatIst(it) ?: it) }
-      item.complaintNumber?.takeIf { it.isNotBlank() }?.let { DetailField("Service center no.", it) }
+      item.complaintNumber?.takeIf { it.isNotBlank() }?.let { DetailField("Complaint request ID", it) }
       if (!item.technicianName.isNullOrBlank() || !item.technicianMobile.isNullOrBlank()) {
         DetailField("Technician", listOfNotNull(item.technicianName, item.technicianMobile).joinToString(" - "))
       }
@@ -331,7 +331,7 @@ private fun ComplaintDetailScreen(
       item.closedDate?.let { DetailField("Closed date", it) }
 
       Spacer(modifier = Modifier.height(16.dp))
-      StatusAssistChip(currentStatus = item.status, onConfirmed = onStatusSelected)
+      StatusAssistChip(currentStatus = item.status, referenceLabel = "Complaint request ID", onConfirmed = onStatusSelected)
     }
   }
 }

@@ -22,12 +22,19 @@ data class TrackerTask(
   val priority: String,
   @Json(name = "assigned_to") val assignedTo: String? = null,
   @Json(name = "assigned_to_email") val assignedToEmail: String? = null,
+  @Json(name = "assigned_to_name") val assignedToName: String? = null,
   @Json(name = "created_by_email") val createdByEmail: String? = null,
+  @Json(name = "created_by_name") val createdByName: String? = null,
   @Json(name = "updated_by_email") val updatedByEmail: String? = null,
+  @Json(name = "updated_by_name") val updatedByName: String? = null,
   @Json(name = "created_at") val createdAt: String,
   @Json(name = "updated_at") val updatedAt: String,
   @Json(name = "completed_at") val completedAt: String? = null
-)
+) {
+  // Name when set in Supabase, else email (same fallback as StaffMember.displayName).
+  val assignedToDisplay: String? get() = assignedToName?.takeIf { it.isNotBlank() } ?: assignedToEmail
+  val createdByDisplay: String? get() = createdByName?.takeIf { it.isNotBlank() } ?: createdByEmail
+}
 
 @JsonClass(generateAdapter = true)
 data class TaskListResponse(

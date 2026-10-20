@@ -160,7 +160,7 @@ async function me(req, res) {
 
   try {
     const staff = await requireStaff(req);
-    return res.status(200).json({ id: staff.id, email: staff.email, role: staff.role });
+    return res.status(200).json({ id: staff.id, email: staff.email, name: staff.name, role: staff.role });
   } catch (err) {
     if (err instanceof StaffAuthError) {
       return res.status(err.status).json({ error: err.message });
@@ -181,7 +181,7 @@ async function list(req, res) {
 
     const pool = getPool();
     const result = await pool.query(
-      `select id, email, role, created_at from public.staff_profiles order by created_at desc`
+      `select id, email, name, role, created_at from public.staff_profiles order by created_at desc`
     );
     return res.status(200).json({ staff: result.rows });
   } catch (err) {
@@ -227,7 +227,7 @@ async function create(req, res) {
     const result = await pool.query(
       `insert into public.staff_profiles (id, email, role, invited_by)
        values ($1, $2, $3, $4)
-       returning id, email, role, created_at`,
+       returning id, email, name, role, created_at`,
       [data.user.id, email.trim(), newRole, admin.id]
     );
     return res.status(201).json(result.rows[0]);
@@ -263,7 +263,7 @@ async function role(req, res) {
     const pool = getPool();
     const result = await pool.query(
       `update public.staff_profiles set role = $1 where id = $2
-       returning id, email, role, created_at`,
+       returning id, email, name, role, created_at`,
       [newRole, staffId]
     );
     if (result.rowCount === 0) {

@@ -43,7 +43,7 @@ function extractBearerToken(req) {
   return header.slice('Bearer '.length).trim();
 }
 
-// Returns the caller's { id, email, role } from staff_profiles, or throws a
+// Returns the caller's { id, email, name, role } from staff_profiles, or throws a
 // StaffAuthError (401 for missing/invalid token or unknown staff id, 403 if
 // minRole is 'admin' and the caller is an employee).
 async function requireStaff(req, { minRole } = {}) {
@@ -62,7 +62,7 @@ async function requireStaff(req, { minRole } = {}) {
 
   const pool = getPool();
   const result = await pool.query(
-    'select id, email, role from public.staff_profiles where id = $1',
+    'select id, email, name, role from public.staff_profiles where id = $1',
     [payload.sub]
   );
   if (result.rowCount === 0) {

@@ -32,9 +32,9 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 const TASK_COLUMNS = `
   t.id, t.title, t.description, t.status, t.priority,
-  t.assigned_to, a.email as assigned_to_email,
-  t.created_by, c.email as created_by_email,
-  t.updated_by, u.email as updated_by_email,
+  t.assigned_to, a.email as assigned_to_email, a.name as assigned_to_name,
+  t.created_by, c.email as created_by_email, c.name as created_by_name,
+  t.updated_by, u.email as updated_by_email, u.name as updated_by_name,
   t.created_at, t.updated_at, t.completed_at`;
 
 const TASK_JOINS = `
@@ -114,7 +114,7 @@ async function listTasks(req, res) {
 async function listAssignees(req, res) {
   const pool = getPool();
   const staff = await pool.query(
-    `select id, email, role from public.staff_profiles where role = 'admin' order by email`
+    `select id, email, name, role from public.staff_profiles where role = 'admin' order by coalesce(name, email)`
   );
   return res.status(200).json({ staff: staff.rows });
 }

@@ -367,6 +367,11 @@ do $$ begin
   end if;
 end $$;
 
+-- Display name. Nullable and filled in by hand from the Supabase dashboard
+-- (existing accounts predate it); the staff app falls back to the email
+-- wherever it's null.
+alter table public.staff_profiles add column if not exists name text;
+
 -- One row per push notification an admin sends. Rows are never deleted --
 -- duration_minutes only controls how long it's shown as "active" in the
 -- customer app's notification tab (created_at + duration_minutes), not how

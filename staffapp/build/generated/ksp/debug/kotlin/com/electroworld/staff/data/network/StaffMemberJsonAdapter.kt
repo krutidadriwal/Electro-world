@@ -23,14 +23,14 @@ import kotlin.text.buildString
 public class StaffMemberJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<StaffMember>() {
-  private val options: JsonReader.Options = JsonReader.Options.of("id", "email", "role",
+  private val options: JsonReader.Options = JsonReader.Options.of("id", "email", "role", "name",
       "created_at")
 
   private val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java, emptySet(),
       "id")
 
   private val nullableStringAdapter: JsonAdapter<String?> = moshi.adapter(String::class.java,
-      emptySet(), "createdAt")
+      emptySet(), "name")
 
   @Volatile
   private var constructorRef: Constructor<StaffMember>? = null
@@ -42,6 +42,7 @@ public class StaffMemberJsonAdapter(
     var id: String? = null
     var email: String? = null
     var role: String? = null
+    var name: String? = null
     var createdAt: String? = null
     var mask0 = -1
     reader.beginObject()
@@ -53,9 +54,14 @@ public class StaffMemberJsonAdapter(
         2 -> role = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("role", "role",
             reader)
         3 -> {
-          createdAt = nullableStringAdapter.fromJson(reader)
+          name = nullableStringAdapter.fromJson(reader)
           // $mask = $mask and (1 shl 3).inv()
           mask0 = mask0 and 0xfffffff7.toInt()
+        }
+        4 -> {
+          createdAt = nullableStringAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 4).inv()
+          mask0 = mask0 and 0xffffffef.toInt()
         }
         -1 -> {
           // Unknown name, skip it.
@@ -65,12 +71,13 @@ public class StaffMemberJsonAdapter(
       }
     }
     reader.endObject()
-    if (mask0 == 0xfffffff7.toInt()) {
+    if (mask0 == 0xffffffe7.toInt()) {
       // All parameters with defaults are set, invoke the constructor directly
       return  StaffMember(
           id = id ?: throw Util.missingProperty("id", "id", reader),
           email = email ?: throw Util.missingProperty("email", "email", reader),
           role = role ?: throw Util.missingProperty("role", "role", reader),
+          name = name,
           createdAt = createdAt
       )
     } else {
@@ -78,12 +85,13 @@ public class StaffMemberJsonAdapter(
       @Suppress("UNCHECKED_CAST")
       val localConstructor: Constructor<StaffMember> = this.constructorRef ?:
           StaffMember::class.java.getDeclaredConstructor(String::class.java, String::class.java,
-          String::class.java, String::class.java, Int::class.javaPrimitiveType,
+          String::class.java, String::class.java, String::class.java, Int::class.javaPrimitiveType,
           Util.DEFAULT_CONSTRUCTOR_MARKER).also { this.constructorRef = it }
       return localConstructor.newInstance(
           id ?: throw Util.missingProperty("id", "id", reader),
           email ?: throw Util.missingProperty("email", "email", reader),
           role ?: throw Util.missingProperty("role", "role", reader),
+          name,
           createdAt,
           mask0,
           /* DefaultConstructorMarker */ null
@@ -102,6 +110,8 @@ public class StaffMemberJsonAdapter(
     stringAdapter.toJson(writer, value_.email)
     writer.name("role")
     stringAdapter.toJson(writer, value_.role)
+    writer.name("name")
+    nullableStringAdapter.toJson(writer, value_.name)
     writer.name("created_at")
     nullableStringAdapter.toJson(writer, value_.createdAt)
     writer.endObject()

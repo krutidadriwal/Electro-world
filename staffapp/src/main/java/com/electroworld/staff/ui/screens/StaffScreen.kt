@@ -128,7 +128,10 @@ private fun StaffRow(member: StaffMember, onRoleChange: (String) -> Unit) {
       horizontalArrangement = Arrangement.SpaceBetween
     ) {
       Column {
-        Text(member.email, style = MaterialTheme.typography.bodyLarge)
+        Text(member.displayName, style = MaterialTheme.typography.bodyLarge)
+        if (member.displayName != member.email) {
+          Text(member.email, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+        }
         Text(member.role, style = MaterialTheme.typography.labelMedium)
       }
       Box {

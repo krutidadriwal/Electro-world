@@ -333,13 +333,13 @@ private fun TaskRow(task: TrackerTask, onClick: () -> Unit, onStatusSelected: (S
       }
 
       Text(
-        "Assigned: ${task.assignedToEmail ?: "Unassigned"}",
+        "Assigned: ${task.assignedToDisplay ?: "Unassigned"}",
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.outline,
         modifier = Modifier.padding(top = 8.dp)
       )
       Text(
-        "Posted by ${task.createdByEmail ?: "unknown"} · ${formatTaskDate(task.createdAt)}",
+        "Posted by ${task.createdByDisplay ?: "unknown"} · ${formatTaskDate(task.createdAt)}",
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.outline
       )
@@ -442,7 +442,7 @@ private fun TaskEditorDialog(
             onClick = { assigneeMenuExpanded = true },
             label = {
               Text(
-                staff.firstOrNull { it.id == assigneeId }?.email ?: "Unassigned",
+                staff.firstOrNull { it.id == assigneeId }?.displayName ?: "Unassigned",
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
               )
@@ -461,7 +461,7 @@ private fun TaskEditorDialog(
             // server/api/tasks/[...path].js).
             staff.forEach { member ->
               DropdownMenuItem(
-                text = { Text(member.email) },
+                text = { Text(member.displayName) },
                 onClick = {
                   assigneeId = member.id
                   assigneeMenuExpanded = false

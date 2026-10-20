@@ -12,8 +12,12 @@ data class StaffMember(
   val id: String,
   val email: String,
   val role: String,
+  // Nullable -- set by hand in Supabase; use displayName for showing it.
+  val name: String? = null,
   @Json(name = "created_at") val createdAt: String? = null
-)
+) {
+  val displayName: String get() = name?.takeIf { it.isNotBlank() } ?: email
+}
 
 @JsonClass(generateAdapter = true)
 data class StaffListResponse(

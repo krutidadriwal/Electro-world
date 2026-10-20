@@ -60,6 +60,7 @@ import com.electroworld.staff.data.network.InstallationStatusRequest
 import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.network.lookupCustomerName
 import com.electroworld.staff.ui.theme.staffCardColors
+import com.electroworld.staff.ui.theme.statusCardColors
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -252,7 +253,7 @@ private fun InstallationRow(
   onStatusSelected: (String, StatusChangeFields) -> Unit,
   onCall: () -> Unit
 ) {
-  Card(colors = staffCardColors(), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).clickable(onClick = onClick)) {
+  Card(colors = statusCardColors(serviceStatusColor(item.status)), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).clickable(onClick = onClick)) {
     Column(modifier = Modifier.padding(16.dp)) {
       Row(
         modifier = Modifier.fillMaxWidth(),

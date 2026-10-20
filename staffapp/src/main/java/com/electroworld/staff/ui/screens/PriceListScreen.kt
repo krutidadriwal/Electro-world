@@ -56,9 +56,8 @@ import coil.compose.AsyncImage
 import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.network.PriceListItem
 import com.electroworld.staff.ui.theme.AllSwatches
-import com.electroworld.staff.ui.theme.Swatch4Taupe
-import com.electroworld.staff.ui.theme.Swatch5Pearl
-import com.electroworld.staff.ui.theme.Swatch8Sand
+import com.electroworld.staff.ui.theme.DeepSlate
+import com.electroworld.staff.ui.theme.PaleGold
 import com.electroworld.staff.ui.theme.contrastTextColor
 import kotlinx.coroutines.launch
 
@@ -283,7 +282,7 @@ private fun RootLevel(
           NavRow(
             title = category,
             subtitle = "$count items",
-            containerColor = Swatch5Pearl.copy(alpha = 0.3f)
+            containerColor = DeepSlate
           ) { onCategorySelected(category) }
         }
       }
@@ -301,7 +300,7 @@ private fun RootLevel(
           NavRow(
             title = group,
             subtitle = "${itemsInGroup.first().category} · ${itemsInGroup.size} items",
-            containerColor = Swatch4Taupe.copy(alpha = 0.3f)
+            containerColor = PaleGold.copy(alpha = 0.12f)
           ) { onGroupSelected(group) }
         }
       }
@@ -366,7 +365,7 @@ private fun ItemRows(items: List<PriceListItem>, isAdmin: Boolean, onItemSelecte
 @Composable
 private fun ItemRow(item: PriceListItem, isAdmin: Boolean, onClick: () -> Unit) {
   Card(
-    colors = CardDefaults.cardColors(containerColor = Swatch8Sand.copy(alpha = 0.1f)),
+    colors = CardDefaults.cardColors(containerColor = DeepSlate),
     modifier = Modifier
       .fillMaxWidth()
       .padding(bottom = 12.dp)
@@ -413,7 +412,7 @@ private fun ItemRow(item: PriceListItem, isAdmin: Boolean, onClick: () -> Unit) 
 
 // Full-screen, customer-facing view: the salesperson hands their phone to the
 // customer, so this favors large, unambiguous type over information density.
-// Background is one of the 8 swatches, picked fresh per item (remember keyed
+// Background is one of the 6 palette colors, picked fresh per item (remember keyed
 // on `item`, so it stays stable while this one item is on screen but
 // reshuffles on the next), matching the "shuffling randomly" reference-design
 // request; text color follows the explicit contrast rule in

@@ -112,4 +112,5 @@ object NetworkModule {
   val unreadableInvoicesApi: UnreadableInvoicesApi by lazy { serverRetrofit.create(UnreadableInvoicesApi::class.java) }
   val customerLookupApi:CustomerLookupApi by lazy { serverRetrofit.create(CustomerLookupApi::class.java) }
   val spinApi: SpinApi by lazy { serverRetrofit.create(SpinApi::class.java) }
+  val taskTrackerApi: TaskTrackerApi by lazy { serverRetrofit.create(TaskTrackerApi::class.java) } // task tracker (experimental)
 }

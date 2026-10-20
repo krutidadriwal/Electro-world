@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Casino
+import androidx.compose.material.icons.filled.Checklist // task tracker (experimental)
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Notifications
@@ -53,7 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.electroworld.staff.data.network.NetworkModule
 
-private enum class HomeTab { ALERTS, PRICE_LIST, WISHLIST, COMPLAINTS, INSTALLATIONS, INVOICE_REQUESTS, BROADCAST, STAFF, CATEGORY_IMAGES, SPIN, REDEEM_POINTS }
+private enum class HomeTab { ALERTS, PRICE_LIST, WISHLIST, COMPLAINTS, INSTALLATIONS, INVOICE_REQUESTS, BROADCAST, STAFF, CATEGORY_IMAGES, SPIN, REDEEM_POINTS, TASK_TRACKER /* task tracker (experimental) */ }
 
 @Composable
 fun HomeScreen(
@@ -164,6 +165,7 @@ fun HomeScreen(
       HomeTab.CATEGORY_IMAGES -> CategoryImagesScreen(onBack = onBack, modifier = modifier)
       HomeTab.SPIN -> SpinScreen(onBack = onBack, modifier = modifier)
       HomeTab.REDEEM_POINTS -> RedeemPointsScreen(onBack = onBack, modifier = modifier)
+      HomeTab.TASK_TRACKER -> TaskTrackerScreen(onBack = onBack, modifier = modifier) // task tracker (experimental)
     }
     return
   }
@@ -177,7 +179,9 @@ fun HomeScreen(
     DashboardModule("CATEGORY IMAGES", Icons.Default.Image, "Set price list hero images") { selectedTab = HomeTab.CATEGORY_IMAGES },
     DashboardModule("SPIN TO WIN", Icons.Default.Casino, "Unlock spins & manage prizes") { selectedTab = HomeTab.SPIN },
     DashboardModule("REDEEM POINTS", Icons.Default.Redeem, "Redeem customer points") { selectedTab = HomeTab.REDEEM_POINTS }
-  )
+  ) + listOfNotNull( // task tracker (experimental)
+    DashboardModule("TASK TRACKER", Icons.Default.Checklist, "Dev tasks & status") { selectedTab = HomeTab.TASK_TRACKER }.takeIf { TaskTrackerFeature.isEnabled } // task tracker (experimental)
+  ) // task tracker (experimental)
 
   val serviceModules = listOf(
     DashboardModule("NOTIFICATIONS", Icons.Default.Notifications, "New alerts & requests", badgeCount = unreadAlertCount) { selectedTab = HomeTab.ALERTS },
@@ -290,7 +294,7 @@ private data class DashboardModule(
 // Count pill -- shared across each dashboard card's badge, so it always
 // matches what the Notifications tab would show for that same category
 // (both are driven by the same not_contacted/open counts fetched in
-// HomeScreen). Uses `secondary` (swatch6, deep amber) rather than a
+// HomeScreen). Uses `secondary` (Pale Gold) rather than a
 // red/error color -- the palette has no red.
 @Composable
 private fun CountBadge(count: Int, modifier: Modifier = Modifier) {

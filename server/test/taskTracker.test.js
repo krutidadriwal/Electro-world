@@ -31,7 +31,7 @@ function withFlag(value, fn) {
 
 for (const value of [undefined, 'false', 'TRUE', '1']) {
   test(`every route 404s when TASK_TRACKER_MODE is ${JSON.stringify(value)}`, withFlag(value, async () => {
-    for (const [method, route] of [['GET', 'list'], ['POST', 'create'], ['PATCH', 'update'], ['DELETE', 'delete']]) {
+    for (const [method, route] of [['GET', 'list'], ['GET', 'staff'], ['POST', 'create'], ['PATCH', 'update'], ['DELETE', 'delete']]) {
       const res = await call({ method, url: `/api/tasks/${route}` });
       assert.equal(res.statusCode, 404, `${method} ${route}`);
     }

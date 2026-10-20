@@ -28,7 +28,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.electroworld.staff.ui.theme.StatusGreen
+import com.electroworld.staff.ui.theme.StatusRed
+import com.electroworld.staff.ui.theme.StatusYellow
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -65,6 +69,16 @@ fun serviceStatusLabel(status: String): String = when (status) {
   "cancelled_by_customer" -> "Cancelled by Customer"
   "closed" -> "Closed"
   else -> status
+}
+
+// Card tint per status, for the Complaints and Installations lists (see
+// statusCardColors). Open keeps the plain card; red = blocked or cancelled,
+// yellow = assigned and being worked on, green = closed.
+fun serviceStatusColor(status: String): Color? = when (status) {
+  "blocked", "cancelled_by_staff", "cancelled_by_customer" -> StatusRed
+  "assigned_to_service_center", "assigned_to_technician", "in_progress" -> StatusYellow
+  "closed", "resolved" -> StatusGreen
+  else -> null
 }
 
 // Which of these is populated depends entirely on the `status` passed to

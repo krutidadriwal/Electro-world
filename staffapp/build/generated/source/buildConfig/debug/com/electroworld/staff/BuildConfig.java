@@ -24,6 +24,7 @@ public final class BuildConfig {
   public static final String SUPABASE_JWT_SECRET = "6bsX6scI7w+KW1VNJsEIoV/Dq2FYBbox7EiXTclqqLoIw94e/iK9SPbK4TbV3MFRvirmtpOWwsNC9Ly7N8C4cQ==";
   public static final String SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaXViZmpuZHBtZnRudXF0cmp3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDExNzM2MiwiZXhwIjoyMDk5NjkzMzYyfQ.Upx8wlMoopFdoazWdDqTp2-XHngMf-L7LznVvenA9jA";
   public static final String SUPABASE_URL = "https://hniubfjndpmftnuqtrjw.supabase.co";
+  public static final String TASK_TRACKER_MODE = "true";
   public static final String TEXTBEE_API_KEY = "txb_TjAVZGHaq2znzF3tniVo7DNwSA65xrPd";
   public static final String TEXTBEE_DEVICE_ID = "6aca1fac74ee49a6e124a37b";
   public static final String USE_SMS_QUEUE = "false";

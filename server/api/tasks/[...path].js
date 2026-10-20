@@ -17,8 +17,8 @@
 // Lives in its own catch-all function rather than inside
 // api/staff/[...path].js (counts toward Vercel Hobby's 12-function cap --
 // 8 of 12 with this one). Routes are single-segment for the same reason as
-// there: /api/tasks/list, /api/tasks/create, /api/tasks/update,
-// /api/tasks/delete.
+// there: /api/tasks/list, /api/tasks/staff, /api/tasks/create,
+// /api/tasks/update, /api/tasks/delete.
 
 const { getPool } = require('../../lib/db');
 const { requireAdmin, StaffAuthError } = require('../../lib/staffAuth');
@@ -57,6 +57,8 @@ module.exports = async function handler(req, res) {
   switch (route) {
     case 'list':
       return withAdmin(req, res, 'GET', listTasks);
+    case 'staff':
+      return withAdmin(req, res, 'GET', listAssignees);
     case 'create':
       return withAdmin(req, res, 'POST', createTask);
     case 'update':
@@ -98,15 +100,23 @@ async function withAdmin(req, res, method, route) {
   }
 }
 
-// Returns every task plus the staff list (for the assignee picker), in one
-// round trip from the app.
 async function listTasks(req, res) {
   const pool = getPool();
-  const [tasks, staff] = await Promise.all([
-    pool.query(`select ${TASK_COLUMNS} from public.tracker_tasks t ${TASK_JOINS} order by t.created_at desc`),
-    pool.query('select id, email, role from public.staff_profiles order by email')
-  ]);
-  return res.status(200).json({ items: tasks.rows, staff: staff.rows });
+  const tasks = await pool.query(
+    `select ${TASK_COLUMNS} from public.tracker_tasks t ${TASK_JOINS} order by t.created_at desc`
+  );
+  return res.status(200).json({ items: tasks.rows });
+}
+
+// Who a task can be assigned to. Its own route (not folded into list) so the
+// picker still fills even if loading tasks fails. Admin-only for now; drop
+// the role filter when the tracker opens up to all employees.
+async function listAssignees(req, res) {
+  const pool = getPool();
+  const staff = await pool.query(
+    `select id, email, role from public.staff_profiles where role = 'admin' order by email`
+  );
+  return res.status(200).json({ staff: staff.rows });
 }
 
 async function createTask(req, res, admin) {

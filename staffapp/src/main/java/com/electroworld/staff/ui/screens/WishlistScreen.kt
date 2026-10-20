@@ -58,7 +58,12 @@ import com.electroworld.staff.data.network.WishlistItem
 import com.electroworld.staff.data.network.WishlistAddRequest
 import com.electroworld.staff.data.network.WishlistStatusRequest
 import com.electroworld.staff.data.network.WishlistCallRequest
+import androidx.compose.ui.graphics.Color
+import com.electroworld.staff.ui.theme.StatusGreen
+import com.electroworld.staff.ui.theme.StatusRed
+import com.electroworld.staff.ui.theme.StatusYellow
 import com.electroworld.staff.ui.theme.staffCardColors
+import com.electroworld.staff.ui.theme.statusCardColors
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -81,6 +86,18 @@ private val WISHLIST_STATUSES = listOf(
   "dropped_plan",
   "not_interested"
 )
+
+// Card tint per status (see statusCardColors): red = still to call, or a
+// lost lead; yellow = being followed up; green = won (purchased rows are
+// removed from the list, so pending delivery is the win that's still shown).
+private fun wishlistStatusColor(status: String): Color? = when (status) {
+  "not_contacted", "invalid_number", "not_interested", "bought_elsewhere", "dropped_plan" -> StatusRed
+  "unreachable", "call_back_later", "sent_details_whatsapp", "store_visit_scheduled",
+  "interested", "interested_comparing_prices", "interested_waiting_emi",
+  "interested_waiting_stock", "interested_waiting_offer" -> StatusYellow
+  "purchased", "pending_delivery" -> StatusGreen
+  else -> null
+}
 
 private fun statusLabel(status: String): String = when (status) {
   "not_contacted" -> "Not Contacted"
@@ -480,7 +497,7 @@ private fun WishlistRow(
     )
   }
 
-  Card(colors = staffCardColors(), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+  Card(colors = statusCardColors(wishlistStatusColor(item.status)), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
     Column(modifier = Modifier.padding(16.dp)) {
       Row(
         modifier = Modifier.fillMaxWidth(),

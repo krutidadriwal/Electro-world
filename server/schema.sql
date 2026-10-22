@@ -620,6 +620,23 @@ create index if not exists spin_grants_phone_idx on public.spin_grants (phone, c
 -- lib/staffSpin.js).
 alter table public.spin_grants add column if not exists delivered_at timestamptz;
 
+-- One row per price-list image (single item or quotation) a staff member
+-- shared with a customer from the staff app -- who shared to whom and when,
+-- deliberately not what. Written by POST /api/staff/price-share-log; the
+-- images themselves are made and kept on the phone only.
+create table if not exists public.price_share_log (
+  id uuid primary key default gen_random_uuid(),
+  staff_id uuid references public.staff_profiles(id) on delete set null,
+  customer_phone text not null,    -- E.164 format, e.g. +919876543210
+  customer_name text not null,
+  shared_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
+alter table public.price_share_log enable row level security;
+
+create index if not exists price_share_log_phone_idx on public.price_share_log (customer_phone, shared_at desc);
+
 -- ===== TASK TRACKER (experimental) — start =====
 -- Backs api/tasks/[...path].js, only reachable when the server's
 -- TASK_TRACKER_MODE env var is "true". Admin-only for now (owner <->

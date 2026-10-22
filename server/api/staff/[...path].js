@@ -139,6 +139,8 @@ module.exports = async function handler(req, res) {
       return staffDeviceToken(req, res);
     case 'customer-lookup':
       return customerLookup(req, res);
+    case 'price-share-log':
+      return priceShareLog(req, res);
     case 'spin-overview':
       return spinOverview(req, res);
     case 'spin-prize':
@@ -1298,6 +1300,54 @@ async function staffDeviceToken(req, res) {
 // staff re-typing a name that's already on file. 404 (not 200 with a null
 // name) when there's no account yet, so the client can tell "no match" apart
 // from "matched, empty name" unambiguously.
+// Records that a staff member shared a price-list image (single item or
+// quotation) with a customer -- who shared to whom and when, not what. The
+// image itself is made and shared entirely on the phone; this is the only
+// server call involved. sharedAt comes from the app because a log that
+// failed offline is retried later (see ShareHistory.kt in the staff app).
+const MAX_SHARE_CUSTOMER_NAME_LENGTH = 100;
+
+async function priceShareLog(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { customerPhone, customerName, sharedAt } = req.body ?? {};
+  const normalizedPhone = normalizePhone(customerPhone);
+  if (!normalizedPhone) {
+    return res.status(400).json({ error: 'customerPhone must be a 10-digit number' });
+  }
+  if (typeof customerName !== 'string' || !customerName.trim()) {
+    return res.status(400).json({ error: 'customerName is required' });
+  }
+  if (customerName.trim().length > MAX_SHARE_CUSTOMER_NAME_LENGTH) {
+    return res.status(400).json({ error: `customerName must be at most ${MAX_SHARE_CUSTOMER_NAME_LENGTH} characters` });
+  }
+  const sharedAtDate = sharedAt === undefined ? new Date() : new Date(sharedAt);
+  if (Number.isNaN(sharedAtDate.getTime())) {
+    return res.status(400).json({ error: 'sharedAt must be an ISO-8601 timestamp' });
+  }
+
+  try {
+    const staff = await requireStaff(req);
+    const pool = getPool();
+    const result = await pool.query(
+      `insert into public.price_share_log (staff_id, customer_phone, customer_name, shared_at)
+       values ($1, $2, $3, $4)
+       returning id`,
+      [staff.id, normalizedPhone, customerName.trim(), sharedAtDate.toISOString()]
+    );
+    return res.status(201).json({ id: result.rows[0].id });
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('price share log error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
 async function customerLookup(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');

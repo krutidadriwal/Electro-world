@@ -1,6 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { visibleInAppSql } = require('../lib/closedRequests');
+const { visibleInAppSql, wishlistVisibleInAppSql } = require('../lib/closedRequests');
+
+test('wishlistVisibleInAppSql hides only deals closed more than 7 days ago', () => {
+  assert.equal(
+    wishlistVisibleInAppSql('wi'),
+    "not (wi.status = 'purchased' and coalesce(wi.status_updated_at, wi.created_at) < now() - interval '7 days')"
+  );
+});
 
 test('visibleInAppSql hides only requests closed more than 7 days ago', () => {
   assert.equal(

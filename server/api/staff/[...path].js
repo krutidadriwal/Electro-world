@@ -12,7 +12,7 @@ const { normalizePhone } = require('../../lib/phone');
 const { sendToTokens } = require('../../lib/fcm');
 const { spinOverview, spinPrize, spinPurchaseItem, spinGrant } = require('../../lib/staffSpin');
 const { syncInvoicePoints } = require('../../lib/invoicePoints');
-const { visibleInAppSql } = require('../../lib/closedRequests');
+const { visibleInAppSql, wishlistVisibleInAppSql } = require('../../lib/closedRequests');
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // base64 inflates ~33%; Vercel caps request bodies at 4.5MB
 
@@ -451,6 +451,7 @@ async function wishlistList(req, res) {
          ) as last_called_at
        from public.wishlist_items wi
        join public.users u on u.phone = wi.phone
+       where ${wishlistVisibleInAppSql('wi')}
        order by wi.created_at desc`
     );
     return res.status(200).json({ items: result.rows });
@@ -528,14 +529,14 @@ async function wishlistAdd(req, res) {
       ? await pool.query(
           `insert into public.wishlist_items (phone, category_icon_key, category_name, subcategory_id, subcategory_name)
            values ($1, $2, $3, $4, $5)
-           on conflict (phone, category_icon_key, subcategory_id) where subcategory_id is not null do nothing
+           on conflict (phone, category_icon_key, subcategory_id) where subcategory_id is not null and status <> 'purchased' do nothing
            returning id`,
           [normalizedPhone, category.icon_key, category.name, subcategory.id, subcategory.name]
         )
       : await pool.query(
           `insert into public.wishlist_items (phone, category_icon_key, category_name)
            values ($1, $2, $3)
-           on conflict (phone, category_icon_key) where subcategory_id is null do nothing
+           on conflict (phone, category_icon_key) where subcategory_id is null and status <> 'purchased' do nothing
            returning id`,
           [normalizedPhone, category.icon_key, category.name]
         );
@@ -569,21 +570,10 @@ async function wishlistStatus(req, res) {
 
     const pool = getPool();
 
-    // A purchase ends the wishlist entry's reason for existing -- rather than
-    // leave a "purchased" row behind, it's deleted outright, both as a
-    // signal to staff (gone from the list = done) and to the customer (this
-    // table is also what their own app's wishlist reads from).
-    if (status === 'purchased') {
-      const result = await pool.query(
-        `delete from public.wishlist_items where id = $1 returning id`,
-        [wishlistItemId]
-      );
-      if (result.rowCount === 0) {
-        return res.status(404).json({ error: 'Wishlist item not found' });
-      }
-      return res.status(200).json({ id: result.rows[0].id, status: 'purchased', deleted: true });
-    }
-
+    // 'purchased' is saved like any other status (the row is kept as a
+    // record of the closed deal): it stays in the staff list for a week
+    // (wishlistVisibleInAppSql) and leaves the customer's own wishlist at
+    // once (see wishlistGet in api/catalog.js).
     const result = await pool.query(
       `update public.wishlist_items
        set status = $1, status_updated_at = now(), status_updated_by = $2

@@ -17,4 +17,13 @@ function visibleInAppSql(alias = '') {
   return `not (${col('status')} = 'closed' and coalesce(${col('resolved_at')}, ${col('updated_at')}) < now() - interval '${CLOSED_VISIBLE_DAYS} days')`;
 }
 
-module.exports = { visibleInAppSql, CLOSED_VISIBLE_DAYS };
+// The same week-long window for the staff wishlist: a 'purchased' (deal
+// closed) entry stays listed for CLOSED_VISIBLE_DAYS after it was marked,
+// then drops off. Never deleted. status_updated_at is stamped by every
+// staff status change; created_at covers a row without one.
+function wishlistVisibleInAppSql(alias = '') {
+  const col = (name) => (alias ? `${alias}.${name}` : name);
+  return `not (${col('status')} = 'purchased' and coalesce(${col('status_updated_at')}, ${col('created_at')}) < now() - interval '${CLOSED_VISIBLE_DAYS} days')`;
+}
+
+module.exports = { visibleInAppSql, wishlistVisibleInAppSql, CLOSED_VISIBLE_DAYS };

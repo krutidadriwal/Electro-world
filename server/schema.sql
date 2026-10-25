@@ -220,6 +220,8 @@ create index if not exists complaints_phone_idx on public.complaints (phone, cre
 -- category at once (the app enforces that: starring any subcategory drops
 -- the bare-category entry). The two partial unique indexes below make each
 -- shape unique per user without a sentinel value standing in for null.
+-- (Those indexes are created further down, once the status column exists:
+-- they only cover rows that aren't 'purchased'.)
 create table if not exists public.wishlist_items (
   id uuid primary key default gen_random_uuid(),
   phone text not null references public.users(phone),
@@ -230,10 +232,6 @@ create table if not exists public.wishlist_items (
   created_at timestamptz not null default now()
 );
 
-create unique index if not exists wishlist_items_category_only_key
-  on public.wishlist_items (phone, category_icon_key) where subcategory_id is null;
-create unique index if not exists wishlist_items_category_subcategory_key
-  on public.wishlist_items (phone, category_icon_key, subcategory_id) where subcategory_id is not null;
 create index if not exists wishlist_items_phone_idx on public.wishlist_items (phone, created_at desc);
 
 do $$ begin
@@ -465,6 +463,20 @@ alter type public.wishlist_response_status add value if not exists 'dropped_plan
 alter table public.wishlist_items add column if not exists status public.wishlist_response_status not null default 'not_contacted';
 alter table public.wishlist_items add column if not exists status_updated_at timestamptz;
 alter table public.wishlist_items add column if not exists status_updated_by uuid references public.staff_profiles(id);
+
+-- A purchased entry is kept (not deleted) so staff still see the closed deal
+-- for a week -- see lib/closedRequests.js. It's history, not an active
+-- wish, so it's left out of the per-user uniqueness: the customer (or staff)
+-- can wishlist the same category/subcategory again alongside it. Replaces
+-- the original indexes, which covered every row.
+drop index if exists public.wishlist_items_category_only_key;
+drop index if exists public.wishlist_items_category_subcategory_key;
+create unique index if not exists wishlist_items_active_category_only_key
+  on public.wishlist_items (phone, category_icon_key)
+  where subcategory_id is null and status <> 'purchased';
+create unique index if not exists wishlist_items_active_category_subcategory_key
+  on public.wishlist_items (phone, category_icon_key, subcategory_id)
+  where subcategory_id is not null and status <> 'purchased';
 
 -- One row per tap of the Call button on a wishlist entry, for an audit trail
 -- of outreach. customer_phone/customer_name/staff_email are captured at call

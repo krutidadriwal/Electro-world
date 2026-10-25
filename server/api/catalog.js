@@ -67,6 +67,9 @@ async function wishlist(req, res) {
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
+// A deal staff closed ('purchased') is no longer something the customer
+// wants, so it's left out here and in wishlistPost -- the row itself is kept
+// for the staff list (see lib/closedRequests.js).
 async function wishlistGet(req, res) {
   const { phone, countryCode } = req.query;
   const normalizedPhone = normalizePhone(phone, countryCode);
@@ -79,7 +82,7 @@ async function wishlistGet(req, res) {
     const result = await pool.query(
       `select id, category_icon_key, category_name, subcategory_id, subcategory_name, created_at
        from public.wishlist_items
-       where phone = $1
+       where phone = $1 and status <> 'purchased'
        order by created_at desc`,
       [normalizedPhone]
     );
@@ -142,7 +145,7 @@ async function wishlistPost(req, res) {
     await pool.query('begin');
     try {
       await pool.query(
-        `delete from public.wishlist_items where phone = $1 and category_icon_key = $2`,
+        `delete from public.wishlist_items where phone = $1 and category_icon_key = $2 and status <> 'purchased'`,
         [normalizedPhone, categoryIconKey]
       );
 
@@ -187,7 +190,7 @@ async function wishlistPost(req, res) {
     const result = await pool.query(
       `select id, category_icon_key, category_name, subcategory_id, subcategory_name, created_at
        from public.wishlist_items
-       where phone = $1 and category_icon_key = $2
+       where phone = $1 and category_icon_key = $2 and status <> 'purchased'
        order by created_at desc`,
       [normalizedPhone, categoryIconKey]
     );

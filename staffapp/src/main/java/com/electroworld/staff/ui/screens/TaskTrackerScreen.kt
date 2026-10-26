@@ -123,6 +123,7 @@ fun TaskTrackerScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
   var errorMessage by remember { mutableStateOf<String?>(null) }
   var staffError by remember { mutableStateOf<String?>(null) }
   var refreshTrigger by remember { mutableStateOf(0) }
+  var isRefreshing by remember { mutableStateOf(false) }
   var filter by remember { mutableStateOf(FILTER_ACTIVE) }
   // null = no editor open; editingNew = the "new task" editor.
   var editingTask by remember { mutableStateOf<TrackerTask?>(null) }
@@ -138,6 +139,7 @@ fun TaskTrackerScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
       errorMessage = "Failed to load tasks (${describeError(e)})."
     } finally {
       isLoading = false
+      isRefreshing = false
     }
     // Loaded separately so a task-list failure can't leave the assignee
     // picker silently empty.
@@ -270,16 +272,19 @@ fun TaskTrackerScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
           CircularProgressIndicator()
         }
-      } else if (visibleTasks.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-          Text(
-            if (tasks.isEmpty()) "No tasks yet. Tap + to add one." else "Nothing here.",
-            color = MaterialTheme.colorScheme.outline
-          )
-        }
-      } else {
-        // Bottom padding keeps the last card clear of the FAB.
-        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp)) {
+      } else StaffPullToRefresh(isRefreshing = isRefreshing, onRefresh = { isRefreshing = true; refreshTrigger++ }) {
+        if (visibleTasks.isEmpty()) {
+          PullableMessage {
+            Text(
+              if (tasks.isEmpty()) "No tasks yet. Tap + to add one." else "Nothing here.",
+              color = MaterialTheme.colorScheme.outline
+            )
+          }
+        } else LazyColumn(
+          // Bottom padding keeps the last card clear of the FAB.
+          modifier = Modifier.fillMaxSize(),
+          contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp)
+        ) {
           items(visibleTasks, key = { it.id }) { task ->
             TaskRow(
               task = task,

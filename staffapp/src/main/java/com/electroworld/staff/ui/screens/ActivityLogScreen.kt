@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Refresh
@@ -89,7 +90,8 @@ private val WORK_TYPES = listOf(
   WorkType("spin", "Spin to Win", Icons.Default.Casino),
   WorkType("broadcast", "Broadcasts", Icons.Default.Campaign),
   WorkType("staff", "Staff accounts", Icons.Default.People),
-  WorkType("price_list", "Price list", Icons.Default.Sell)
+  WorkType("price_list", "Price list", Icons.Default.Sell),
+  WorkType("catalog", "Catalog setup", Icons.Default.Image)
 )
 
 private enum class DatePreset(val label: String) {
@@ -193,6 +195,7 @@ fun ActivityLogScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
   var entries by remember { mutableStateOf<List<ActivityLogEntry>>(emptyList()) }
   var nextCursor by remember { mutableStateOf<String?>(null) }
   var isLoading by remember { mutableStateOf(true) }
+  var isRefreshing by remember { mutableStateOf(false) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
 
   // Worked out once per filter change, so "Today" and the pages after the
@@ -218,8 +221,13 @@ fun ActivityLogScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
   LaunchedEffect(staffFilter, workFilter, range, refreshTrigger) {
     isLoading = true
     errorMessage = null
-    entries = emptyList()
-    nextCursor = null
+    // A pull keeps the current entries on screen until the new ones arrive;
+    // a filter change clears them straight away so stale rows never show
+    // under the new filters.
+    if (!isRefreshing) {
+      entries = emptyList()
+      nextCursor = null
+    }
     try {
       val page = fetchPage(before = null)
       entries = page.items
@@ -228,6 +236,7 @@ fun ActivityLogScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
       errorMessage = "Failed to load activity."
     } finally {
       isLoading = false
+      isRefreshing = false
     }
   }
 
@@ -310,19 +319,17 @@ fun ActivityLogScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
       }
 
-      if (isLoading) {
+      if (isLoading && !isRefreshing) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
           CircularProgressIndicator()
         }
-      } else if (entries.isEmpty() && errorMessage == null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-          Text("No activity for these filters.", color = MaterialTheme.colorScheme.outline)
-        }
-      } else {
+      } else StaffPullToRefresh(isRefreshing = isRefreshing, onRefresh = { isRefreshing = true; refreshTrigger++ }) {
         val grouped = entries
           .mapNotNull { entry -> parseServerTimestamp(entry.createdAt)?.let { entry to it } }
           .groupBy { (_, date) -> dayHeading(date) }
-        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+        if (entries.isEmpty()) PullableMessage {
+          if (errorMessage == null) Text("No activity for these filters.", color = MaterialTheme.colorScheme.outline)
+        } else LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
           grouped.forEach { (heading, dayEntries) ->
             item(key = "heading-$heading") {
               Text(

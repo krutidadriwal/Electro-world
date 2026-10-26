@@ -14,6 +14,8 @@ data class InstallationItem(
   @Json(name = "customer_name") val customerName: String,
   @Json(name = "category_name") val categoryName: String,
   @Json(name = "item_name") val itemName: String,
+  // Null on requests made before companies were added.
+  @Json(name = "company_name") val companyName: String? = null,
   @Json(name = "wants_demo") val wantsDemo: Boolean,
   @Json(name = "wants_installation") val wantsInstallation: Boolean,
   val address: String,
@@ -63,6 +65,7 @@ data class InstallationAddRequest(
   val customerName: String,
   val categoryIconKey: String,
   val itemName: String,
+  val companyId: String,
   val wantsDemo: Boolean,
   val wantsInstallation: Boolean,
   val address: String,

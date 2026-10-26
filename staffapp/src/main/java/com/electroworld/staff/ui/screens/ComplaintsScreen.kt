@@ -3,7 +3,9 @@ package com.electroworld.staff.ui.screens
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Search
@@ -50,15 +53,21 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.electroworld.staff.data.network.Category
+import com.electroworld.staff.data.network.Company
 import com.electroworld.staff.data.network.ComplaintAddRequest
 import com.electroworld.staff.data.network.ComplaintItem
 import com.electroworld.staff.data.network.ComplaintStatusRequest
 import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.network.Subcategory
 import com.electroworld.staff.data.network.lookupCustomerName
+import com.electroworld.staff.ui.share.RequestShareContent
+import com.electroworld.staff.ui.share.RequestShareHost
+import com.electroworld.staff.ui.share.rememberRequestSharer
 import com.electroworld.staff.ui.theme.staffCardColors
 import com.electroworld.staff.ui.theme.statusCardColors
 import kotlinx.coroutines.launch
@@ -73,6 +82,7 @@ fun ComplaintsScreen(initialStatusFilter: String? = null, onBack: () -> Unit, mo
   var isLoading by remember { mutableStateOf(true) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
   var refreshTrigger by remember { mutableStateOf(0) }
+  var isRefreshing by remember { mutableStateOf(false) }
   var searchQuery by remember { mutableStateOf("") }
   var statusFilter by remember { mutableStateOf(initialStatusFilter) }
   var selectedItem by remember { mutableStateOf<ComplaintItem?>(null) }
@@ -99,6 +109,7 @@ fun ComplaintsScreen(initialStatusFilter: String? = null, onBack: () -> Unit, mo
       errorMessage = "Failed to load complaints."
     } finally {
       isLoading = false
+      isRefreshing = false
     }
   }
 
@@ -123,12 +134,16 @@ fun ComplaintsScreen(initialStatusFilter: String? = null, onBack: () -> Unit, mo
     }
   }
 
+  val sharer = rememberRequestSharer()
+  RequestShareHost(sharer)
+
   selectedItem?.let { item ->
     BackHandler { selectedItem = null }
     ComplaintDetailScreen(
       item = item,
       onBack = { selectedItem = null },
       onStatusSelected = { newStatus, fields -> updateStatus(item, newStatus, fields) },
+      onShare = { sharer.share(complaintShareContent(item)) },
       modifier = modifier
     )
     return
@@ -213,19 +228,20 @@ fun ComplaintsScreen(initialStatusFilter: String? = null, onBack: () -> Unit, mo
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
           CircularProgressIndicator()
         }
-      } else if (filteredItems.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-          Text(
-            if (items.isEmpty()) "No complaints yet." else "No matches found.",
-            color = MaterialTheme.colorScheme.outline
-          )
-        }
-      } else {
-        LazyColumn(contentPadding = PaddingValues(16.dp)) {
+      } else StaffPullToRefresh(isRefreshing = isRefreshing, onRefresh = { isRefreshing = true; refreshTrigger++ }) {
+        if (filteredItems.isEmpty()) {
+          PullableMessage {
+            Text(
+              if (items.isEmpty()) "No complaints yet." else "No matches found.",
+              color = MaterialTheme.colorScheme.outline
+            )
+          }
+        } else LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
           items(filteredItems, key = { it.id }) { complaint ->
             ComplaintRow(
               item = complaint,
               onClick = { selectedItem = complaint },
+              onLongClick = { sharer.share(complaintShareContent(complaint)) },
               onStatusSelected = { newStatus, fields -> updateStatus(complaint, newStatus, fields) },
               onCall = {
                 val number = complaint.contactPhone?.takeIf { it.isNotBlank() } ?: complaint.customerPhone
@@ -239,14 +255,29 @@ fun ComplaintsScreen(initialStatusFilter: String? = null, onBack: () -> Unit, mo
   }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ComplaintRow(
   item: ComplaintItem,
   onClick: () -> Unit,
+  onLongClick: () -> Unit,
   onStatusSelected: (String, StatusChangeFields) -> Unit,
   onCall: () -> Unit
 ) {
-  Card(colors = statusCardColors(serviceStatusColor(item.status)), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).clickable(onClick = onClick)) {
+  val haptics = LocalHapticFeedback.current
+  Card(
+    colors = statusCardColors(serviceStatusColor(item.status)),
+    modifier = Modifier
+      .fillMaxWidth()
+      .padding(bottom = 12.dp)
+      .combinedClickable(
+        onClick = onClick,
+        onLongClick = {
+          haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+          onLongClick()
+        }
+      )
+  ) {
     Column(modifier = Modifier.padding(16.dp)) {
       Row(
         modifier = Modifier.fillMaxWidth(),
@@ -267,7 +298,7 @@ private fun ComplaintRow(
       }
 
       Text(
-        if (item.subcategoryName != null) "${item.categoryName} · ${item.subcategoryName}" else item.categoryName,
+        listOfNotNull(item.companyName, item.categoryName, item.subcategoryName).joinToString(" · "),
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.padding(top = 8.dp)
       )
@@ -292,6 +323,7 @@ private fun ComplaintDetailScreen(
   item: ComplaintItem,
   onBack: () -> Unit,
   onStatusSelected: (String, StatusChangeFields) -> Unit,
+  onShare: () -> Unit,
   modifier: Modifier = Modifier
 ) {
   Scaffold(
@@ -301,6 +333,11 @@ private fun ComplaintDetailScreen(
         navigationIcon = {
           IconButton(onClick = onBack) {
             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+          }
+        },
+        actions = {
+          IconButton(onClick = onShare) {
+            Icon(Icons.Default.Share, contentDescription = "Share as image")
           }
         }
       )
@@ -316,26 +353,41 @@ private fun ComplaintDetailScreen(
       )
 
       Spacer(modifier = Modifier.height(16.dp))
-      DetailField("Category", if (item.subcategoryName != null) "${item.categoryName} · ${item.subcategoryName}" else item.categoryName)
-      DetailField("Description", item.description)
-      DetailField("Address", item.address)
-      item.contactPhone?.takeIf { it.isNotBlank() }?.let { DetailField("Contact phone", it) }
-      item.invoiceFileName?.takeIf { it.isNotBlank() }?.let { DetailField("Invoice", it) }
-      DetailField("Reported", formatIst(item.createdAt) ?: item.createdAt)
-      item.resolvedAt?.let { DetailField("Resolved", formatIst(it) ?: it) }
-      item.complaintNumber?.takeIf { it.isNotBlank() }?.let { DetailField("Complaint request ID", it) }
-      if (!item.technicianName.isNullOrBlank() || !item.technicianMobile.isNullOrBlank()) {
-        DetailField("Technician", listOfNotNull(item.technicianName, item.technicianMobile).joinToString(" - "))
-      }
-      item.blockedReason?.takeIf { it.isNotBlank() }?.let { DetailField("Blocked reason", it) }
-      item.cancellationReason?.takeIf { it.isNotBlank() }?.let { DetailField("Cancellation reason", it) }
-      item.closedDate?.let { DetailField("Closed date", it) }
+      complaintDetailFields(item).forEach { (label, value) -> DetailField(label, value) }
 
       Spacer(modifier = Modifier.height(16.dp))
       StatusAssistChip(currentStatus = item.status, referenceLabel = "Complaint request ID", onConfirmed = onStatusSelected)
     }
   }
 }
+
+// Everything the detail screen lists under the customer's name -- also what
+// the share image carries (plus the status, a chip on screen).
+private fun complaintDetailFields(item: ComplaintItem): List<Pair<String, String>> = buildList {
+  item.companyName?.let { add("Company" to it) }
+  add("Category" to if (item.subcategoryName != null) "${item.categoryName} · ${item.subcategoryName}" else item.categoryName)
+  add("Description" to item.description)
+  add("Address" to item.address)
+  item.contactPhone?.takeIf { it.isNotBlank() }?.let { add("Contact phone" to it) }
+  item.invoiceFileName?.takeIf { it.isNotBlank() }?.let { add("Invoice" to it) }
+  add("Reported" to (formatIst(item.createdAt) ?: item.createdAt))
+  item.resolvedAt?.let { add("Resolved" to (formatIst(it) ?: it)) }
+  item.complaintNumber?.takeIf { it.isNotBlank() }?.let { add("Complaint request ID" to it) }
+  if (!item.technicianName.isNullOrBlank() || !item.technicianMobile.isNullOrBlank()) {
+    add("Technician" to listOfNotNull(item.technicianName, item.technicianMobile).joinToString(" - "))
+  }
+  item.blockedReason?.takeIf { it.isNotBlank() }?.let { add("Blocked reason" to it) }
+  item.cancellationReason?.takeIf { it.isNotBlank() }?.let { add("Cancellation reason" to it) }
+  item.closedDate?.let { add("Closed date" to it) }
+}
+
+private fun complaintShareContent(item: ComplaintItem) = RequestShareContent(
+  badge = "COMPLAINT",
+  title = "Complaint details",
+  customerName = item.customerName,
+  customerPhone = item.customerPhone,
+  fields = complaintDetailFields(item) + ("Status" to serviceStatusLabel(item.status))
+)
 
 @Composable
 private fun DetailField(label: String, value: String) {
@@ -360,6 +412,7 @@ private fun AddComplaintDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
   var isLookingUpCustomer by remember { mutableStateOf(false) }
   var selectedCategory by remember { mutableStateOf<Category?>(null) }
   var selectedSubcategory by remember { mutableStateOf<Subcategory?>(null) }
+  var selectedCompany by remember { mutableStateOf<Company?>(null) }
   var categoryMenuExpanded by remember { mutableStateOf(false) }
   var subcategoryMenuExpanded by remember { mutableStateOf(false) }
   var description by remember { mutableStateOf("") }
@@ -480,6 +533,8 @@ private fun AddComplaintDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
           }
         }
 
+        CompanyDropdown(selected = selectedCompany, onSelect = { selectedCompany = it })
+
         OutlinedTextField(
           value = description,
           onValueChange = { description = it },
@@ -510,9 +565,10 @@ private fun AddComplaintDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
     confirmButton = {
       Button(
         enabled = !isSaving && phone.length == 10 && (customerExists || customerName.isNotBlank()) && selectedCategory != null &&
-          description.isNotBlank() && address.isNotBlank(),
+          selectedCompany != null && description.isNotBlank() && address.isNotBlank(),
         onClick = {
           val category = selectedCategory ?: return@Button
+          val company = selectedCompany ?: return@Button
           errorMessage = null
           isSaving = true
           scope.launch {
@@ -523,6 +579,7 @@ private fun AddComplaintDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
                   customerName = customerName.trim(),
                   categoryIconKey = category.iconKey,
                   subcategoryId = selectedSubcategory?.id,
+                  companyId = company.id,
                   description = description.trim(),
                   address = address.trim(),
                   contactPhone = contactPhone.takeIf { it.isNotBlank() }

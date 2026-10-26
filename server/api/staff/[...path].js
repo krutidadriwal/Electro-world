@@ -13,6 +13,7 @@ const { sendToTokens } = require('../../lib/fcm');
 const { spinOverview, spinPrize, spinPurchaseItem, spinGrant } = require('../../lib/staffSpin');
 const { syncInvoicePoints } = require('../../lib/invoicePoints');
 const { visibleInAppSql, wishlistVisibleInAppSql } = require('../../lib/closedRequests');
+const { UUID_REGEX, listCompanies, resolveCompany } = require('../../lib/companies');
 const {
   WORK_TYPES,
   WISHLIST_STATUS_LABELS,
@@ -116,6 +117,8 @@ module.exports = async function handler(req, res) {
       return priceListCategoryImages(req, res);
     case 'price-list-category-image':
       return priceListCategoryImageUpload(req, res);
+    case 'companies':
+      return companies(req, res);
     case 'wishlist-list':
       return wishlistList(req, res);
     case 'wishlist-add':
@@ -492,13 +495,77 @@ async function priceListCategoryImageUpload(req, res) {
        returning category, image_url`,
       [category.trim(), file.path, file.url]
     );
-    await logActivity(admin, { workType: 'price_list', description: `set the ${category.trim()} category image` });
+    await logActivity(admin, { workType: 'catalog', description: `set the ${category.trim()} category image` });
     return res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err instanceof StaffAuthError) {
       return res.status(err.status).json({ error: err.message });
     }
     console.error('upload price list category image error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// The Company dropdown's options (see public.companies in schema.sql).
+// GET    -- any signed-in staff member: the list, for the add dialogs
+// POST   { name } -- admin: add one (409 if the name exists, ignoring case)
+// DELETE ?id=     -- admin: remove one. Requests already made for it keep
+//                    showing its name (company_name is copied onto them).
+const UNIQUE_VIOLATION = '23505';
+const MAX_COMPANY_NAME_LENGTH = 60;
+
+async function companies(req, res) {
+  try {
+    if (req.method === 'GET') {
+      await requireStaff(req);
+      return res.status(200).json({ companies: await listCompanies(getPool()) });
+    }
+
+    if (req.method === 'POST') {
+      const name = typeof req.body?.name === 'string' ? req.body.name.trim().replace(/\s+/g, ' ') : '';
+      if (name.length === 0) {
+        return res.status(400).json({ error: 'name is required' });
+      }
+      if (name.length > MAX_COMPANY_NAME_LENGTH) {
+        return res.status(400).json({ error: `name must be at most ${MAX_COMPANY_NAME_LENGTH} characters` });
+      }
+      const admin = await requireAdmin(req);
+      try {
+        const result = await getPool().query(
+          `insert into public.companies (name) values ($1) returning id, name`,
+          [name]
+        );
+        await logActivity(admin, { workType: 'catalog', description: `added company ${name}` });
+        return res.status(201).json(result.rows[0]);
+      } catch (err) {
+        if (err.code === UNIQUE_VIOLATION) {
+          return res.status(409).json({ error: `${name} is already in the list` });
+        }
+        throw err;
+      }
+    }
+
+    if (req.method === 'DELETE') {
+      const { id } = req.query;
+      if (typeof id !== 'string' || !UUID_REGEX.test(id)) {
+        return res.status(400).json({ error: 'id query param is required' });
+      }
+      const admin = await requireAdmin(req);
+      const result = await getPool().query(`delete from public.companies where id = $1 returning name`, [id]);
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: 'Company not found' });
+      }
+      await logActivity(admin, { workType: 'catalog', description: `removed company ${result.rows[0].name}` });
+      return res.status(204).end();
+    }
+
+    res.setHeader('Allow', 'GET, POST, DELETE');
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('companies error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
@@ -766,6 +833,7 @@ async function complaintsList(req, res) {
          u.name as customer_name,
          c.category_name,
          c.subcategory_name,
+         c.company_name,
          c.description,
          c.address,
          c.contact_phone,
@@ -804,7 +872,7 @@ async function complaintsAdd(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { phone, countryCode, customerName, categoryIconKey, subcategoryId, description, address, contactPhone } = req.body ?? {};
+  const { phone, countryCode, customerName, categoryIconKey, subcategoryId, companyId, description, address, contactPhone } = req.body ?? {};
   const normalizedPhone = normalizePhone(phone, countryCode);
   if (!normalizedPhone) {
     return res.status(400).json({ error: 'phone must be a 10-digit number' });
@@ -846,6 +914,11 @@ async function complaintsAdd(req, res) {
       subcategory = subcategoryResult.rows[0];
     }
 
+    const { company, error: companyError } = await resolveCompany(pool, companyId);
+    if (companyError) {
+      return res.status(400).json({ error: companyError });
+    }
+
     const existingUser = await pool.query('select phone from public.users where phone = $1', [normalizedPhone]);
     if (existingUser.rowCount === 0) {
       if (!trimmedName) {
@@ -856,8 +929,9 @@ async function complaintsAdd(req, res) {
 
     const result = await pool.query(
       `insert into public.complaints
-         (phone, category_icon_key, category_name, subcategory_id, subcategory_name, description, address, contact_phone)
-       values ($1, $2, $3, $4, $5, $6, $7, $8)
+         (phone, category_icon_key, category_name, subcategory_id, subcategory_name, description, address, contact_phone,
+          company_id, company_name)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        returning id`,
       [
         normalizedPhone,
@@ -867,12 +941,14 @@ async function complaintsAdd(req, res) {
         subcategory ? subcategory.name : null,
         description.trim(),
         address.trim(),
-        typeof contactPhone === 'string' && contactPhone.trim().length > 0 ? contactPhone.trim() : null
+        typeof contactPhone === 'string' && contactPhone.trim().length > 0 ? contactPhone.trim() : null,
+        company.id,
+        company.name
       ]
     );
     await logActivity(staff, {
       workType: 'complaint',
-      description: `logged a ${categoryText(category.name, subcategory?.name)} complaint`,
+      description: `logged a ${company.name} ${categoryText(category.name, subcategory?.name)} complaint`,
       customerPhone: normalizedPhone
     });
     return res.status(201).json({ id: result.rows[0].id });
@@ -977,6 +1053,7 @@ async function installationsList(req, res) {
          u.name as customer_name,
          i.category_name,
          i.item_name,
+         i.company_name,
          i.wants_demo,
          i.wants_installation,
          i.address,
@@ -1021,6 +1098,7 @@ async function installationsAdd(req, res) {
     customerName,
     categoryIconKey,
     itemName,
+    companyId,
     wantsDemo,
     wantsInstallation,
     address,
@@ -1067,6 +1145,11 @@ async function installationsAdd(req, res) {
       return res.status(400).json({ error: 'Demo is not available for this category' });
     }
 
+    const { company, error: companyError } = await resolveCompany(pool, companyId);
+    if (companyError) {
+      return res.status(400).json({ error: companyError });
+    }
+
     const existingUser = await pool.query('select phone from public.users where phone = $1', [normalizedPhone]);
     if (existingUser.rowCount === 0) {
       if (!trimmedName) {
@@ -1077,8 +1160,9 @@ async function installationsAdd(req, res) {
 
     const result = await pool.query(
       `insert into public.installations
-         (phone, category_icon_key, category_name, item_name, wants_demo, wants_installation, address, contact_phone)
-       values ($1, $2, $3, $4, $5, $6, $7, $8)
+         (phone, category_icon_key, category_name, item_name, wants_demo, wants_installation, address, contact_phone,
+          company_id, company_name)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        returning id`,
       [
         normalizedPhone,
@@ -1088,12 +1172,14 @@ async function installationsAdd(req, res) {
         demo,
         installation,
         address.trim(),
-        typeof contactPhone === 'string' && contactPhone.trim().length > 0 ? contactPhone.trim() : null
+        typeof contactPhone === 'string' && contactPhone.trim().length > 0 ? contactPhone.trim() : null,
+        company.id,
+        company.name
       ]
     );
     await logActivity(staff, {
       workType: 'installation',
-      description: `logged a ${installationKindText(demo, installation)} request for ${itemName.trim()}`,
+      description: `logged a ${installationKindText(demo, installation)} request for ${company.name} ${itemName.trim()}`,
       customerPhone: normalizedPhone
     });
     return res.status(201).json({ id: result.rows[0].id });
@@ -1543,7 +1629,6 @@ async function customerLookup(req, res) {
 // plus its id, since a JS Date would round created_at to milliseconds and
 // skip or repeat rows at a page boundary.
 const ACTIVITY_LOG_PAGE_SIZE = 50;
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function activityLog(req, res) {
   if (req.method !== 'GET') {

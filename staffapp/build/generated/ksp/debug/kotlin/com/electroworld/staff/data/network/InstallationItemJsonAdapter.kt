@@ -11,30 +11,36 @@ import com.squareup.moshi.JsonWriter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.`internal`.Util
 import java.lang.NullPointerException
+import java.lang.reflect.Constructor
 import kotlin.Boolean
+import kotlin.Int
 import kotlin.String
 import kotlin.Suppress
 import kotlin.Unit
 import kotlin.collections.emptySet
+import kotlin.jvm.Volatile
 import kotlin.text.buildString
 
 public class InstallationItemJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<InstallationItem>() {
   private val options: JsonReader.Options = JsonReader.Options.of("id", "customer_phone",
-      "customer_name", "category_name", "item_name", "wants_demo", "wants_installation", "address",
-      "contact_phone", "invoice_file_name", "status", "installation_number", "technician_name",
-      "technician_mobile", "blocked_reason", "cancellation_reason", "closed_date", "created_at",
-      "updated_at", "resolved_at")
+      "customer_name", "category_name", "item_name", "company_name", "wants_demo",
+      "wants_installation", "address", "contact_phone", "invoice_file_name", "status",
+      "installation_number", "technician_name", "technician_mobile", "blocked_reason",
+      "cancellation_reason", "closed_date", "created_at", "updated_at", "resolved_at")
 
   private val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java, emptySet(),
       "id")
 
+  private val nullableStringAdapter: JsonAdapter<String?> = moshi.adapter(String::class.java,
+      emptySet(), "companyName")
+
   private val booleanAdapter: JsonAdapter<Boolean> = moshi.adapter(Boolean::class.java, emptySet(),
       "wantsDemo")
 
-  private val nullableStringAdapter: JsonAdapter<String?> = moshi.adapter(String::class.java,
-      emptySet(), "contactPhone")
+  @Volatile
+  private var constructorRef: Constructor<InstallationItem>? = null
 
   public override fun toString(): String = buildString(38) {
       append("GeneratedJsonAdapter(").append("InstallationItem").append(')') }
@@ -45,6 +51,7 @@ public class InstallationItemJsonAdapter(
     var customerName: String? = null
     var categoryName: String? = null
     var itemName: String? = null
+    var companyName: String? = null
     var wantsDemo: Boolean? = null
     var wantsInstallation: Boolean? = null
     var address: String? = null
@@ -60,6 +67,7 @@ public class InstallationItemJsonAdapter(
     var createdAt: String? = null
     var updatedAt: String? = null
     var resolvedAt: String? = null
+    var mask0 = -1
     reader.beginObject()
     while (reader.hasNext()) {
       when (reader.selectName(options)) {
@@ -72,27 +80,32 @@ public class InstallationItemJsonAdapter(
             throw Util.unexpectedNull("categoryName", "category_name", reader)
         4 -> itemName = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("itemName",
             "item_name", reader)
-        5 -> wantsDemo = booleanAdapter.fromJson(reader) ?: throw Util.unexpectedNull("wantsDemo",
+        5 -> {
+          companyName = nullableStringAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 5).inv()
+          mask0 = mask0 and 0xffffffdf.toInt()
+        }
+        6 -> wantsDemo = booleanAdapter.fromJson(reader) ?: throw Util.unexpectedNull("wantsDemo",
             "wants_demo", reader)
-        6 -> wantsInstallation = booleanAdapter.fromJson(reader) ?:
+        7 -> wantsInstallation = booleanAdapter.fromJson(reader) ?:
             throw Util.unexpectedNull("wantsInstallation", "wants_installation", reader)
-        7 -> address = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("address",
+        8 -> address = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("address",
             "address", reader)
-        8 -> contactPhone = nullableStringAdapter.fromJson(reader)
-        9 -> invoiceFileName = nullableStringAdapter.fromJson(reader)
-        10 -> status = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("status",
+        9 -> contactPhone = nullableStringAdapter.fromJson(reader)
+        10 -> invoiceFileName = nullableStringAdapter.fromJson(reader)
+        11 -> status = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("status",
             "status", reader)
-        11 -> installationNumber = nullableStringAdapter.fromJson(reader)
-        12 -> technicianName = nullableStringAdapter.fromJson(reader)
-        13 -> technicianMobile = nullableStringAdapter.fromJson(reader)
-        14 -> blockedReason = nullableStringAdapter.fromJson(reader)
-        15 -> cancellationReason = nullableStringAdapter.fromJson(reader)
-        16 -> closedDate = nullableStringAdapter.fromJson(reader)
-        17 -> createdAt = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("createdAt",
+        12 -> installationNumber = nullableStringAdapter.fromJson(reader)
+        13 -> technicianName = nullableStringAdapter.fromJson(reader)
+        14 -> technicianMobile = nullableStringAdapter.fromJson(reader)
+        15 -> blockedReason = nullableStringAdapter.fromJson(reader)
+        16 -> cancellationReason = nullableStringAdapter.fromJson(reader)
+        17 -> closedDate = nullableStringAdapter.fromJson(reader)
+        18 -> createdAt = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("createdAt",
             "created_at", reader)
-        18 -> updatedAt = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("updatedAt",
+        19 -> updatedAt = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("updatedAt",
             "updated_at", reader)
-        19 -> resolvedAt = nullableStringAdapter.fromJson(reader)
+        20 -> resolvedAt = nullableStringAdapter.fromJson(reader)
         -1 -> {
           // Unknown name, skip it.
           reader.skipName()
@@ -101,32 +114,74 @@ public class InstallationItemJsonAdapter(
       }
     }
     reader.endObject()
-    return InstallationItem(
-        id = id ?: throw Util.missingProperty("id", "id", reader),
-        customerPhone = customerPhone ?: throw Util.missingProperty("customerPhone",
-            "customer_phone", reader),
-        customerName = customerName ?: throw Util.missingProperty("customerName", "customer_name",
-            reader),
-        categoryName = categoryName ?: throw Util.missingProperty("categoryName", "category_name",
-            reader),
-        itemName = itemName ?: throw Util.missingProperty("itemName", "item_name", reader),
-        wantsDemo = wantsDemo ?: throw Util.missingProperty("wantsDemo", "wants_demo", reader),
-        wantsInstallation = wantsInstallation ?: throw Util.missingProperty("wantsInstallation",
-            "wants_installation", reader),
-        address = address ?: throw Util.missingProperty("address", "address", reader),
-        contactPhone = contactPhone,
-        invoiceFileName = invoiceFileName,
-        status = status ?: throw Util.missingProperty("status", "status", reader),
-        installationNumber = installationNumber,
-        technicianName = technicianName,
-        technicianMobile = technicianMobile,
-        blockedReason = blockedReason,
-        cancellationReason = cancellationReason,
-        closedDate = closedDate,
-        createdAt = createdAt ?: throw Util.missingProperty("createdAt", "created_at", reader),
-        updatedAt = updatedAt ?: throw Util.missingProperty("updatedAt", "updated_at", reader),
-        resolvedAt = resolvedAt
-    )
+    if (mask0 == 0xffffffdf.toInt()) {
+      // All parameters with defaults are set, invoke the constructor directly
+      return  InstallationItem(
+          id = id ?: throw Util.missingProperty("id", "id", reader),
+          customerPhone = customerPhone ?: throw Util.missingProperty("customerPhone",
+              "customer_phone", reader),
+          customerName = customerName ?: throw Util.missingProperty("customerName", "customer_name",
+              reader),
+          categoryName = categoryName ?: throw Util.missingProperty("categoryName", "category_name",
+              reader),
+          itemName = itemName ?: throw Util.missingProperty("itemName", "item_name", reader),
+          companyName = companyName,
+          wantsDemo = wantsDemo ?: throw Util.missingProperty("wantsDemo", "wants_demo", reader),
+          wantsInstallation = wantsInstallation ?: throw Util.missingProperty("wantsInstallation",
+              "wants_installation", reader),
+          address = address ?: throw Util.missingProperty("address", "address", reader),
+          contactPhone = contactPhone,
+          invoiceFileName = invoiceFileName,
+          status = status ?: throw Util.missingProperty("status", "status", reader),
+          installationNumber = installationNumber,
+          technicianName = technicianName,
+          technicianMobile = technicianMobile,
+          blockedReason = blockedReason,
+          cancellationReason = cancellationReason,
+          closedDate = closedDate,
+          createdAt = createdAt ?: throw Util.missingProperty("createdAt", "created_at", reader),
+          updatedAt = updatedAt ?: throw Util.missingProperty("updatedAt", "updated_at", reader),
+          resolvedAt = resolvedAt
+      )
+    } else {
+      // Reflectively invoke the synthetic defaults constructor
+      @Suppress("UNCHECKED_CAST")
+      val localConstructor: Constructor<InstallationItem> = this.constructorRef ?:
+          InstallationItem::class.java.getDeclaredConstructor(String::class.java,
+          String::class.java, String::class.java, String::class.java, String::class.java,
+          String::class.java, Boolean::class.javaPrimitiveType, Boolean::class.javaPrimitiveType,
+          String::class.java, String::class.java, String::class.java, String::class.java,
+          String::class.java, String::class.java, String::class.java, String::class.java,
+          String::class.java, String::class.java, String::class.java, String::class.java,
+          String::class.java, Int::class.javaPrimitiveType, Util.DEFAULT_CONSTRUCTOR_MARKER).also {
+          this.constructorRef = it }
+      return localConstructor.newInstance(
+          id ?: throw Util.missingProperty("id", "id", reader),
+          customerPhone ?: throw Util.missingProperty("customerPhone", "customer_phone", reader),
+          customerName ?: throw Util.missingProperty("customerName", "customer_name", reader),
+          categoryName ?: throw Util.missingProperty("categoryName", "category_name", reader),
+          itemName ?: throw Util.missingProperty("itemName", "item_name", reader),
+          companyName,
+          wantsDemo ?: throw Util.missingProperty("wantsDemo", "wants_demo", reader),
+          wantsInstallation ?: throw Util.missingProperty("wantsInstallation", "wants_installation",
+              reader),
+          address ?: throw Util.missingProperty("address", "address", reader),
+          contactPhone,
+          invoiceFileName,
+          status ?: throw Util.missingProperty("status", "status", reader),
+          installationNumber,
+          technicianName,
+          technicianMobile,
+          blockedReason,
+          cancellationReason,
+          closedDate,
+          createdAt ?: throw Util.missingProperty("createdAt", "created_at", reader),
+          updatedAt ?: throw Util.missingProperty("updatedAt", "updated_at", reader),
+          resolvedAt,
+          mask0,
+          /* DefaultConstructorMarker */ null
+      )
+    }
   }
 
   public override fun toJson(writer: JsonWriter, value_: InstallationItem?): Unit {
@@ -144,6 +199,8 @@ public class InstallationItemJsonAdapter(
     stringAdapter.toJson(writer, value_.categoryName)
     writer.name("item_name")
     stringAdapter.toJson(writer, value_.itemName)
+    writer.name("company_name")
+    nullableStringAdapter.toJson(writer, value_.companyName)
     writer.name("wants_demo")
     booleanAdapter.toJson(writer, value_.wantsDemo)
     writer.name("wants_installation")

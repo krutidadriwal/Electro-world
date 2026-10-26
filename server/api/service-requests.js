@@ -9,6 +9,7 @@ const { getPool } = require('../lib/db');
 const { normalizePhone } = require('../lib/phone');
 const { notifyStaff } = require('../lib/staffNotify');
 const { visibleInAppSql } = require('../lib/closedRequests');
+const { resolveCompany } = require('../lib/companies');
 
 module.exports = async function handler(req, res) {
   switch (req.query.resource) {
@@ -43,7 +44,7 @@ async function complaintsGet(req, res) {
     const pool = getPool();
     const result = await pool.query(
       `select id, invoice_file_id, invoice_file_name, category_icon_key, category_name,
-              subcategory_id, subcategory_name, description, address,
+              subcategory_id, subcategory_name, company_name, description, address,
               contact_phone, status, complaint_request_id as complaint_number, technician_name, technician_mobile,
               created_at, updated_at, resolved_at
        from public.complaints
@@ -66,6 +67,7 @@ async function complaintsPost(req, res) {
     invoiceFileName,
     categoryIconKey,
     subcategoryId,
+    companyId,
     description,
     address,
     contactPhone
@@ -113,13 +115,18 @@ async function complaintsPost(req, res) {
       subcategory = subcategoryResult.rows[0];
     }
 
+    const { company, error: companyError } = await resolveCompany(pool, companyId);
+    if (companyError) {
+      return res.status(400).json({ error: companyError });
+    }
+
     const result = await pool.query(
       `insert into public.complaints
          (phone, invoice_file_id, invoice_file_name, category_icon_key, category_name,
-          subcategory_id, subcategory_name, description, address, contact_phone)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          subcategory_id, subcategory_name, description, address, contact_phone, company_id, company_name)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        returning id, invoice_file_id, invoice_file_name, category_icon_key, category_name,
-                 subcategory_id, subcategory_name, description, address,
+                 subcategory_id, subcategory_name, company_name, description, address,
                  contact_phone, status, complaint_request_id as complaint_number, created_at, updated_at, resolved_at`,
       [
         normalizedPhone,
@@ -131,7 +138,9 @@ async function complaintsPost(req, res) {
         subcategory ? subcategory.name : null,
         description.trim(),
         address.trim(),
-        typeof contactPhone === 'string' && contactPhone.trim().length > 0 ? contactPhone.trim() : null
+        typeof contactPhone === 'string' && contactPhone.trim().length > 0 ? contactPhone.trim() : null,
+        company.id,
+        company.name
       ]
     );
     const countResult = await pool.query(
@@ -173,7 +182,7 @@ async function installationsGet(req, res) {
     const pool = getPool();
     const result = await pool.query(
       `select id, invoice_file_id, invoice_file_name, category_icon_key, category_name,
-              item_name, wants_demo, wants_installation, address,
+              item_name, company_name, wants_demo, wants_installation, address,
               contact_phone, status, installation_request_id as installation_number, technician_name, technician_mobile,
               created_at, updated_at, resolved_at
        from public.installations
@@ -196,6 +205,7 @@ async function installationsPost(req, res) {
     invoiceFileName,
     categoryIconKey,
     itemName,
+    companyId,
     wantsDemo,
     wantsInstallation,
     address,
@@ -243,13 +253,18 @@ async function installationsPost(req, res) {
       return res.status(400).json({ error: 'Demo is not available for this category' });
     }
 
+    const { company, error: companyError } = await resolveCompany(pool, companyId);
+    if (companyError) {
+      return res.status(400).json({ error: companyError });
+    }
+
     const result = await pool.query(
       `insert into public.installations
          (phone, invoice_file_id, invoice_file_name, category_icon_key, category_name,
-          item_name, wants_demo, wants_installation, address, contact_phone)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          item_name, wants_demo, wants_installation, address, contact_phone, company_id, company_name)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        returning id, invoice_file_id, invoice_file_name, category_icon_key, category_name,
-                 item_name, wants_demo, wants_installation, address,
+                 item_name, company_name, wants_demo, wants_installation, address,
                  contact_phone, status, installation_request_id as installation_number, created_at, updated_at, resolved_at`,
       [
         normalizedPhone,
@@ -261,7 +276,9 @@ async function installationsPost(req, res) {
         demo,
         installation,
         address.trim(),
-        typeof contactPhone === 'string' && contactPhone.trim().length > 0 ? contactPhone.trim() : null
+        typeof contactPhone === 'string' && contactPhone.trim().length > 0 ? contactPhone.trim() : null,
+        company.id,
+        company.name
       ]
     );
     const countResult = await pool.query(

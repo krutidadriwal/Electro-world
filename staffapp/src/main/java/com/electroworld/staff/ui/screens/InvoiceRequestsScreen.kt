@@ -72,6 +72,7 @@ fun InvoiceRequestsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
   var isLoading by remember { mutableStateOf(true) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
   var refreshTrigger by remember { mutableStateOf(0) }
+  var isRefreshing by remember { mutableStateOf(false) }
   var searchQuery by remember { mutableStateOf("") }
   val scope = rememberCoroutineScope()
   val context = LocalContext.current
@@ -92,6 +93,7 @@ fun InvoiceRequestsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
       errorMessage = "Failed to load invoice requests."
     } finally {
       isLoading = false
+      isRefreshing = false
     }
   }
 
@@ -141,15 +143,15 @@ fun InvoiceRequestsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
           CircularProgressIndicator()
         }
-      } else if (filteredItems.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-          Text(
-            if (items.isEmpty()) "No invoice requests yet." else "No matches found.",
-            color = MaterialTheme.colorScheme.outline
-          )
-        }
-      } else {
-        LazyColumn(contentPadding = PaddingValues(16.dp)) {
+      } else StaffPullToRefresh(isRefreshing = isRefreshing, onRefresh = { isRefreshing = true; refreshTrigger++ }) {
+        if (filteredItems.isEmpty()) {
+          PullableMessage {
+            Text(
+              if (items.isEmpty()) "No invoice requests yet." else "No matches found.",
+              color = MaterialTheme.colorScheme.outline
+            )
+          }
+        } else LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
           items(filteredItems, key = { it.id }) { item ->
             InvoiceRequestRow(
               item = item,

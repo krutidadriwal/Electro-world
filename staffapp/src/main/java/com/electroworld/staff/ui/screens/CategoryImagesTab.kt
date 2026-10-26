@@ -18,18 +18,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,18 +45,19 @@ import com.electroworld.staff.data.network.UploadCategoryImageRequest
 import com.electroworld.staff.ui.theme.staffCardColors
 import kotlinx.coroutines.launch
 
-// Admin-only: assigns the hero image shown at the end of CustomerPriceScreen
-// (PriceListScreen.kt) for every item in a category. One category at a time --
-// tapping a row's button opens the system picker scoped to that row.
-@OptIn(ExperimentalMaterial3Api::class)
+// Admin-only, the Category Images tab of Catalog Setup: assigns the hero
+// image shown at the end of CustomerPriceScreen (PriceListScreen.kt) for
+// every item in a category. One category at a time -- tapping a row's button
+// opens the system picker scoped to that row.
 @Composable
-fun CategoryImagesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun CategoryImagesTab(modifier: Modifier = Modifier) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
 
   var categories by remember { mutableStateOf<List<CategoryImage>>(emptyList()) }
   var isLoading by remember { mutableStateOf(true) }
   var refreshTrigger by remember { mutableStateOf(0) }
+  var isRefreshing by remember { mutableStateOf(false) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
   var uploadingCategory by remember { mutableStateOf<String?>(null) }
   // Set right before launching the picker, read in its callback -- the
@@ -111,46 +107,33 @@ fun CategoryImagesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
       errorMessage = "Failed to load categories."
     } finally {
       isLoading = false
+      isRefreshing = false
     }
   }
 
-  Scaffold(
-    topBar = {
-      TopAppBar(
-        title = { Text("Category Images") },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-          }
-        }
+  Column(modifier = modifier.fillMaxSize()) {
+    errorMessage?.let {
+      Text(
+        it,
+        color = MaterialTheme.colorScheme.error,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
       )
-    },
-    modifier = modifier
-  ) { padding ->
-    Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-      errorMessage?.let {
-        Text(
-          it,
-          color = MaterialTheme.colorScheme.error,
-          modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-        )
+    }
+    if (isLoading && categories.isEmpty()) {
+      Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator()
       }
-      if (isLoading && categories.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-          CircularProgressIndicator()
-        }
-      } else {
-        LazyColumn(contentPadding = PaddingValues(16.dp)) {
-          items(categories) { item ->
-            CategoryImageRow(
-              item = item,
-              isUploading = uploadingCategory == item.category,
-              onPick = {
-                pendingCategory = item.category
-                pickImageLauncher.launch("image/*")
-              }
-            )
-          }
+    } else StaffPullToRefresh(isRefreshing = isRefreshing, onRefresh = { isRefreshing = true; refreshTrigger++ }) {
+      LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
+        items(categories) { item ->
+          CategoryImageRow(
+            item = item,
+            isUploading = uploadingCategory == item.category,
+            onPick = {
+              pendingCategory = item.category
+              pickImageLauncher.launch("image/*")
+            }
+          )
         }
       }
     }

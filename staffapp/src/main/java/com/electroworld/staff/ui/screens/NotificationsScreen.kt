@@ -63,6 +63,7 @@ fun NotificationsScreen(isAdmin: Boolean, onBack: () -> Unit, modifier: Modifier
   var isLoading by remember { mutableStateOf(true) }
   var showCompose by remember { mutableStateOf(false) }
   var refreshTrigger by remember { mutableStateOf(0) }
+  var isRefreshing by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
 
   LaunchedEffect(refreshTrigger) {
@@ -70,10 +71,10 @@ fun NotificationsScreen(isAdmin: Boolean, onBack: () -> Unit, modifier: Modifier
     try {
       notifications = NetworkModule.notificationsApi.list().notifications
     } catch (e: Exception) {
-      // Leave the previous list showing; a manual pull-to-refresh isn't
-      // implemented yet for this first pass.
+      // Leave the previous list showing; pulling down retries.
     } finally {
       isLoading = false
+      isRefreshing = false
     }
   }
 
@@ -109,12 +110,14 @@ fun NotificationsScreen(isAdmin: Boolean, onBack: () -> Unit, modifier: Modifier
     modifier = modifier
   ) { padding ->
     Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-      if (isLoading && notifications.isEmpty()) {
+      if (isLoading && notifications.isEmpty() && !isRefreshing) {
         CircularProgressIndicator(modifier = Modifier.padding(24.dp))
-      } else if (notifications.isEmpty()) {
-        Text("No notifications sent yet.", modifier = Modifier.padding(24.dp))
-      } else {
-        LazyColumn(contentPadding = PaddingValues(16.dp)) {
+      } else StaffPullToRefresh(isRefreshing = isRefreshing, onRefresh = { isRefreshing = true; refreshTrigger++ }) {
+        if (notifications.isEmpty()) {
+          PullableMessage {
+            Text("No notifications sent yet.")
+          }
+        } else LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
           items(notifications) { notification ->
             NotificationCard(notification)
           }

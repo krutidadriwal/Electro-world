@@ -110,17 +110,21 @@ fun ShareFlowHost(state: ShareFlowState) {
     )
   }
 
-  if (state.isWorking) {
-    Dialog(onDismissRequest = {}) {
-      Card {
-        Row(
-          modifier = Modifier.padding(24.dp),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-          CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-          Text("Preparing image…")
-        }
+  if (state.isWorking) PreparingImageDialog()
+}
+
+// Shown while a share image is drawn and saved -- also used by RequestShare.kt.
+@Composable
+internal fun PreparingImageDialog() {
+  Dialog(onDismissRequest = {}) {
+    Card {
+      Row(
+        modifier = Modifier.padding(24.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+      ) {
+        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+        Text("Preparing image…")
       }
     }
   }
@@ -265,7 +269,7 @@ fun reshare(context: Context, record: ShareRecord) {
   launchShareSheet(context, file)
 }
 
-private fun launchShareSheet(context: Context, file: File) {
+internal fun launchShareSheet(context: Context, file: File) {
   val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
   val send = Intent(Intent.ACTION_SEND).apply {
     type = "image/png"

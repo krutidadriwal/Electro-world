@@ -114,5 +114,6 @@ object NetworkModule {
   val spinApi: SpinApi by lazy { serverRetrofit.create(SpinApi::class.java) }
   val shareLogApi: ShareLogApi by lazy { serverRetrofit.create(ShareLogApi::class.java) }
   val activityLogApi: ActivityLogApi by lazy { serverRetrofit.create(ActivityLogApi::class.java) }
+  val companiesApi: CompaniesApi by lazy { serverRetrofit.create(CompaniesApi::class.java) }
   val taskTrackerApi: TaskTrackerApi by lazy { serverRetrofit.create(TaskTrackerApi::class.java) } // task tracker (experimental)
 }

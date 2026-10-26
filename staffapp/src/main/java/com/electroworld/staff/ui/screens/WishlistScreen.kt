@@ -125,6 +125,7 @@ fun WishlistScreen(initialStatusFilter: String? = null, onBack: () -> Unit, modi
   var isLoading by remember { mutableStateOf(true) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
   var refreshTrigger by remember { mutableStateOf(0) }
+  var isRefreshing by remember { mutableStateOf(false) }
   var searchQuery by remember { mutableStateOf("") }
   var statusFilter by remember { mutableStateOf(initialStatusFilter) }
   var showAddDialog by remember { mutableStateOf(false) }
@@ -160,6 +161,7 @@ fun WishlistScreen(initialStatusFilter: String? = null, onBack: () -> Unit, modi
       errorMessage = "Failed to load wishlist."
     } finally {
       isLoading = false
+      isRefreshing = false
     }
   }
 
@@ -235,15 +237,15 @@ fun WishlistScreen(initialStatusFilter: String? = null, onBack: () -> Unit, modi
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
           CircularProgressIndicator()
         }
-      } else if (filteredItems.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-          Text(
-            if (items.isEmpty()) "No wishlist entries yet." else "No matches found.",
-            color = MaterialTheme.colorScheme.outline
-          )
-        }
-      } else {
-        LazyColumn(contentPadding = PaddingValues(16.dp)) {
+      } else StaffPullToRefresh(isRefreshing = isRefreshing, onRefresh = { isRefreshing = true; refreshTrigger++ }) {
+        if (filteredItems.isEmpty()) {
+          PullableMessage {
+            Text(
+              if (items.isEmpty()) "No wishlist entries yet." else "No matches found.",
+              color = MaterialTheme.colorScheme.outline
+            )
+          }
+        } else LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
           items(filteredItems, key = { it.id }) { wishlistItem ->
             WishlistRow(
               item = wishlistItem,

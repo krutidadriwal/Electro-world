@@ -60,9 +60,11 @@ fun AlertsScreen(isAdmin: Boolean, onNavigate: (target: String) -> Unit, onBack:
   var retryingFileId by remember { mutableStateOf<String?>(null) }
   val scope = rememberCoroutineScope()
   var isLoading by remember { mutableStateOf(true) }
+  var isRefreshing by remember { mutableStateOf(false) }
+  var refreshTrigger by remember { mutableStateOf(0) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
 
-  LaunchedEffect(Unit) {
+  LaunchedEffect(refreshTrigger) {
     isLoading = true
     try {
       wishlistCount = NetworkModule.wishlistApi.list().items.count { it.status == "not_contacted" }
@@ -76,16 +78,18 @@ fun AlertsScreen(isAdmin: Boolean, onNavigate: (target: String) -> Unit, onBack:
       errorMessage = "Failed to load notifications."
     } finally {
       isLoading = false
+      isRefreshing = false
     }
   }
 
   // Loaded on its own, after the counts above: this section is the one part
   // of the tab that's an actual list rather than a live count, and a failure
   // here shouldn't take the request alerts down with it.
-  LaunchedEffect(Unit) {
+  LaunchedEffect(refreshTrigger) {
     if (!isAdmin) return@LaunchedEffect
     try {
       unreadableInvoices = NetworkModule.unreadableInvoicesApi.list().items
+      unreadableMessage = null
     } catch (e: Exception) {
       unreadableMessage = "Failed to load invoices without points."
     }
@@ -125,19 +129,23 @@ fun AlertsScreen(isAdmin: Boolean, onNavigate: (target: String) -> Unit, onBack:
     },
     modifier = modifier
   ) { padding ->
-    if (isLoading) {
+    if (isLoading && !isRefreshing) {
       Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
       }
-    } else {
+    } else StaffPullToRefresh(
+      isRefreshing = isRefreshing,
+      onRefresh = { isRefreshing = true; refreshTrigger++ },
+      modifier = Modifier.padding(padding)
+    ) {
       val hasRequestAlert = wishlistCount > 0 || complaintsCount > 0 || installationsCount > 0 || (isAdmin && invoiceCount > 0)
       val showUnreadableSection = isAdmin && (unreadableInvoices.isNotEmpty() || unreadableMessage != null)
-      Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+      Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         errorMessage?.let {
           Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(bottom = 8.dp))
         }
         if (!hasRequestAlert && !showUnreadableSection) {
-          Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+          PullableMessage {
             Text("You're all caught up.", color = MaterialTheme.colorScheme.outline)
           }
         } else Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {

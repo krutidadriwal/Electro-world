@@ -47,6 +47,9 @@ interface UserApi {
   @GET("api/categories")
   suspend fun getCategories(): CategoriesResponse
 
+  @GET("api/companies")
+  suspend fun getCompanies(): CompaniesResponse
+
   @GET("api/installations")
   suspend fun getInstallations(@Query("phone") phone: String): InstallationsResponse
 

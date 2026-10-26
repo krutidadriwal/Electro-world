@@ -65,6 +65,7 @@ fun StaffScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
   var showAddDialog by remember { mutableStateOf(false) }
   var pendingDelete by remember { mutableStateOf<StaffMember?>(null) }
   var refreshTrigger by remember { mutableStateOf(0) }
+  var isRefreshing by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
 
   LaunchedEffect(refreshTrigger) {
@@ -75,6 +76,7 @@ fun StaffScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
       // Keep the previous list on failure.
     } finally {
       isLoading = false
+      isRefreshing = false
     }
   }
 
@@ -120,8 +122,8 @@ fun StaffScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     Box(modifier = Modifier.fillMaxSize().padding(padding)) {
       if (isLoading && staff.isEmpty()) {
         CircularProgressIndicator(modifier = Modifier.padding(24.dp))
-      } else {
-        LazyColumn(contentPadding = PaddingValues(16.dp)) {
+      } else StaffPullToRefresh(isRefreshing = isRefreshing, onRefresh = { isRefreshing = true; refreshTrigger++ }) {
+        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
           items(staff) { member ->
             StaffRow(
               member,

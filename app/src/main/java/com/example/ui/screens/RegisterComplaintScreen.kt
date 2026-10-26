@@ -55,6 +55,7 @@ import com.example.data.CategoryCache
 import com.example.data.InvoiceFileCache
 import com.example.data.InvoiceListCache
 import com.example.data.network.Category
+import com.example.data.network.Company
 import com.example.data.network.CreateComplaintRequest
 import com.example.data.network.InvoiceFile
 import com.example.data.network.NetworkModule
@@ -117,6 +118,9 @@ fun RegisterComplaintScreen(
   var selectedSubcategory by remember { mutableStateOf<Subcategory?>(null) }
   var subcategoryMenuExpanded by remember { mutableStateOf(false) }
 
+  var companies by remember { mutableStateOf<List<Company>?>(null) }
+  var selectedCompany by remember { mutableStateOf<Company?>(null) }
+
   var description by remember { mutableStateOf("") }
   var address by remember { mutableStateOf("") }
   var contactPhone by remember { mutableStateOf("") }
@@ -146,6 +150,17 @@ fun RegisterComplaintScreen(
       if (categories.isEmpty()) {
         submitError = "Unable to load product categories. Please check your connection and try again."
       }
+    }
+  }
+
+  // Not cached like categories: it's a short list, and a stale one could
+  // offer a company that's since been removed (which the server rejects).
+  LaunchedEffect(Unit) {
+    try {
+      companies = NetworkModule.userApi.getCompanies().companies
+    } catch (e: Exception) {
+      companies = emptyList()
+      submitError = "Unable to load companies. Please check your connection and try again."
     }
   }
 
@@ -201,6 +216,7 @@ fun RegisterComplaintScreen(
             selectedInvoice = null
             selectedCategory = null
             selectedSubcategory = null
+            selectedCompany = null
             description = ""
             address = ""
             contactPhone = ""
@@ -346,6 +362,10 @@ fun RegisterComplaintScreen(
 
       Spacer(modifier = Modifier.height(14.dp))
 
+      CompanyDropdownField(companies = companies, selected = selectedCompany, onSelect = { selectedCompany = it })
+
+      Spacer(modifier = Modifier.height(14.dp))
+
       Text("Description *", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
       OutlinedTextField(
         value = description,
@@ -404,8 +424,9 @@ fun RegisterComplaintScreen(
       Button(
         onClick = {
           val category = selectedCategory
-          if (category == null || description.trim().isEmpty() || address.trim().isEmpty()) {
-            submitError = "Please fill in category, description and address."
+          val company = selectedCompany
+          if (category == null || company == null || description.trim().isEmpty() || address.trim().isEmpty()) {
+            submitError = "Please fill in category, company, description and address."
             return@Button
           }
           submitError = null
@@ -419,6 +440,7 @@ fun RegisterComplaintScreen(
                   invoiceFileName = selectedInvoice?.name,
                   categoryIconKey = category.iconKey,
                   subcategoryId = selectedSubcategory?.id,
+                  companyId = company.id,
                   description = description.trim(),
                   address = address.trim(),
                   contactPhone = contactPhone.ifEmpty { null }

@@ -2,6 +2,7 @@
   "rewrites": [
     { "source": "/api/categories", "destination": "/api/catalog" },
     { "source": "/api/wishlist", "destination": "/api/catalog?resource=wishlist" },
+    { "source": "/api/companies", "destination": "/api/catalog?resource=companies" },
     { "source": "/api/complaints", "destination": "/api/service-requests" },
     { "source": "/api/installations", "destination": "/api/service-requests?resource=installations" },
     { "source": "/api/invoice-requests", "destination": "/api/service-requests?resource=invoice-requests" },

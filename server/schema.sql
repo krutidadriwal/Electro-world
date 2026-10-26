@@ -697,7 +697,7 @@ create table if not exists public.staff_activity_log (
   staff_id uuid references public.staff_profiles(id) on delete set null,
   staff_name text not null,
   work_type text not null
-    check (work_type in ('wishlist', 'complaint', 'installation', 'invoice', 'price_share', 'spin', 'broadcast', 'staff', 'price_list')),
+    check (work_type in ('wishlist', 'complaint', 'installation', 'invoice', 'price_share', 'spin', 'broadcast', 'staff', 'price_list', 'catalog')),
   description text not null,
   customer_phone text,
   customer_name text,
@@ -710,6 +710,35 @@ create index if not exists staff_activity_log_staff_idx on public.staff_activity
 create index if not exists staff_activity_log_work_type_idx on public.staff_activity_log (work_type, created_at desc);
 
 alter table public.staff_activity_log enable row level security;
+
+-- 'catalog' (category images, companies) was added after the table first
+-- shipped -- re-created so databases made before then accept it too.
+alter table public.staff_activity_log drop constraint if exists staff_activity_log_work_type_check;
+alter table public.staff_activity_log add constraint staff_activity_log_work_type_check
+  check (work_type in ('wishlist', 'complaint', 'installation', 'invoice', 'price_share', 'spin', 'broadcast', 'staff', 'price_list', 'catalog'));
+
+-- Product brands (LG, Samsung...) a complaint or installation request is
+-- for, picked from a dropdown in both apps and required on every new
+-- request. Admins add/delete them from the staff app's Catalog Setup tile
+-- (api/staff/companies); customers read them via GET /api/companies.
+-- Names are unique ignoring case so "lg" can't be added next to "LG".
+create table if not exists public.companies (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists companies_name_key on public.companies (lower(name));
+
+alter table public.companies enable row level security;
+
+-- company_name is denormalized, like category_name, so a request still
+-- shows its company after that company is deleted (company_id then becomes
+-- null). Both are null on requests made before companies existed.
+alter table public.complaints add column if not exists company_id uuid references public.companies(id) on delete set null;
+alter table public.complaints add column if not exists company_name text;
+alter table public.installations add column if not exists company_id uuid references public.companies(id) on delete set null;
+alter table public.installations add column if not exists company_name text;
 
 -- ===== TASK TRACKER (experimental) — start =====
 -- Backs api/tasks/[...path].js, only reachable when the server's

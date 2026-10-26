@@ -58,6 +58,7 @@ import com.example.data.CategoryCache
 import com.example.data.InvoiceFileCache
 import com.example.data.InvoiceListCache
 import com.example.data.network.Category
+import com.example.data.network.Company
 import com.example.data.network.CreateInstallationRequest
 import com.example.data.network.InvoiceFile
 import com.example.data.network.NetworkModule
@@ -96,6 +97,8 @@ fun InstallationRequestScreen(
 
   var categories by remember { mutableStateOf(categoryCache.get() ?: emptyList()) }
   var selectedCategory by remember { mutableStateOf<Category?>(null) }
+  var companies by remember { mutableStateOf<List<Company>?>(null) }
+  var selectedCompany by remember { mutableStateOf<Company?>(null) }
   var categoryMenuExpanded by remember { mutableStateOf(false) }
 
   var itemName by remember { mutableStateOf("") }
@@ -169,6 +172,17 @@ fun InstallationRequestScreen(
     }
   }
 
+  // Not cached like categories: it's a short list, and a stale one could
+  // offer a company that's since been removed (which the server rejects).
+  LaunchedEffect(Unit) {
+    try {
+      companies = NetworkModule.userApi.getCompanies().companies
+    } catch (e: Exception) {
+      companies = emptyList()
+      submitError = "Unable to load companies. Please check your connection and try again."
+    }
+  }
+
   Scaffold(
     modifier = modifier.fillMaxSize(),
     containerColor = MaterialTheme.colorScheme.background,
@@ -220,6 +234,7 @@ fun InstallationRequestScreen(
           onClick = {
             selectedInvoice = null
             selectedCategory = null
+            selectedCompany = null
             itemName = ""
             wantsDemo = false
             wantsInstallation = false
@@ -300,11 +315,15 @@ fun InstallationRequestScreen(
 
       Spacer(modifier = Modifier.height(14.dp))
 
+      CompanyDropdownField(companies = companies, selected = selectedCompany, onSelect = { selectedCompany = it })
+
+      Spacer(modifier = Modifier.height(14.dp))
+
       Text("Item Name *", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
       OutlinedTextField(
         value = itemName,
         onValueChange = { itemName = it },
-        placeholder = { Text("e.g. LG 1.5 Ton Split AC") },
+        placeholder = { Text("e.g. 1.5 Ton Split AC") },
         colors = OutlinedTextFieldDefaults.colors(
           focusedTextColor = MaterialTheme.colorScheme.onSurface,
           unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
@@ -430,8 +449,9 @@ fun InstallationRequestScreen(
       Button(
         onClick = {
           val category = selectedCategory
-          if (category == null || itemName.trim().isEmpty() || address.trim().isEmpty()) {
-            submitError = "Please fill in item name, category and address."
+          val company = selectedCompany
+          if (category == null || company == null || itemName.trim().isEmpty() || address.trim().isEmpty()) {
+            submitError = "Please fill in company, item name, category and address."
             return@Button
           }
           if (!wantsDemo && !wantsInstallation) {
@@ -449,6 +469,7 @@ fun InstallationRequestScreen(
                   invoiceFileName = selectedInvoice?.name,
                   categoryIconKey = category.iconKey,
                   itemName = itemName.trim(),
+                  companyId = company.id,
                   wantsDemo = wantsDemo,
                   wantsInstallation = wantsInstallation,
                   address = address.trim(),

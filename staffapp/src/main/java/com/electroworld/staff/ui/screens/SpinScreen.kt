@@ -97,6 +97,7 @@ fun SpinScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
   var overview by remember { mutableStateOf<SpinOverviewResponse?>(null) }
   var isLoading by remember { mutableStateOf(true) }
   var refreshTrigger by remember { mutableStateOf(0) }
+  var isRefreshing by remember { mutableStateOf(false) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
   var isBusy by remember { mutableStateOf(false) }
   var selectedTab by remember { mutableStateOf(SpinTab.SPINS) }
@@ -117,6 +118,7 @@ fun SpinScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
       if (errorMessage == null) errorMessage = "Failed to load Spin to Win."
     } finally {
       isLoading = false
+      isRefreshing = false
     }
   }
 
@@ -257,97 +259,105 @@ fun SpinScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
       }
 
       val loaded = overview
-      if (loaded == null) {
-        if (isLoading) {
-          Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-          }
+      if (loaded == null && isLoading && !isRefreshing) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+          CircularProgressIndicator()
         }
         return@Column
       }
 
       // Bottom padding leaves room for the FAB over the last row's buttons.
       val listPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp)
-      when (selectedTab) {
-        SpinTab.SPINS -> LazyColumn(contentPadding = listPadding) {
-          item {
-            Text(
-              "${loaded.pendingCount} pending  ·  ${loaded.playedCount} played  ·  ${loaded.deliveredCount} delivered",
-              style = MaterialTheme.typography.labelLarge,
-              modifier = Modifier.padding(bottom = 12.dp)
-            )
-          }
-          if (loaded.grants.isEmpty()) {
-            item { EmptyHint("No spins unlocked yet. Tap + when a customer makes a purchase.") }
-          }
-          items(loaded.grants, key = { it.id }) { grant ->
-            GrantRow(
-              grant = grant,
-              enabled = !isBusy,
-              onRevoke = {
-                pendingConfirm = PendingConfirm(
-                  message = "Revoke the unplayed spin for ${grant.phone}?",
-                  failure = "Failed to revoke the spin."
-                ) { NetworkModule.spinApi.revoke(grant.id) }
-              },
-              onUndo = {
-                pendingConfirm = PendingConfirm(
-                  message = "Undo this win for ${grant.phone}? \"${grant.prizeName ?: "The prize"}\" goes back into stock " +
-                    "and the customer can spin again.",
-                  failure = "Failed to undo the win."
-                ) { NetworkModule.spinApi.undoWin(UndoSpinGrantRequest(grant.id)) }
-              },
-              onDeliver = {
-                pendingConfirm = PendingConfirm(
-                  message = "Mark \"${grant.prizeName ?: "the prize"}\" as delivered to ${grant.customerName ?: grant.phone}? " +
-                    "The win can't be undone after this.",
-                  failure = "Failed to mark the prize as delivered."
-                ) { NetworkModule.spinApi.markDelivered(DeliverSpinGrantRequest(grant.id)) }
-              }
-            )
-          }
+      StaffPullToRefresh(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+          errorMessage = null
+          isRefreshing = true
+          refreshTrigger++
         }
-
-        SpinTab.PRIZES -> LazyColumn(contentPadding = listPadding) {
-          if (prizes.isEmpty()) {
-            item { EmptyHint("No prizes yet. Customers can't spin until at least one is in stock.") }
-          }
-          items(prizes, key = { it.id }) { prize ->
-            PrizeRow(
-              prize = prize,
-              enabled = !isBusy,
-              onSetQuantity = { quantity ->
-                runAction("Failed to update stock.") {
-                  NetworkModule.spinApi.updatePrize(UpdateSpinPrizeRequest(id = prize.id, quantity = quantity))
+      ) {
+      // Nothing loaded (the first load failed) -- still pullable, to retry.
+        if (loaded == null) PullableMessage {} else when (selectedTab) {
+          SpinTab.SPINS -> LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = listPadding) {
+            item {
+              Text(
+                "${loaded.pendingCount} pending  ·  ${loaded.playedCount} played  ·  ${loaded.deliveredCount} delivered",
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(bottom = 12.dp)
+              )
+            }
+            if (loaded.grants.isEmpty()) {
+              item { EmptyHint("No spins unlocked yet. Tap + when a customer makes a purchase.") }
+            }
+            items(loaded.grants, key = { it.id }) { grant ->
+              GrantRow(
+                grant = grant,
+                enabled = !isBusy,
+                onRevoke = {
+                  pendingConfirm = PendingConfirm(
+                    message = "Revoke the unplayed spin for ${grant.phone}?",
+                    failure = "Failed to revoke the spin."
+                  ) { NetworkModule.spinApi.revoke(grant.id) }
+                },
+                onUndo = {
+                  pendingConfirm = PendingConfirm(
+                    message = "Undo this win for ${grant.phone}? \"${grant.prizeName ?: "The prize"}\" goes back into stock " +
+                      "and the customer can spin again.",
+                    failure = "Failed to undo the win."
+                  ) { NetworkModule.spinApi.undoWin(UndoSpinGrantRequest(grant.id)) }
+                },
+                onDeliver = {
+                  pendingConfirm = PendingConfirm(
+                    message = "Mark \"${grant.prizeName ?: "the prize"}\" as delivered to ${grant.customerName ?: grant.phone}? " +
+                      "The win can't be undone after this.",
+                    failure = "Failed to mark the prize as delivered."
+                  ) { NetworkModule.spinApi.markDelivered(DeliverSpinGrantRequest(grant.id)) }
                 }
-              },
-              onDelete = {
-                pendingConfirm = PendingConfirm(
-                  message = "Delete \"${prize.name}\" from the prize list?",
-                  failure = "Failed to delete the prize."
-                ) { NetworkModule.spinApi.deletePrize(prize.id) }
-              }
-            )
+              )
+            }
           }
-        }
 
-        SpinTab.ITEMS -> LazyColumn(contentPadding = listPadding) {
-          if (purchaseItems.isEmpty()) {
-            item { EmptyHint("No purchase items yet. Add what customers buy so a spin can be unlocked against it.") }
+          SpinTab.PRIZES -> LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = listPadding) {
+            if (prizes.isEmpty()) {
+              item { EmptyHint("No prizes yet. Customers can't spin until at least one is in stock.") }
+            }
+            items(prizes, key = { it.id }) { prize ->
+              PrizeRow(
+                prize = prize,
+                enabled = !isBusy,
+                onSetQuantity = { quantity ->
+                  runAction("Failed to update stock.") {
+                    NetworkModule.spinApi.updatePrize(UpdateSpinPrizeRequest(id = prize.id, quantity = quantity))
+                  }
+                },
+                onDelete = {
+                  pendingConfirm = PendingConfirm(
+                    message = "Delete \"${prize.name}\" from the prize list?",
+                    failure = "Failed to delete the prize."
+                  ) { NetworkModule.spinApi.deletePrize(prize.id) }
+                }
+              )
+            }
           }
-          items(purchaseItems, key = { it.id }) { item ->
-            PurchaseItemRow(
-              item = item,
-              prizes = prizes,
-              enabled = !isBusy,
-              onEdit = { editingItem = item },
-              onDelete = {
-                pendingConfirm = PendingConfirm(
-                  message = "Delete \"${item.name}\"? Spins already unlocked with it are not affected.",
-                  failure = "Failed to delete the purchase item."
-                ) { NetworkModule.spinApi.deletePurchaseItem(item.id) }
-              }
-            )
+
+          SpinTab.ITEMS -> LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = listPadding) {
+            if (purchaseItems.isEmpty()) {
+              item { EmptyHint("No purchase items yet. Add what customers buy so a spin can be unlocked against it.") }
+            }
+            items(purchaseItems, key = { it.id }) { item ->
+              PurchaseItemRow(
+                item = item,
+                prizes = prizes,
+                enabled = !isBusy,
+                onEdit = { editingItem = item },
+                onDelete = {
+                  pendingConfirm = PendingConfirm(
+                    message = "Delete \"${item.name}\"? Spins already unlocked with it are not affected.",
+                    failure = "Failed to delete the purchase item."
+                  ) { NetworkModule.spinApi.deletePurchaseItem(item.id) }
+                }
+              )
+            }
           }
         }
       }

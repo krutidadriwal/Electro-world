@@ -125,6 +125,40 @@ object ShareImageRenderer {
     return card.render(background = CHARCOAL)
   }
 
+  // A complaint / installation request's detail screen as an image: the same
+  // fields, in the same order, label above value. No prices, so no
+  // GST/validity footer -- just who shared it and when.
+  fun renderRequestDetails(content: RequestShareContent, sharedBy: String, sharedAt: Long, logo: Bitmap?): Bitmap {
+    val card = Card()
+    card.header(logo, badge = content.badge)
+    card.space(44f)
+    card.text(content.title.uppercase(), paint(26f, MUTED, bold = true).apply { letterSpacing = 0.1f })
+    card.space(12f)
+    card.text(content.customerName, paint(52f, TEXT, bold = true), maxLines = 2)
+    card.space(4f)
+    card.text(content.customerPhone, paint(32f, MUTED), maxLines = 1)
+    card.space(32f)
+    card.divider()
+    card.space(28f)
+    content.fields.forEach { (label, value) ->
+      card.text(label, paint(26f, MUTED))
+      card.space(4f)
+      card.text(value, paint(34f, TEXT))
+      card.space(24f)
+    }
+    card.divider()
+    card.space(24f)
+    card.text(
+      "Shared by $sharedBy · ${formatDateTime(sharedAt)}",
+      paint(26f, MUTED),
+      Layout.Alignment.ALIGN_CENTER,
+      maxLines = 2
+    )
+    card.space(32f)
+    card.addressFooter()
+    return card.render()
+  }
+
   // --- building blocks -----------------------------------------------------
 
   // A card is built top to bottom as a list of fixed-height blocks; the
@@ -286,6 +320,20 @@ object ShareImageRenderer {
     block(8f) { c, top -> c.drawRect(0f, top, WIDTH.toFloat(), top + 8f, fill(GOLD)) }
   }
 
+  // Store address band + gold rule, for images without prices.
+  private fun Card.addressFooter() {
+    val address = BuildConfig.STORE_ADDRESS.takeIf { it.isNotBlank() }
+    if (address != null) {
+      val layout = layout(address, paint(28f, MUTED), CONTENT_WIDTH, Layout.Alignment.ALIGN_CENTER)
+      val footerHeight = layout.height + 64f
+      block(footerHeight) { c, top ->
+        c.drawRect(0f, top, WIDTH.toFloat(), top + footerHeight, fill(PANEL))
+        drawLayout(c, layout, MARGIN, top + 32f)
+      }
+    }
+    block(8f) { c, top -> c.drawRect(0f, top, WIDTH.toFloat(), top + 8f, fill(GOLD)) }
+  }
+
   // --- low-level helpers ---------------------------------------------------
 
   private fun paint(size: Float, color: Int, bold: Boolean = false, strike: Boolean = false) =
@@ -337,5 +385,9 @@ object ShareImageRenderer {
 
   fun formatDate(millis: Long): String =
     SimpleDateFormat("d MMM yyyy", Locale.US).apply { timeZone = TimeZone.getTimeZone("Asia/Kolkata") }
+      .format(Date(millis))
+
+  private fun formatDateTime(millis: Long): String =
+    SimpleDateFormat("d MMM yyyy, h:mm a", Locale.US).apply { timeZone = TimeZone.getTimeZone("Asia/Kolkata") }
       .format(Date(millis))
 }

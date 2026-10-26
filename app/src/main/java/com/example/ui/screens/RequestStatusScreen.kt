@@ -284,7 +284,7 @@ private fun assignedInfoFor(
 
 private fun Complaint.toStatusItem() = RequestStatusItem(
   id = id,
-  title = categoryName + (subcategoryName?.let { " - $it" } ?: ""),
+  title = listOfNotNull(companyName, categoryName).joinToString(" ") + (subcategoryName?.let { " - $it" } ?: ""),
   subtitle = description,
   address = address,
   status = status,
@@ -294,7 +294,7 @@ private fun Complaint.toStatusItem() = RequestStatusItem(
 
 private fun Installation.toStatusItem() = RequestStatusItem(
   id = id,
-  title = "$itemName ($categoryName)",
+  title = listOfNotNull(companyName, itemName).joinToString(" ") + " ($categoryName)",
   subtitle = listOfNotNull(
     if (wantsDemo) "Demo" else null,
     if (wantsInstallation) "Installation" else null

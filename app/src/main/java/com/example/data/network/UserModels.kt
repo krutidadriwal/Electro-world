@@ -84,6 +84,7 @@ data class CreateComplaintRequest(
   val invoiceFileName: String? = null,
   val categoryIconKey: String,
   val subcategoryId: String? = null,
+  val companyId: String,
   val description: String,
   val address: String,
   val contactPhone: String? = null
@@ -98,6 +99,8 @@ data class Complaint(
   @Json(name = "category_name") val categoryName: String,
   @Json(name = "subcategory_id") val subcategoryId: String?,
   @Json(name = "subcategory_name") val subcategoryName: String?,
+  // Null on complaints made before companies were added.
+  @Json(name = "company_name") val companyName: String? = null,
   val description: String,
   val address: String,
   @Json(name = "contact_phone") val contactPhone: String?,
@@ -141,6 +144,19 @@ data class CategoriesResponse(
   val categories: List<Category>
 )
 
+// A product brand (LG, Samsung...) -- the required Company dropdown on the
+// Register Complaint and Installation Request forms. Managed by staff.
+@JsonClass(generateAdapter = true)
+data class Company(
+  val id: String,
+  val name: String
+)
+
+@JsonClass(generateAdapter = true)
+data class CompaniesResponse(
+  val companies: List<Company>
+)
+
 @JsonClass(generateAdapter = true)
 data class CreateInstallationRequest(
   val phone: String,
@@ -148,6 +164,7 @@ data class CreateInstallationRequest(
   val invoiceFileName: String? = null,
   val categoryIconKey: String,
   val itemName: String,
+  val companyId: String,
   val wantsDemo: Boolean,
   val wantsInstallation: Boolean,
   val address: String,
@@ -162,6 +179,8 @@ data class Installation(
   @Json(name = "category_icon_key") val categoryIconKey: String,
   @Json(name = "category_name") val categoryName: String,
   @Json(name = "item_name") val itemName: String,
+  // Null on requests made before companies were added.
+  @Json(name = "company_name") val companyName: String? = null,
   @Json(name = "wants_demo") val wantsDemo: Boolean,
   @Json(name = "wants_installation") val wantsInstallation: Boolean,
   val address: String,

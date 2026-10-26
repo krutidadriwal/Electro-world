@@ -111,6 +111,7 @@ fun PriceListScreen(isAdmin: Boolean, onBack: () -> Unit, modifier: Modifier = M
   var isSyncing by remember { mutableStateOf(false) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
   var refreshTrigger by remember { mutableStateOf(0) }
+  var isRefreshing by remember { mutableStateOf(false) }
   var nav by remember { mutableStateOf<PriceListNav>(PriceListNav.Root) }
   var scope by remember { mutableStateOf(SearchScope.CATEGORY) }
   var searchQuery by remember { mutableStateOf("") }
@@ -148,6 +149,7 @@ fun PriceListScreen(isAdmin: Boolean, onBack: () -> Unit, modifier: Modifier = M
       errorMessage = "Failed to load price list."
     } finally {
       isLoading = false
+      isRefreshing = false
     }
     try {
       categoryImages = NetworkModule.priceListApi.categoryImages().categories
@@ -309,7 +311,7 @@ fun PriceListScreen(isAdmin: Boolean, onBack: () -> Unit, modifier: Modifier = M
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
           CircularProgressIndicator()
         }
-      } else {
+      } else StaffPullToRefresh(isRefreshing = isRefreshing, onRefresh = { isRefreshing = true; refreshTrigger++ }) {
         when (val current = nav) {
           is PriceListNav.Root -> RootLevel(
             allItems = visibleItems,
@@ -387,7 +389,7 @@ private fun RootLevel(
         NoMatchesState(query = searchQuery, currentScope = scope, onScopeChange = onScopeChange)
         return
       }
-      LazyColumn(state = listState, contentPadding = PaddingValues(16.dp)) {
+      LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
         items(categories) { category ->
           val count = allItems.count { it.category == category }
           NavRow(
@@ -406,7 +408,7 @@ private fun RootLevel(
         NoMatchesState(query = searchQuery, currentScope = scope, onScopeChange = onScopeChange)
         return
       }
-      LazyColumn(state = listState, contentPadding = PaddingValues(16.dp)) {
+      LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
         items(groups.entries.toList()) { (group, itemsInGroup) ->
           NavRow(
             title = group,
@@ -438,7 +440,7 @@ private fun NoMatchesState(query: String, currentScope: SearchScope, onScopeChan
     return
   }
   val otherScopes = SearchScope.values().filter { it != currentScope }
-  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+  PullableMessage {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
       Text(
         "No ${currentScope.label().lowercase()} match \"$query\".",
@@ -468,7 +470,7 @@ private fun ItemRows(items: List<PriceListItem>, isAdmin: Boolean, listState: La
     EmptyState("No items match your search.")
     return
   }
-  LazyColumn(state = listState, contentPadding = PaddingValues(16.dp)) {
+  LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
     items(items) { item -> ItemRow(item, isAdmin = isAdmin, actions = actions) }
   }
 }
@@ -760,7 +762,7 @@ private fun ScopeRadioOption(label: String, selected: Boolean, onClick: () -> Un
 
 @Composable
 private fun EmptyState(message: String) {
-  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+  PullableMessage {
     Text(message, color = MaterialTheme.colorScheme.outline)
   }
 }

@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.electroworld.staff.data.network.NetworkModule
 
-private enum class HomeTab { ALERTS, PRICE_LIST, WISHLIST, COMPLAINTS, INSTALLATIONS, INVOICE_REQUESTS, BROADCAST, STAFF, ACTIVITY_LOG, CATEGORY_IMAGES, SPIN, REDEEM_POINTS, TASK_TRACKER /* task tracker (experimental) */ }
+private enum class HomeTab { ALERTS, PRICE_LIST, WISHLIST, COMPLAINTS, INSTALLATIONS, INVOICE_REQUESTS, BROADCAST, STAFF, ACTIVITY_LOG, CATALOG_SETUP, SPIN, REDEEM_POINTS, TASK_TRACKER /* task tracker (experimental) */ }
 
 @Composable
 fun HomeScreen(
@@ -81,6 +81,9 @@ fun HomeScreen(
   var invoiceCount by remember { mutableStateOf(0) }
   var unreadableInvoiceCount by remember { mutableStateOf(0) }
   val unreadAlertCount = wishlistCount + complaintsCount + installationsCount + invoiceCount + unreadableInvoiceCount
+  // Pulling down on the dashboard re-fetches the badge counts.
+  var dashboardRefreshTrigger by remember { mutableStateOf(0) }
+  var isDashboardRefreshing by remember { mutableStateOf(false) }
 
   // Preset filters applied the next time the relevant tab is entered --
   // consumed by each screen's own `initialStatusFilter` param at the moment
@@ -125,7 +128,7 @@ fun HomeScreen(
 
   // Refreshed whenever we return to the dashboard (selectedTab becomes
   // null), so acting on an alert and coming back updates the bell badge.
-  LaunchedEffect(selectedTab) {
+  LaunchedEffect(selectedTab, dashboardRefreshTrigger) {
     if (selectedTab != null) return@LaunchedEffect
     try {
       wishlistCount = NetworkModule.wishlistApi.list().items.count { it.status == "not_contacted" }
@@ -138,6 +141,8 @@ fun HomeScreen(
       }
     } catch (e: Exception) {
       // Leave the previous badge counts showing rather than clearing them.
+    } finally {
+      isDashboardRefreshing = false
     }
   }
 
@@ -166,7 +171,7 @@ fun HomeScreen(
       HomeTab.BROADCAST -> NotificationsScreen(isAdmin = isAdmin, onBack = onBack, modifier = modifier)
       HomeTab.STAFF -> StaffScreen(onBack = onBack, modifier = modifier)
       HomeTab.ACTIVITY_LOG -> ActivityLogScreen(onBack = onBack, modifier = modifier)
-      HomeTab.CATEGORY_IMAGES -> CategoryImagesScreen(onBack = onBack, modifier = modifier)
+      HomeTab.CATALOG_SETUP -> CatalogSetupScreen(onBack = onBack, modifier = modifier)
       HomeTab.SPIN -> SpinScreen(onBack = onBack, modifier = modifier)
       HomeTab.REDEEM_POINTS -> RedeemPointsScreen(onBack = onBack, modifier = modifier)
       HomeTab.TASK_TRACKER -> TaskTrackerScreen(onBack = onBack, modifier = modifier) // task tracker (experimental)
@@ -181,7 +186,7 @@ fun HomeScreen(
     DashboardModule("BROADCAST", Icons.Default.Campaign, "notify customers") { selectedTab = HomeTab.BROADCAST },
     DashboardModule("STAFF", Icons.Default.People, "Manage staff accounts") { selectedTab = HomeTab.STAFF },
     DashboardModule("ACTIVITY LOG", Icons.Default.History, "Who did what, and when") { selectedTab = HomeTab.ACTIVITY_LOG },
-    DashboardModule("CATEGORY IMAGES", Icons.Default.Image, "Set price list hero images") { selectedTab = HomeTab.CATEGORY_IMAGES },
+    DashboardModule("CATALOG SETUP", Icons.Default.Image, "Category images & companies") { selectedTab = HomeTab.CATALOG_SETUP },
     DashboardModule("SPIN TO WIN", Icons.Default.Casino, "Unlock spins & manage prizes") { selectedTab = HomeTab.SPIN },
     DashboardModule("REDEEM POINTS", Icons.Default.Redeem, "Redeem customer points") { selectedTab = HomeTab.REDEEM_POINTS }
   ) + listOfNotNull( // task tracker (experimental)
@@ -196,38 +201,44 @@ fun HomeScreen(
   )
 
   Scaffold(modifier = modifier.fillMaxSize(), containerColor = MaterialTheme.colorScheme.background) { padding ->
-    LazyVerticalGrid(
-      columns = GridCells.Fixed(2),
-      modifier = Modifier.fillMaxSize().padding(padding),
-      contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-      verticalArrangement = Arrangement.spacedBy(12.dp),
-      horizontalArrangement = Arrangement.spacedBy(12.dp)
+    StaffPullToRefresh(
+      isRefreshing = isDashboardRefreshing,
+      onRefresh = { isDashboardRefreshing = true; dashboardRefreshTrigger++ },
+      modifier = Modifier.padding(padding)
     ) {
-      item(span = { GridItemSpan(maxLineSpan) }) {
-        DashboardHeader(
-          displayName = name.ifBlank { email },
-          role = role,
-          onOpenProfile = { showProfile = true }
-        )
-      }
-      // Price List leads, full-width (spans both columns) -- it's the single
-      // highest-traffic tool (every sale starts there), so it gets top
-      // billing and more tap area rather than sharing a row.
-      item(span = { GridItemSpan(maxLineSpan) }) {
-        ModuleCard(priceListModule, modifier = Modifier.fillMaxWidth())
-      }
-
-      if (isAdmin) {
+      LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+      ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
-          SectionLabel("ADMIN")
+          DashboardHeader(
+            displayName = name.ifBlank { email },
+            role = role,
+            onOpenProfile = { showProfile = true }
+          )
         }
-        items(adminModules) { module -> ModuleCard(module) }
-      }
+        // Price List leads, full-width (spans both columns) -- it's the single
+        // highest-traffic tool (every sale starts there), so it gets top
+        // billing and more tap area rather than sharing a row.
+        item(span = { GridItemSpan(maxLineSpan) }) {
+          ModuleCard(priceListModule, modifier = Modifier.fillMaxWidth())
+        }
 
-      item(span = { GridItemSpan(maxLineSpan) }) {
-        SectionLabel("SERVICES")
+        if (isAdmin) {
+          item(span = { GridItemSpan(maxLineSpan) }) {
+            SectionLabel("ADMIN")
+          }
+          items(adminModules) { module -> ModuleCard(module) }
+        }
+
+        item(span = { GridItemSpan(maxLineSpan) }) {
+          SectionLabel("SERVICES")
+        }
+        items(serviceModules) { module -> ModuleCard(module) }
       }
-      items(serviceModules) { module -> ModuleCard(module) }
     }
   }
 }

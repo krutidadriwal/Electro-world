@@ -14,6 +14,8 @@ data class ComplaintItem(
   @Json(name = "customer_name") val customerName: String,
   @Json(name = "category_name") val categoryName: String,
   @Json(name = "subcategory_name") val subcategoryName: String?,
+  // Null on complaints made before companies were added.
+  @Json(name = "company_name") val companyName: String? = null,
   val description: String,
   val address: String,
   @Json(name = "contact_phone") val contactPhone: String?,
@@ -64,6 +66,7 @@ data class ComplaintAddRequest(
   val customerName: String,
   val categoryIconKey: String,
   val subcategoryId: String? = null,
+  val companyId: String,
   val description: String,
   val address: String,
   val contactPhone: String? = null

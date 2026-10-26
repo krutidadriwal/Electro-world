@@ -11,26 +11,32 @@ import com.squareup.moshi.JsonWriter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.`internal`.Util
 import java.lang.NullPointerException
+import java.lang.reflect.Constructor
+import kotlin.Int
 import kotlin.String
 import kotlin.Suppress
 import kotlin.Unit
 import kotlin.collections.emptySet
+import kotlin.jvm.Volatile
 import kotlin.text.buildString
 
 public class ComplaintItemJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<ComplaintItem>() {
   private val options: JsonReader.Options = JsonReader.Options.of("id", "customer_phone",
-      "customer_name", "category_name", "subcategory_name", "description", "address",
-      "contact_phone", "invoice_file_name", "status", "complaint_number", "technician_name",
-      "technician_mobile", "blocked_reason", "cancellation_reason", "closed_date", "created_at",
-      "updated_at", "resolved_at")
+      "customer_name", "category_name", "subcategory_name", "company_name", "description",
+      "address", "contact_phone", "invoice_file_name", "status", "complaint_number",
+      "technician_name", "technician_mobile", "blocked_reason", "cancellation_reason",
+      "closed_date", "created_at", "updated_at", "resolved_at")
 
   private val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java, emptySet(),
       "id")
 
   private val nullableStringAdapter: JsonAdapter<String?> = moshi.adapter(String::class.java,
       emptySet(), "subcategoryName")
+
+  @Volatile
+  private var constructorRef: Constructor<ComplaintItem>? = null
 
   public override fun toString(): String = buildString(35) {
       append("GeneratedJsonAdapter(").append("ComplaintItem").append(')') }
@@ -41,6 +47,7 @@ public class ComplaintItemJsonAdapter(
     var customerName: String? = null
     var categoryName: String? = null
     var subcategoryName: String? = null
+    var companyName: String? = null
     var description: String? = null
     var address: String? = null
     var contactPhone: String? = null
@@ -55,6 +62,7 @@ public class ComplaintItemJsonAdapter(
     var createdAt: String? = null
     var updatedAt: String? = null
     var resolvedAt: String? = null
+    var mask0 = -1
     reader.beginObject()
     while (reader.hasNext()) {
       when (reader.selectName(options)) {
@@ -66,25 +74,30 @@ public class ComplaintItemJsonAdapter(
         3 -> categoryName = stringAdapter.fromJson(reader) ?:
             throw Util.unexpectedNull("categoryName", "category_name", reader)
         4 -> subcategoryName = nullableStringAdapter.fromJson(reader)
-        5 -> description = stringAdapter.fromJson(reader) ?:
+        5 -> {
+          companyName = nullableStringAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 5).inv()
+          mask0 = mask0 and 0xffffffdf.toInt()
+        }
+        6 -> description = stringAdapter.fromJson(reader) ?:
             throw Util.unexpectedNull("description", "description", reader)
-        6 -> address = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("address",
+        7 -> address = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("address",
             "address", reader)
-        7 -> contactPhone = nullableStringAdapter.fromJson(reader)
-        8 -> invoiceFileName = nullableStringAdapter.fromJson(reader)
-        9 -> status = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("status",
+        8 -> contactPhone = nullableStringAdapter.fromJson(reader)
+        9 -> invoiceFileName = nullableStringAdapter.fromJson(reader)
+        10 -> status = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("status",
             "status", reader)
-        10 -> complaintNumber = nullableStringAdapter.fromJson(reader)
-        11 -> technicianName = nullableStringAdapter.fromJson(reader)
-        12 -> technicianMobile = nullableStringAdapter.fromJson(reader)
-        13 -> blockedReason = nullableStringAdapter.fromJson(reader)
-        14 -> cancellationReason = nullableStringAdapter.fromJson(reader)
-        15 -> closedDate = nullableStringAdapter.fromJson(reader)
-        16 -> createdAt = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("createdAt",
+        11 -> complaintNumber = nullableStringAdapter.fromJson(reader)
+        12 -> technicianName = nullableStringAdapter.fromJson(reader)
+        13 -> technicianMobile = nullableStringAdapter.fromJson(reader)
+        14 -> blockedReason = nullableStringAdapter.fromJson(reader)
+        15 -> cancellationReason = nullableStringAdapter.fromJson(reader)
+        16 -> closedDate = nullableStringAdapter.fromJson(reader)
+        17 -> createdAt = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("createdAt",
             "created_at", reader)
-        17 -> updatedAt = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("updatedAt",
+        18 -> updatedAt = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("updatedAt",
             "updated_at", reader)
-        18 -> resolvedAt = nullableStringAdapter.fromJson(reader)
+        19 -> resolvedAt = nullableStringAdapter.fromJson(reader)
         -1 -> {
           // Unknown name, skip it.
           reader.skipName()
@@ -93,31 +106,70 @@ public class ComplaintItemJsonAdapter(
       }
     }
     reader.endObject()
-    return ComplaintItem(
-        id = id ?: throw Util.missingProperty("id", "id", reader),
-        customerPhone = customerPhone ?: throw Util.missingProperty("customerPhone",
-            "customer_phone", reader),
-        customerName = customerName ?: throw Util.missingProperty("customerName", "customer_name",
-            reader),
-        categoryName = categoryName ?: throw Util.missingProperty("categoryName", "category_name",
-            reader),
-        subcategoryName = subcategoryName,
-        description = description ?: throw Util.missingProperty("description", "description",
-            reader),
-        address = address ?: throw Util.missingProperty("address", "address", reader),
-        contactPhone = contactPhone,
-        invoiceFileName = invoiceFileName,
-        status = status ?: throw Util.missingProperty("status", "status", reader),
-        complaintNumber = complaintNumber,
-        technicianName = technicianName,
-        technicianMobile = technicianMobile,
-        blockedReason = blockedReason,
-        cancellationReason = cancellationReason,
-        closedDate = closedDate,
-        createdAt = createdAt ?: throw Util.missingProperty("createdAt", "created_at", reader),
-        updatedAt = updatedAt ?: throw Util.missingProperty("updatedAt", "updated_at", reader),
-        resolvedAt = resolvedAt
-    )
+    if (mask0 == 0xffffffdf.toInt()) {
+      // All parameters with defaults are set, invoke the constructor directly
+      return  ComplaintItem(
+          id = id ?: throw Util.missingProperty("id", "id", reader),
+          customerPhone = customerPhone ?: throw Util.missingProperty("customerPhone",
+              "customer_phone", reader),
+          customerName = customerName ?: throw Util.missingProperty("customerName", "customer_name",
+              reader),
+          categoryName = categoryName ?: throw Util.missingProperty("categoryName", "category_name",
+              reader),
+          subcategoryName = subcategoryName,
+          companyName = companyName,
+          description = description ?: throw Util.missingProperty("description", "description",
+              reader),
+          address = address ?: throw Util.missingProperty("address", "address", reader),
+          contactPhone = contactPhone,
+          invoiceFileName = invoiceFileName,
+          status = status ?: throw Util.missingProperty("status", "status", reader),
+          complaintNumber = complaintNumber,
+          technicianName = technicianName,
+          technicianMobile = technicianMobile,
+          blockedReason = blockedReason,
+          cancellationReason = cancellationReason,
+          closedDate = closedDate,
+          createdAt = createdAt ?: throw Util.missingProperty("createdAt", "created_at", reader),
+          updatedAt = updatedAt ?: throw Util.missingProperty("updatedAt", "updated_at", reader),
+          resolvedAt = resolvedAt
+      )
+    } else {
+      // Reflectively invoke the synthetic defaults constructor
+      @Suppress("UNCHECKED_CAST")
+      val localConstructor: Constructor<ComplaintItem> = this.constructorRef ?:
+          ComplaintItem::class.java.getDeclaredConstructor(String::class.java, String::class.java,
+          String::class.java, String::class.java, String::class.java, String::class.java,
+          String::class.java, String::class.java, String::class.java, String::class.java,
+          String::class.java, String::class.java, String::class.java, String::class.java,
+          String::class.java, String::class.java, String::class.java, String::class.java,
+          String::class.java, String::class.java, Int::class.javaPrimitiveType,
+          Util.DEFAULT_CONSTRUCTOR_MARKER).also { this.constructorRef = it }
+      return localConstructor.newInstance(
+          id ?: throw Util.missingProperty("id", "id", reader),
+          customerPhone ?: throw Util.missingProperty("customerPhone", "customer_phone", reader),
+          customerName ?: throw Util.missingProperty("customerName", "customer_name", reader),
+          categoryName ?: throw Util.missingProperty("categoryName", "category_name", reader),
+          subcategoryName,
+          companyName,
+          description ?: throw Util.missingProperty("description", "description", reader),
+          address ?: throw Util.missingProperty("address", "address", reader),
+          contactPhone,
+          invoiceFileName,
+          status ?: throw Util.missingProperty("status", "status", reader),
+          complaintNumber,
+          technicianName,
+          technicianMobile,
+          blockedReason,
+          cancellationReason,
+          closedDate,
+          createdAt ?: throw Util.missingProperty("createdAt", "created_at", reader),
+          updatedAt ?: throw Util.missingProperty("updatedAt", "updated_at", reader),
+          resolvedAt,
+          mask0,
+          /* DefaultConstructorMarker */ null
+      )
+    }
   }
 
   public override fun toJson(writer: JsonWriter, value_: ComplaintItem?): Unit {
@@ -135,6 +187,8 @@ public class ComplaintItemJsonAdapter(
     stringAdapter.toJson(writer, value_.categoryName)
     writer.name("subcategory_name")
     nullableStringAdapter.toJson(writer, value_.subcategoryName)
+    writer.name("company_name")
+    nullableStringAdapter.toJson(writer, value_.companyName)
     writer.name("description")
     stringAdapter.toJson(writer, value_.description)
     writer.name("address")

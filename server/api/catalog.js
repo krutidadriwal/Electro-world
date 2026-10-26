@@ -2,18 +2,38 @@
 // function cap (see server/vercel.json) -- /api/wishlist is rewritten here
 // with ?resource=wishlist appended, everything else (the bare /api/catalog
 // path, which nothing calls directly) falls through to categories. External
-// URLs are unchanged: /api/categories, /api/wishlist.
+// URLs are unchanged: /api/categories, /api/wishlist, /api/companies.
 
 const { getPool } = require('../lib/db');
 const { normalizePhone } = require('../lib/phone');
 const { notifyStaff } = require('../lib/staffNotify');
+const { listCompanies } = require('../lib/companies');
 
 module.exports = async function handler(req, res) {
   if (req.query.resource === 'wishlist') {
     return wishlist(req, res);
   }
+  if (req.query.resource === 'companies') {
+    return companies(req, res);
+  }
   return categories(req, res);
 };
+
+// The Company dropdown on the complaint / installation request forms.
+// Public, like categories -- it's the same kind of reference data.
+async function companies(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    return res.status(200).json({ companies: await listCompanies(getPool()) });
+  } catch (err) {
+    console.error('list companies error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
 
 async function categories(req, res) {
   if (req.method !== 'GET') {

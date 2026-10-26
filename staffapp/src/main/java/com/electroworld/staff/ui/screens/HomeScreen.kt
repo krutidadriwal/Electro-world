@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Checklist // task tracker (experimental)
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.People
@@ -54,12 +55,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.electroworld.staff.data.network.NetworkModule
 
-private enum class HomeTab { ALERTS, PRICE_LIST, WISHLIST, COMPLAINTS, INSTALLATIONS, INVOICE_REQUESTS, BROADCAST, STAFF, CATEGORY_IMAGES, SPIN, REDEEM_POINTS, TASK_TRACKER /* task tracker (experimental) */ }
+private enum class HomeTab { ALERTS, PRICE_LIST, WISHLIST, COMPLAINTS, INSTALLATIONS, INVOICE_REQUESTS, BROADCAST, STAFF, ACTIVITY_LOG, CATEGORY_IMAGES, SPIN, REDEEM_POINTS, TASK_TRACKER /* task tracker (experimental) */ }
 
 @Composable
 fun HomeScreen(
   isAdmin: Boolean,
   email: String,
+  // Blank until set in Supabase -- the header falls back to the email.
+  name: String,
   role: String,
   onLogout: () -> Unit,
   notificationTarget: String? = null,
@@ -162,6 +165,7 @@ fun HomeScreen(
       HomeTab.INVOICE_REQUESTS -> InvoiceRequestsScreen(onBack = onBack, modifier = modifier)
       HomeTab.BROADCAST -> NotificationsScreen(isAdmin = isAdmin, onBack = onBack, modifier = modifier)
       HomeTab.STAFF -> StaffScreen(onBack = onBack, modifier = modifier)
+      HomeTab.ACTIVITY_LOG -> ActivityLogScreen(onBack = onBack, modifier = modifier)
       HomeTab.CATEGORY_IMAGES -> CategoryImagesScreen(onBack = onBack, modifier = modifier)
       HomeTab.SPIN -> SpinScreen(onBack = onBack, modifier = modifier)
       HomeTab.REDEEM_POINTS -> RedeemPointsScreen(onBack = onBack, modifier = modifier)
@@ -176,6 +180,7 @@ fun HomeScreen(
     DashboardModule("INVOICE REQUESTS", Icons.Default.Receipt, "Re-send invoice requests", badgeCount = invoiceCount) { selectedTab = HomeTab.INVOICE_REQUESTS },
     DashboardModule("BROADCAST", Icons.Default.Campaign, "notify customers") { selectedTab = HomeTab.BROADCAST },
     DashboardModule("STAFF", Icons.Default.People, "Manage staff accounts") { selectedTab = HomeTab.STAFF },
+    DashboardModule("ACTIVITY LOG", Icons.Default.History, "Who did what, and when") { selectedTab = HomeTab.ACTIVITY_LOG },
     DashboardModule("CATEGORY IMAGES", Icons.Default.Image, "Set price list hero images") { selectedTab = HomeTab.CATEGORY_IMAGES },
     DashboardModule("SPIN TO WIN", Icons.Default.Casino, "Unlock spins & manage prizes") { selectedTab = HomeTab.SPIN },
     DashboardModule("REDEEM POINTS", Icons.Default.Redeem, "Redeem customer points") { selectedTab = HomeTab.REDEEM_POINTS }
@@ -200,7 +205,7 @@ fun HomeScreen(
     ) {
       item(span = { GridItemSpan(maxLineSpan) }) {
         DashboardHeader(
-          email = email,
+          displayName = name.ifBlank { email },
           role = role,
           onOpenProfile = { showProfile = true }
         )
@@ -314,7 +319,7 @@ private fun CountBadge(count: Int, modifier: Modifier = Modifier) {
 
 @Composable
 private fun DashboardHeader(
-  email: String,
+  displayName: String,
   role: String,
   onOpenProfile: () -> Unit
 ) {
@@ -330,7 +335,7 @@ private fun DashboardHeader(
       contentAlignment = Alignment.Center
     ) {
       Text(
-        text = email.take(2).ifBlank { "EW" }.uppercase(),
+        text = displayName.take(2).ifBlank { "EW" }.uppercase(),
         color = MaterialTheme.colorScheme.secondary,
         fontWeight = FontWeight.Bold,
         fontSize = 14.sp
@@ -343,7 +348,7 @@ private fun DashboardHeader(
       // Theme.kt), which would make it invisible there.
       Text(text = "Welcome Back,", color = MaterialTheme.colorScheme.outline, fontSize = 12.sp)
       Text(
-        text = email.ifBlank { "Staff" },
+        text = displayName.ifBlank { "Staff" },
         color = MaterialTheme.colorScheme.onBackground,
         fontSize = 17.sp,
         fontWeight = FontWeight.Bold,

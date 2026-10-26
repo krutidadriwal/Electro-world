@@ -13,7 +13,8 @@ data class NotificationItem(
   @Json(name = "image_drive_file_id") val imageDriveFileId: String? = null,
   @Json(name = "image_url") val imageUrl: String? = null,
   @Json(name = "duration_minutes") val durationMinutes: Int,
-  @Json(name = "created_by") val createdBy: String,
+  // Null once the staff member who sent it has been deleted.
+  @Json(name = "created_by") val createdBy: String? = null,
   @Json(name = "created_at") val createdAt: String,
   val expired: Boolean = false
 )

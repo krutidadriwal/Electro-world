@@ -20,6 +20,10 @@ class SessionManager(context: Context) {
   val email: String
     get() = prefs.getString(KEY_EMAIL, "") ?: ""
 
+  // Blank until set on the account in Supabase (staff_profiles.name).
+  val name: String
+    get() = prefs.getString(KEY_NAME, "") ?: ""
+
   val role: String
     get() = prefs.getString(KEY_ROLE, "") ?: ""
 
@@ -33,10 +37,11 @@ class SessionManager(context: Context) {
       .apply()
   }
 
-  fun saveProfile(staffId: String, email: String, role: String) {
+  fun saveProfile(staffId: String, email: String, name: String?, role: String) {
     prefs.edit()
       .putString(KEY_STAFF_ID, staffId)
       .putString(KEY_EMAIL, email)
+      .putString(KEY_NAME, name ?: "")
       .putString(KEY_ROLE, role)
       .apply()
   }
@@ -52,5 +57,6 @@ class SessionManager(context: Context) {
     private const val KEY_STAFF_ID = "staff_id"
     private const val KEY_EMAIL = "email"
     private const val KEY_ROLE = "role"
+    private const val KEY_NAME = "name"
   }
 }

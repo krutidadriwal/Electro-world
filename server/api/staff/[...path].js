@@ -13,6 +13,13 @@ const { sendToTokens } = require('../../lib/fcm');
 const { spinOverview, spinPrize, spinPurchaseItem, spinGrant } = require('../../lib/staffSpin');
 const { syncInvoicePoints } = require('../../lib/invoicePoints');
 const { visibleInAppSql, wishlistVisibleInAppSql } = require('../../lib/closedRequests');
+const {
+  WORK_TYPES,
+  WISHLIST_STATUS_LABELS,
+  serviceRequestStatusText,
+  categoryText,
+  logActivity
+} = require('../../lib/activityLog');
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // base64 inflates ~33%; Vercel caps request bodies at 4.5MB
 
@@ -93,6 +100,8 @@ module.exports = async function handler(req, res) {
       return create(req, res);
     case 'role':
       return role(req, res);
+    case 'remove':
+      return remove(req, res);
     // Single hyphenated segments, not nested ("price-list/list") -- Vercel's
     // [...path].js catch-all only ever routes a *1-segment* remainder to
     // this function in production (confirmed by testing against the
@@ -141,6 +150,8 @@ module.exports = async function handler(req, res) {
       return customerLookup(req, res);
     case 'price-share-log':
       return priceShareLog(req, res);
+    case 'activity-log':
+      return activityLog(req, res);
     case 'spin-overview':
       return spinOverview(req, res);
     case 'spin-prize':
@@ -232,6 +243,7 @@ async function create(req, res) {
        returning id, email, name, role, created_at`,
       [data.user.id, email.trim(), newRole, admin.id]
     );
+    await logActivity(admin, { workType: 'staff', description: `added ${email.trim()} as ${newRole}` });
     return res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err instanceof StaffAuthError) {
@@ -271,13 +283,81 @@ async function role(req, res) {
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Staff member not found' });
     }
-    return res.status(200).json(result.rows[0]);
+    const updated = result.rows[0];
+    await logActivity(admin, {
+      workType: 'staff',
+      description: `changed ${updated.name || updated.email}'s role to ${newRole}`
+    });
+    return res.status(200).json(updated);
   } catch (err) {
     if (err instanceof StaffAuthError) {
       return res.status(err.status).json({ error: err.message });
     }
     console.error('update staff role error', err);
     return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Removes a staff member from the system entirely: their staff_profiles row
+// (device tokens cascade, other references are set to null -- see
+// schema.sql) and their Supabase Auth user, so the login stops working too.
+// Done in one transaction so a failed Auth delete leaves the profile intact
+// and the admin can simply retry.
+async function remove(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { staffId } = req.body ?? {};
+  if (typeof staffId !== 'string' || staffId.trim().length === 0) {
+    return res.status(400).json({ error: 'staffId is required' });
+  }
+
+  let client;
+  try {
+    const admin = await requireAdmin(req);
+    if (staffId === admin.id) {
+      return res.status(400).json({ error: 'You cannot delete yourself' });
+    }
+
+    client = await getPool().connect();
+    await client.query('begin');
+    const result = await client.query(
+      `delete from public.staff_profiles where id = $1 returning id, email, name`,
+      [staffId]
+    );
+    if (result.rowCount === 0) {
+      await client.query('rollback');
+      return res.status(404).json({ error: 'Staff member not found' });
+    }
+
+    const { error } = await getSupabaseAdmin().auth.admin.deleteUser(staffId);
+    // A missing Auth user (deleted by hand from the dashboard) is fine --
+    // the goal is that neither record exists afterwards.
+    if (error && error.status !== 404) {
+      await client.query('rollback');
+      console.error('delete staff auth user error', error);
+      return res.status(500).json({ error: 'Failed to delete login for this staff member' });
+    }
+
+    await client.query('commit');
+    // Released before logging -- the pool holds a single connection
+    // (lib/db.js), so logActivity would otherwise wait on it forever.
+    client.release();
+    client = null;
+    const removed = result.rows[0];
+    await logActivity(admin, { workType: 'staff', description: `removed staff member ${removed.name || removed.email}` });
+    return res.status(204).end();
+  } catch (err) {
+    if (client) await client.query('rollback').catch(() => {});
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('delete staff error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    if (client) client.release();
   }
 }
 
@@ -320,9 +400,10 @@ async function priceListSync(req, res) {
   }
 
   try {
-    await requireAdmin(req);
+    const admin = await requireAdmin(req);
 
     const result = await syncPriceList();
+    await logActivity(admin, { workType: 'price_list', description: 'synced the price list' });
     return res.status(200).json(result);
   } catch (err) {
     if (err instanceof StaffAuthError) {
@@ -396,7 +477,7 @@ async function priceListCategoryImageUpload(req, res) {
   }
 
   try {
-    await requireAdmin(req);
+    const admin = await requireAdmin(req);
 
     const file = await uploadCategoryImage(fileName.trim(), mimeType, buffer);
 
@@ -411,6 +492,7 @@ async function priceListCategoryImageUpload(req, res) {
        returning category, image_url`,
       [category.trim(), file.path, file.url]
     );
+    await logActivity(admin, { workType: 'price_list', description: `set the ${category.trim()} category image` });
     return res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err instanceof StaffAuthError) {
@@ -489,7 +571,7 @@ async function wishlistAdd(req, res) {
   const trimmedName = typeof customerName === 'string' ? customerName.trim() : '';
 
   try {
-    await requireStaff(req);
+    const staff = await requireStaff(req);
 
     const pool = getPool();
 
@@ -541,6 +623,13 @@ async function wishlistAdd(req, res) {
           [normalizedPhone, category.icon_key, category.name]
         );
 
+    if (insertResult.rowCount > 0) {
+      await logActivity(staff, {
+        workType: 'wishlist',
+        description: `added ${categoryText(category.name, subcategory?.name)} to the wishlist`,
+        customerPhone: normalizedPhone
+      });
+    }
     return res.status(200).json({ added: insertResult.rowCount > 0 });
   } catch (err) {
     if (err instanceof StaffAuthError) {
@@ -578,13 +667,19 @@ async function wishlistStatus(req, res) {
       `update public.wishlist_items
        set status = $1, status_updated_at = now(), status_updated_by = $2
        where id = $3
-       returning id, status, status_updated_at`,
+       returning id, status, status_updated_at, phone, category_name, subcategory_name`,
       [status, staff.id, wishlistItemId]
     );
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Wishlist item not found' });
     }
-    return res.status(200).json(result.rows[0]);
+    const { phone, category_name: categoryName, subcategory_name: subcategoryName, ...updated } = result.rows[0];
+    await logActivity(staff, {
+      workType: 'wishlist',
+      description: `changed ${categoryText(categoryName, subcategoryName)} wishlist to ${WISHLIST_STATUS_LABELS[status]}`,
+      customerPhone: phone
+    });
+    return res.status(200).json(updated);
   } catch (err) {
     if (err instanceof StaffAuthError) {
       return res.status(err.status).json({ error: err.message });
@@ -613,7 +708,7 @@ async function wishlistCall(req, res) {
 
     const pool = getPool();
     const itemResult = await pool.query(
-      `select wi.phone as customer_phone, u.name as customer_name
+      `select wi.phone as customer_phone, u.name as customer_name, wi.category_name, wi.subcategory_name
        from public.wishlist_items wi
        join public.users u on u.phone = wi.phone
        where wi.id = $1`,
@@ -622,7 +717,12 @@ async function wishlistCall(req, res) {
     if (itemResult.rowCount === 0) {
       return res.status(404).json({ error: 'Wishlist item not found' });
     }
-    const { customer_phone: customerPhone, customer_name: customerName } = itemResult.rows[0];
+    const {
+      customer_phone: customerPhone,
+      customer_name: customerName,
+      category_name: categoryName,
+      subcategory_name: subcategoryName
+    } = itemResult.rows[0];
 
     const logResult = await pool.query(
       `insert into public.wishlist_call_logs
@@ -631,6 +731,12 @@ async function wishlistCall(req, res) {
        returning id, called_at`,
       [wishlistItemId, staff.id, staff.email, customerPhone, customerName]
     );
+    await logActivity(staff, {
+      workType: 'wishlist',
+      description: `called about ${categoryText(categoryName, subcategoryName)} wishlist`,
+      customerPhone,
+      customerName
+    });
     return res.status(201).json(logResult.rows[0]);
   } catch (err) {
     if (err instanceof StaffAuthError) {
@@ -715,7 +821,7 @@ async function complaintsAdd(req, res) {
   const trimmedName = typeof customerName === 'string' ? customerName.trim() : '';
 
   try {
-    await requireStaff(req);
+    const staff = await requireStaff(req);
 
     const pool = getPool();
 
@@ -764,6 +870,11 @@ async function complaintsAdd(req, res) {
         typeof contactPhone === 'string' && contactPhone.trim().length > 0 ? contactPhone.trim() : null
       ]
     );
+    await logActivity(staff, {
+      workType: 'complaint',
+      description: `logged a ${categoryText(category.name, subcategory?.name)} complaint`,
+      customerPhone: normalizedPhone
+    });
     return res.status(201).json({ id: result.rows[0].id });
   } catch (err) {
     if (err instanceof StaffAuthError) {
@@ -794,7 +905,7 @@ async function complaintsStatus(req, res) {
   }
 
   try {
-    await requireStaff(req);
+    const staff = await requireStaff(req);
 
     const pool = getPool();
     const resolved = status === 'closed' || status === 'cancelled_by_staff' || status === 'cancelled_by_customer';
@@ -810,7 +921,7 @@ async function complaintsStatus(req, res) {
            cancellation_reason = case when $1::text in ('cancelled_by_staff', 'cancelled_by_customer') then $6 else cancellation_reason end,
            closed_date = case when $1::text = 'closed' then $7::date else closed_date end
        where id = $8
-       returning id, status, updated_at, resolved_at`,
+       returning id, status, updated_at, resolved_at, phone, category_name, subcategory_name`,
       [
         status,
         resolved,
@@ -825,7 +936,13 @@ async function complaintsStatus(req, res) {
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Complaint not found' });
     }
-    return res.status(200).json(result.rows[0]);
+    const { phone, category_name: categoryName, subcategory_name: subcategoryName, ...updated } = result.rows[0];
+    await logActivity(staff, {
+      workType: 'complaint',
+      description: `changed ${categoryText(categoryName, subcategoryName)} complaint to ${serviceRequestStatusText(status, body)}`,
+      customerPhone: phone
+    });
+    return res.status(200).json(updated);
   } catch (err) {
     if (err instanceof StaffAuthError) {
       return res.status(err.status).json({ error: err.message });
@@ -833,6 +950,12 @@ async function complaintsStatus(req, res) {
     console.error('update complaint status error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
+}
+
+// "demo", "installation" or "demo & installation", for activity log entries.
+function installationKindText(wantsDemo, wantsInstallation) {
+  if (wantsDemo && wantsInstallation) return 'demo & installation';
+  return wantsDemo ? 'demo' : 'installation';
 }
 
 // Any signed-in staff member can review/triage installation & demo
@@ -925,7 +1048,7 @@ async function installationsAdd(req, res) {
   const trimmedName = typeof customerName === 'string' ? customerName.trim() : '';
 
   try {
-    await requireStaff(req);
+    const staff = await requireStaff(req);
 
     const pool = getPool();
 
@@ -968,6 +1091,11 @@ async function installationsAdd(req, res) {
         typeof contactPhone === 'string' && contactPhone.trim().length > 0 ? contactPhone.trim() : null
       ]
     );
+    await logActivity(staff, {
+      workType: 'installation',
+      description: `logged a ${installationKindText(demo, installation)} request for ${itemName.trim()}`,
+      customerPhone: normalizedPhone
+    });
     return res.status(201).json({ id: result.rows[0].id });
   } catch (err) {
     if (err instanceof StaffAuthError) {
@@ -998,7 +1126,7 @@ async function installationsStatus(req, res) {
   }
 
   try {
-    await requireStaff(req);
+    const staff = await requireStaff(req);
 
     const pool = getPool();
     const resolved = status === 'closed' || status === 'cancelled_by_staff' || status === 'cancelled_by_customer';
@@ -1014,7 +1142,7 @@ async function installationsStatus(req, res) {
            cancellation_reason = case when $1::text in ('cancelled_by_staff', 'cancelled_by_customer') then $6 else cancellation_reason end,
            closed_date = case when $1::text = 'closed' then $7::date else closed_date end
        where id = $8
-       returning id, status, updated_at, resolved_at`,
+       returning id, status, updated_at, resolved_at, phone, item_name, wants_demo, wants_installation`,
       [
         status,
         resolved,
@@ -1029,7 +1157,19 @@ async function installationsStatus(req, res) {
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Installation request not found' });
     }
-    return res.status(200).json(result.rows[0]);
+    const {
+      phone,
+      item_name: itemName,
+      wants_demo: wantsDemo,
+      wants_installation: wantsInstallation,
+      ...updated
+    } = result.rows[0];
+    await logActivity(staff, {
+      workType: 'installation',
+      description: `changed ${itemName} ${installationKindText(wantsDemo, wantsInstallation)} request to ${serviceRequestStatusText(status, body)}`,
+      customerPhone: phone
+    });
+    return res.status(200).json(updated);
   } catch (err) {
     if (err instanceof StaffAuthError) {
       return res.status(err.status).json({ error: err.message });
@@ -1099,7 +1239,7 @@ async function invoiceRequestsStatus(req, res) {
   }
 
   try {
-    await requireAdmin(req);
+    const admin = await requireAdmin(req);
 
     const pool = getPool();
 
@@ -1131,6 +1271,7 @@ async function invoiceRequestsStatus(req, res) {
         console.error('invoice ready push error', pushErr);
       }
 
+      await logActivity(admin, { workType: 'invoice', description: 'closed an invoice request', customerPhone: phone });
       return res.status(200).json({ id: invoiceRequestId, status: 'closed', deleted: true });
     }
 
@@ -1138,13 +1279,15 @@ async function invoiceRequestsStatus(req, res) {
       `update public.invoice_requests
        set status = 'open', updated_at = now(), resolved_at = null
        where id = $1
-       returning id, status, updated_at, resolved_at`,
+       returning id, status, updated_at, resolved_at, phone`,
       [invoiceRequestId]
     );
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Invoice request not found' });
     }
-    return res.status(200).json(result.rows[0]);
+    const { phone, ...updated } = result.rows[0];
+    await logActivity(admin, { workType: 'invoice', description: 'reopened an invoice request', customerPhone: phone });
+    return res.status(200).json(updated);
   } catch (err) {
     if (err instanceof StaffAuthError) {
       return res.status(err.status).json({ error: err.message });
@@ -1201,6 +1344,13 @@ async function unreadableInvoicesList(req, res) {
 //                 (e.g. replaced by a corrected PDF, which is credited as
 //                 its own file) or Drive couldn't be reached just now, in
 //                 which case it's picked up on the customer's next sync.
+const RETRY_OUTCOME_TEXT = {
+  credited: (points) => `read, ${points} points added`,
+  read: () => 'read, no points due',
+  unreadable: () => 'still unreadable',
+  cleared: () => 'no longer in the customer\'s folder'
+};
+
 async function unreadableInvoicesRetry(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -1213,13 +1363,13 @@ async function unreadableInvoicesRetry(req, res) {
   }
 
   try {
-    await requireAdmin(req);
+    const admin = await requireAdmin(req);
 
     const pool = getPool();
     const deleted = await pool.query(
       // points = 0 always holds for a flagged invoice; checked anyway, since
       // re-reading a credited one as new would credit it a second time.
-      `delete from public.invoice_points where file_id = $1 and unreadable and points = 0 returning phone`,
+      `delete from public.invoice_points where file_id = $1 and unreadable and points = 0 returning phone, invoice_name`,
       [fileId]
     );
     if (deleted.rowCount === 0) {
@@ -1236,11 +1386,18 @@ async function unreadableInvoicesRetry(req, res) {
       `select unreadable, points from public.invoice_points where file_id = $1`,
       [fileId]
     );
-    if (recheck.rowCount === 0) {
-      return res.status(200).json({ fileId, outcome: 'cleared', points: 0 });
+    let outcome = 'cleared';
+    let points = 0;
+    if (recheck.rowCount > 0) {
+      ({ points } = recheck.rows[0]);
+      outcome = recheck.rows[0].unreadable ? 'unreadable' : points > 0 ? 'credited' : 'read';
     }
-    const { unreadable, points } = recheck.rows[0];
-    const outcome = unreadable ? 'unreadable' : points > 0 ? 'credited' : 'read';
+    const { phone, invoice_name: invoiceName } = deleted.rows[0];
+    await logActivity(admin, {
+      workType: 'invoice',
+      description: `re-checked unreadable invoice ${invoiceName}: ${RETRY_OUTCOME_TEXT[outcome](points)}`,
+      customerPhone: phone
+    });
     return res.status(200).json({ fileId, outcome, points });
   } catch (err) {
     if (err instanceof StaffAuthError) {
@@ -1328,6 +1485,13 @@ async function priceShareLog(req, res) {
        returning id`,
       [staff.id, normalizedPhone, customerName.trim(), sharedAtDate.toISOString()]
     );
+    await logActivity(staff, {
+      workType: 'price_share',
+      description: 'shared prices',
+      customerPhone: normalizedPhone,
+      customerName: customerName.trim(),
+      at: sharedAtDate.toISOString()
+    });
     return res.status(201).json({ id: result.rows[0].id });
   } catch (err) {
     if (err instanceof StaffAuthError) {
@@ -1364,6 +1528,100 @@ async function customerLookup(req, res) {
       return res.status(err.status).json({ error: err.message });
     }
     console.error('customer lookup error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// The Activity Log tab: who did what, for whom, and when -- newest first,
+// one page at a time. Admin-only. All filters are optional:
+//   staffId   -- one staff member
+//   workType  -- one of WORK_TYPES (lib/activityLog.js)
+//   from, to  -- ISO timestamps, from inclusive / to exclusive; the app
+//                works out day boundaries in the phone's own timezone
+//   before    -- the nextCursor of the previous page
+// The cursor is the last row's created_at at full (microsecond) precision
+// plus its id, since a JS Date would round created_at to milliseconds and
+// skip or repeat rows at a page boundary.
+const ACTIVITY_LOG_PAGE_SIZE = 50;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function activityLog(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { staffId, workType, from, to, before } = req.query;
+  const conditions = [];
+  const params = [];
+
+  if (staffId !== undefined) {
+    if (!UUID_REGEX.test(staffId)) {
+      return res.status(400).json({ error: 'staffId must be a staff member id' });
+    }
+    params.push(staffId);
+    conditions.push(`l.staff_id = $${params.length}`);
+  }
+  if (workType !== undefined) {
+    if (!WORK_TYPES.includes(workType)) {
+      return res.status(400).json({ error: `workType must be one of: ${WORK_TYPES.join(', ')}` });
+    }
+    params.push(workType);
+    conditions.push(`l.work_type = $${params.length}`);
+  }
+  for (const [name, value, operator] of [['from', from, '>='], ['to', to, '<']]) {
+    if (value === undefined) continue;
+    if (Number.isNaN(new Date(value).getTime())) {
+      return res.status(400).json({ error: `${name} must be an ISO-8601 timestamp` });
+    }
+    params.push(value);
+    conditions.push(`l.created_at ${operator} $${params.length}::timestamptz`);
+  }
+  if (before !== undefined) {
+    const [cursorAt, cursorId] = String(before).split('|');
+    if (!cursorAt || !UUID_REGEX.test(cursorId ?? '')) {
+      return res.status(400).json({ error: 'before must be a nextCursor from a previous page' });
+    }
+    params.push(cursorAt, cursorId);
+    conditions.push(`(l.created_at, l.id) < ($${params.length - 1}::timestamptz, $${params.length}::uuid)`);
+  }
+
+  try {
+    await requireAdmin(req);
+
+    const pool = getPool();
+    // The staff member's current name when they still exist (it may have
+    // been filled in since), else the snapshot taken when it was logged.
+    const result = await pool.query(
+      `select l.id,
+              l.staff_id,
+              coalesce(nullif(sp.name, ''), l.staff_name) as staff_name,
+              l.work_type,
+              l.description,
+              l.customer_phone,
+              l.customer_name,
+              l.created_at,
+              l.created_at::text as cursor_at
+       from public.staff_activity_log l
+       left join public.staff_profiles sp on sp.id = l.staff_id
+       ${conditions.length > 0 ? `where ${conditions.join(' and ')}` : ''}
+       order by l.created_at desc, l.id desc
+       limit ${ACTIVITY_LOG_PAGE_SIZE + 1}`,
+      params
+    );
+
+    const rows = result.rows.slice(0, ACTIVITY_LOG_PAGE_SIZE);
+    const last = rows[rows.length - 1];
+    const nextCursor = result.rows.length > ACTIVITY_LOG_PAGE_SIZE ? `${last.cursor_at}|${last.id}` : null;
+    return res.status(200).json({
+      items: rows.map(({ cursor_at: _cursorAt, ...row }) => row),
+      nextCursor
+    });
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('list activity log error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

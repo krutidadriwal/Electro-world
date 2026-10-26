@@ -110,10 +110,14 @@ async function main() {
           const reason = purchaseReason(row.invoice_name);
           await client.query(`delete from public.points_ledger where phone = $1 and reason = $2`, [row.phone, reason]);
           if (points > 0) {
+            // Expiry counts from when the invoice was first credited (its
+            // processed_at), same as schema.sql's backfill -- a correction
+            // here mustn't extend it.
             await client.query(
-              `insert into public.points_ledger (phone, points, reason, created_at)
-               values ($1, $2, $3, $4::date::timestamp at time zone 'UTC')`,
-              [row.phone, points, reason, invoiceDate]
+              `insert into public.points_ledger (phone, points, reason, created_at, expires_at)
+               select $1, $2, $3, $4::date::timestamp at time zone 'UTC', processed_at + interval '6 months'
+               from public.invoice_points where file_id = $5`,
+              [row.phone, points, reason, invoiceDate, row.file_id]
             );
           }
         }

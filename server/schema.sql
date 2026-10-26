@@ -342,8 +342,9 @@ exception
 end $$;
 
 -- Staff (admin/employee) profiles, keyed by the Supabase Auth user id. Only
--- an admin can create these rows (via POST /api/staff/create) or change an
--- existing row's role (via PATCH /api/staff/role).
+-- an admin can create these rows (via POST /api/staff/create), change an
+-- existing row's role (via PATCH /api/staff/role) or delete one along with
+-- its Supabase Auth user (via POST /api/staff/remove).
 create table if not exists public.staff_profiles (
   id uuid primary key,                 -- == auth.users.id
   email text not null,
@@ -464,6 +465,22 @@ alter table public.wishlist_items add column if not exists status public.wishlis
 alter table public.wishlist_items add column if not exists status_updated_at timestamptz;
 alter table public.wishlist_items add column if not exists status_updated_by uuid references public.staff_profiles(id);
 
+-- An admin can delete a staff member outright (POST /api/staff/remove).
+-- Everything that points at a staff_profiles row without a delete rule is
+-- switched to "on delete set null" so the history it belongs to (sent
+-- notifications, wishlist status changes, who invited whom) is kept, just
+-- no longer attributed. Re-added under Postgres' auto-generated names.
+alter table public.staff_profiles drop constraint if exists staff_profiles_invited_by_fkey;
+alter table public.staff_profiles add constraint staff_profiles_invited_by_fkey
+  foreign key (invited_by) references public.staff_profiles(id) on delete set null;
+alter table public.notifications alter column created_by drop not null;
+alter table public.notifications drop constraint if exists notifications_created_by_fkey;
+alter table public.notifications add constraint notifications_created_by_fkey
+  foreign key (created_by) references public.staff_profiles(id) on delete set null;
+alter table public.wishlist_items drop constraint if exists wishlist_items_status_updated_by_fkey;
+alter table public.wishlist_items add constraint wishlist_items_status_updated_by_fkey
+  foreign key (status_updated_by) references public.staff_profiles(id) on delete set null;
+
 -- A purchased entry is kept (not deleted) so staff still see the closed deal
 -- for a week -- see lib/closedRequests.js. It's history, not an active
 -- wish, so it's left out of the per-user uniqueness: the customer (or staff)
@@ -571,6 +588,25 @@ alter table public.invoice_points add column if not exists unreadable boolean no
 
 create index if not exists invoice_points_phone_idx on public.invoice_points (phone);
 
+-- Points expire 6 months after they were credited (the app's points T&C).
+-- Only unexpired entries count towards the balance; rows are never deleted.
+-- "Credited" is when the points landed in the account, not created_at: a
+-- purchase credit's created_at is backdated to the invoice date, so for
+-- those the invoice's processed_at is used instead. Every new credit gets
+-- the default (credited now -> expires 6 months from now).
+alter table public.points_ledger add column if not exists expires_at timestamptz;
+update public.points_ledger pl
+set expires_at = coalesce(
+  (select ip.processed_at from public.invoice_points ip
+   where ip.phone = pl.phone
+     and pl.reason = 'Purchase - Invoice ' || regexp_replace(ip.invoice_name, '\.pdf$', '', 'i')
+   limit 1),
+  pl.created_at
+) + interval '6 months'
+where pl.expires_at is null;
+alter table public.points_ledger alter column expires_at set default now() + interval '6 months';
+alter table public.points_ledger alter column expires_at set not null;
+
 -- Spin to Win (see server/lib/spin.js). Three tables, ported from the old
 -- standalone spinner's products / bought_products / valid_code + leads.
 --
@@ -648,6 +684,32 @@ create table if not exists public.price_share_log (
 alter table public.price_share_log enable row level security;
 
 create index if not exists price_share_log_phone_idx on public.price_share_log (customer_phone, shared_at desc);
+
+-- One plain-language row per thing a staff member did, for the staff app's
+-- admin-only Activity Log tab (GET /api/staff/activity-log). Written by
+-- lib/activityLog.js from each staff endpoint. staff_name is a snapshot so
+-- entries stay readable after the staff member is deleted (staff_id then
+-- becomes null); likewise customer_name. work_type values are listed in
+-- WORK_TYPES in lib/activityLog.js. backfilled marks rows copied in from
+-- older tables by scripts/backfill-activity-log.js.
+create table if not exists public.staff_activity_log (
+  id uuid primary key default gen_random_uuid(),
+  staff_id uuid references public.staff_profiles(id) on delete set null,
+  staff_name text not null,
+  work_type text not null
+    check (work_type in ('wishlist', 'complaint', 'installation', 'invoice', 'price_share', 'spin', 'broadcast', 'staff', 'price_list')),
+  description text not null,
+  customer_phone text,
+  customer_name text,
+  backfilled boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists staff_activity_log_created_at_idx on public.staff_activity_log (created_at desc, id desc);
+create index if not exists staff_activity_log_staff_idx on public.staff_activity_log (staff_id, created_at desc);
+create index if not exists staff_activity_log_work_type_idx on public.staff_activity_log (work_type, created_at desc);
+
+alter table public.staff_activity_log enable row level security;
 
 -- ===== TASK TRACKER (experimental) — start =====
 -- Backs api/tasks/[...path].js, only reachable when the server's

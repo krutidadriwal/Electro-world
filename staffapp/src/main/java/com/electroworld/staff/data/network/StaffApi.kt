@@ -2,6 +2,7 @@ package com.electroworld.staff.data.network
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PATCH
@@ -38,6 +39,11 @@ data class UpdateStaffRoleRequest(
 )
 
 @JsonClass(generateAdapter = true)
+data class DeleteStaffRequest(
+  val staffId: String
+)
+
+@JsonClass(generateAdapter = true)
 data class RegisterStaffDeviceTokenRequest(
   val fcmToken: String
 )
@@ -54,6 +60,10 @@ interface StaffApi {
 
   @PATCH("api/staff/role")
   suspend fun updateRole(@Body request: UpdateStaffRoleRequest): StaffMember
+
+  // Removes the staff member and their login entirely (204, no body).
+  @POST("api/staff/remove")
+  suspend fun delete(@Body request: DeleteStaffRequest): Response<Unit>
 
   @POST("api/staff/device-token")
   suspend fun registerDeviceToken(@Body request: RegisterStaffDeviceTokenRequest)

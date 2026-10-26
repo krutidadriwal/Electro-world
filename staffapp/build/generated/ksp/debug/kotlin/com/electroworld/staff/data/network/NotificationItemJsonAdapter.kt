@@ -73,8 +73,11 @@ public class NotificationItemJsonAdapter(
         }
         4 -> durationMinutes = intAdapter.fromJson(reader) ?:
             throw Util.unexpectedNull("durationMinutes", "duration_minutes", reader)
-        5 -> createdBy = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("createdBy",
-            "created_by", reader)
+        5 -> {
+          createdBy = nullableStringAdapter.fromJson(reader)
+          // $mask = $mask and (1 shl 5).inv()
+          mask0 = mask0 and 0xffffffdf.toInt()
+        }
         6 -> createdAt = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("createdAt",
             "created_at", reader)
         7 -> {
@@ -91,7 +94,7 @@ public class NotificationItemJsonAdapter(
       }
     }
     reader.endObject()
-    if (mask0 == 0xffffff73.toInt()) {
+    if (mask0 == 0xffffff53.toInt()) {
       // All parameters with defaults are set, invoke the constructor directly
       return  NotificationItem(
           id = id ?: throw Util.missingProperty("id", "id", reader),
@@ -100,7 +103,7 @@ public class NotificationItemJsonAdapter(
           imageUrl = imageUrl,
           durationMinutes = durationMinutes ?: throw Util.missingProperty("durationMinutes",
               "duration_minutes", reader),
-          createdBy = createdBy ?: throw Util.missingProperty("createdBy", "created_by", reader),
+          createdBy = createdBy,
           createdAt = createdAt ?: throw Util.missingProperty("createdAt", "created_at", reader),
           expired = expired as Boolean
       )
@@ -120,7 +123,7 @@ public class NotificationItemJsonAdapter(
           imageUrl,
           durationMinutes ?: throw Util.missingProperty("durationMinutes", "duration_minutes",
               reader),
-          createdBy ?: throw Util.missingProperty("createdBy", "created_by", reader),
+          createdBy,
           createdAt ?: throw Util.missingProperty("createdAt", "created_at", reader),
           expired,
           mask0,
@@ -145,7 +148,7 @@ public class NotificationItemJsonAdapter(
     writer.name("duration_minutes")
     intAdapter.toJson(writer, value_.durationMinutes)
     writer.name("created_by")
-    stringAdapter.toJson(writer, value_.createdBy)
+    nullableStringAdapter.toJson(writer, value_.createdBy)
     writer.name("created_at")
     stringAdapter.toJson(writer, value_.createdAt)
     writer.name("expired")

@@ -48,6 +48,7 @@ class MainActivity : ComponentActivity() {
           var isLoggedIn by remember { mutableStateOf(sessionManager.isLoggedIn) }
           var role by remember { mutableStateOf(sessionManager.role) }
           var email by remember { mutableStateOf(sessionManager.email) }
+          var name by remember { mutableStateOf(sessionManager.name) }
           var isResolvingProfile by remember { mutableStateOf(false) }
 
           // Android 13+ (API 33) requires this permission to actually be
@@ -73,14 +74,29 @@ class MainActivity : ComponentActivity() {
               isResolvingProfile = true
               try {
                 val me = NetworkModule.staffApi.me()
-                sessionManager.saveProfile(me.id, me.email, me.role)
+                sessionManager.saveProfile(me.id, me.email, me.name, me.role)
                 role = me.role
                 email = me.email
+                name = me.name ?: ""
               } catch (e: Exception) {
                 sessionManager.clearSession()
                 isLoggedIn = false
               } finally {
                 isResolvingProfile = false
+              }
+            } else if (isLoggedIn) {
+              // Already logged in from a previous launch: refresh the saved
+              // profile quietly so changes made in Supabase since then (e.g.
+              // a newly added name) show up without logging out. A failure
+              // just keeps the cached profile.
+              try {
+                val me = NetworkModule.staffApi.me()
+                sessionManager.saveProfile(me.id, me.email, me.name, me.role)
+                role = me.role
+                email = me.email
+                name = me.name ?: ""
+              } catch (e: Exception) {
+                // keep cached values
               }
             }
             if (isLoggedIn) {
@@ -92,6 +108,7 @@ class MainActivity : ComponentActivity() {
             HomeScreen(
               isAdmin = role == "admin",
               email = email,
+              name = name,
               role = role,
               notificationTarget = notificationTarget.value,
               onNotificationTargetConsumed = { notificationTarget.value = null },
@@ -100,6 +117,7 @@ class MainActivity : ComponentActivity() {
                 isLoggedIn = false
                 role = ""
                 email = ""
+                name = ""
               }
             )
           } else if (!isLoggedIn) {

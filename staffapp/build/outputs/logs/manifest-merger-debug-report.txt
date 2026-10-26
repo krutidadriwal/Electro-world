@@ -1,9 +1,20 @@
 -- Merging decision tree log ---
+provider#androidx.core.content.FileProvider
+INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:30:9-38:20
+	android:grantUriPermissions
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:34:13-47
+	android:authorities
+		INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:32:13-64
+	android:exported
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:33:13-37
+	android:name
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:31:13-62
 manifest
-ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:1-38:12
-INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:1-38:12
-INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:1-38:12
-INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:1-38:12
+ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:1-49:12
+INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:1-49:12
+INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:1-49:12
+INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:2:1-49:12
 MERGED from [androidx.compose.material3:material3-android:1.3.0] C:\Users\kruti\.gradle\caches\8.13\transforms\0b6b242cb5c2d94006b99fd9fd3fb5be\transformed\material3-release\AndroidManifest.xml:17:1-22:12
 MERGED from [io.coil-kt:coil-compose:2.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\229f34a40130918d43afbd81d89e33e4\transformed\coil-compose-2.7.0\AndroidManifest.xml:2:1-7:12
 MERGED from [io.coil-kt:coil-compose-base:2.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\badeab27e587fa2ae8fdb3c0f4e86b16\transformed\coil-compose-base-2.7.0\AndroidManifest.xml:2:1-7:12
@@ -119,8 +130,8 @@ MERGED from [com.google.firebase:firebase-messaging:25.1.0] C:\Users\kruti\.grad
 	android:name
 		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:5:22-74
 application
-ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:7:5-36:19
-INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:7:5-36:19
+ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:7:5-47:19
+INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:7:5-47:19
 MERGED from [androidx.compose.ui:ui-tooling-android:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\914d6b4e5340d39f3e472e3bd11bea89\transformed\ui-tooling-release\AndroidManifest.xml:22:5-26:19
 MERGED from [androidx.compose.ui:ui-tooling-android:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\914d6b4e5340d39f3e472e3bd11bea89\transformed\ui-tooling-release\AndroidManifest.xml:22:5-26:19
 MERGED from [androidx.compose.ui:ui-test-manifest:1.7.0] C:\Users\kruti\.gradle\caches\8.13\transforms\81a26d1d7543f2ebbb9564d86b8fa32e\transformed\ui-test-manifest-1.7.0\AndroidManifest.xml:22:5-26:19
@@ -204,17 +215,23 @@ ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:25:17
 	android:name
 		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:25:27-74
 service#com.electroworld.staff.data.notifications.StaffFirebaseMessagingService
-ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:29:9-35:19
+ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:40:9-46:19
 	android:exported
-		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:31:13-37
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:42:13-37
 	android:name
-		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:30:13-77
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:41:13-77
 intent-filter#action:name:com.google.firebase.MESSAGING_EVENT
-ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:32:13-34:29
+ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:43:13-45:29
 action#com.google.firebase.MESSAGING_EVENT
-ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:33:17-78
+ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:44:17-78
 	android:name
-		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:33:25-75
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:44:25-75
+meta-data#android.support.FILE_PROVIDER_PATHS
+ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:35:13-37:55
+	android:resource
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:37:17-52
+	android:name
+		ADDED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml:36:17-67
 uses-sdk
 INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from E:\Projects\Electro-world\staffapp\src\main\AndroidManifest.xml

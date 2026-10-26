@@ -10,6 +10,7 @@ const { getPool } = require('./db');
 const { requireAdmin, StaffAuthError } = require('./staffAuth');
 const { normalizePhone } = require('./phone');
 const { sendToTokens } = require('./fcm');
+const { logActivity } = require('./activityLog');
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const UNIQUE_VIOLATION = '23505';
@@ -302,6 +303,11 @@ async function spinGrantCreate(req, res) {
     );
 
     await notifyCustomer(pool, normalizedPhone, item.name);
+    await logActivity(admin, {
+      workType: 'spin',
+      description: `unlocked a spin for buying ${item.name}`,
+      customerPhone: normalizedPhone
+    });
     return res.status(201).json({ id: result.rows[0].id });
   } catch (err) {
     return handleError(res, err, 'create spin grant error');
@@ -337,13 +343,13 @@ async function spinGrantDeliver(req, res) {
   }
 
   try {
-    await requireAdmin(req);
+    const admin = await requireAdmin(req);
 
     const pool = getPool();
     const result = await pool.query(
       `update public.spin_grants set delivered_at = now()
        where id = $1 and used_at is not null and delivered_at is null
-       returning delivered_at as "deliveredAt"`,
+       returning delivered_at as "deliveredAt", phone, prize_name`,
       [id]
     );
     if (result.rowCount === 0) {
@@ -357,7 +363,13 @@ async function spinGrantDeliver(req, res) {
           : 'This prize has already been marked as delivered'
       });
     }
-    return res.status(200).json({ id, deliveredAt: result.rows[0].deliveredAt });
+    const delivered = result.rows[0];
+    await logActivity(admin, {
+      workType: 'spin',
+      description: `handed over spin prize ${delivered.prize_name}`,
+      customerPhone: delivered.phone
+    });
+    return res.status(200).json({ id, deliveredAt: delivered.deliveredAt });
   } catch (err) {
     return handleError(res, err, 'deliver spin prize error');
   }
@@ -376,12 +388,12 @@ async function spinGrantUndo(req, res) {
 
   let client;
   try {
-    await requireAdmin(req);
+    const admin = await requireAdmin(req);
 
     client = await getPool().connect();
     await client.query('begin');
     const grantResult = await client.query(
-      `select prize_id, used_at, delivered_at from public.spin_grants where id = $1 for update`,
+      `select prize_id, prize_name, phone, used_at, delivered_at from public.spin_grants where id = $1 for update`,
       [id]
     );
     if (grantResult.rowCount === 0) {
@@ -406,6 +418,15 @@ async function spinGrantUndo(req, res) {
       [id]
     );
     await client.query('commit');
+    // Released before logging -- the pool holds a single connection
+    // (lib/db.js), so logActivity would otherwise wait on it forever.
+    client.release();
+    client = null;
+    await logActivity(admin, {
+      workType: 'spin',
+      description: `undid a spin win (${grant.prize_name ?? 'prize since deleted'}), so the customer can spin again`,
+      customerPhone: grant.phone
+    });
     return res.status(204).end();
   } catch (err) {
     if (client) {
@@ -426,13 +447,13 @@ async function spinGrantRevoke(req, res) {
   }
 
   try {
-    await requireAdmin(req);
+    const admin = await requireAdmin(req);
 
     // Only ever deletes an unplayed spin -- a played one is the record of a
     // prize that left stock, so it has to be undone first (spinGrantUndo).
     const pool = getPool();
     const result = await pool.query(
-      `delete from public.spin_grants where id = $1 and used_at is null`,
+      `delete from public.spin_grants where id = $1 and used_at is null returning phone, bought_item`,
       [id]
     );
     if (result.rowCount === 0) {
@@ -441,6 +462,12 @@ async function spinGrantRevoke(req, res) {
         ? res.status(404).json({ error: 'Spin not found' })
         : res.status(409).json({ error: 'This spin has already been played. Undo the win first.' });
     }
+    const revoked = result.rows[0];
+    await logActivity(admin, {
+      workType: 'spin',
+      description: `took back an unplayed spin (for buying ${revoked.bought_item})`,
+      customerPhone: revoked.phone
+    });
     return res.status(204).end();
   } catch (err) {
     return handleError(res, err, 'revoke spin error');

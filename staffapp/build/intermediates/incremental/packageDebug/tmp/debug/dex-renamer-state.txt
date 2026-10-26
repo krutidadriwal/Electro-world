@@ -1,6 +1,7 @@
-#Tue Oct 20 16:30:40 IST 2026
+#Thu Oct 22 12:40:48 IST 2026
 base.0=E\:\\Projects\\Electro-world\\staffapp\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes.dex
 base.1=E\:\\Projects\\Electro-world\\staffapp\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\0\\classes.dex
+base.10=E\:\\Projects\\Electro-world\\staffapp\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\10\\classes.dex
 base.2=E\:\\Projects\\Electro-world\\staffapp\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\11\\classes.dex
 base.3=E\:\\Projects\\Electro-world\\staffapp\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\12\\classes.dex
 base.4=E\:\\Projects\\Electro-world\\staffapp\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\14\\classes.dex
@@ -11,6 +12,7 @@ base.8=E\:\\Projects\\Electro-world\\staffapp\\build\\intermediates\\dex\\debug\
 base.9=E\:\\Projects\\Electro-world\\staffapp\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes3.dex
 path.0=classes.dex
 path.1=0/classes.dex
+path.10=10/classes.dex
 path.2=11/classes.dex
 path.3=12/classes.dex
 path.4=14/classes.dex
@@ -21,6 +23,7 @@ path.8=classes2.dex
 path.9=classes3.dex
 renamed.0=classes.dex
 renamed.1=classes2.dex
+renamed.10=classes11.dex
 renamed.2=classes3.dex
 renamed.3=classes4.dex
 renamed.4=classes5.dex

@@ -224,13 +224,17 @@ private fun PointsBalanceCard(balance: Int) {
 }
 
 // The points programme's terms, shown from the balance card's "T&C apply"
-// link. Placeholder: these just restate how points are currently awarded
-// (see server/lib/invoicePoints.js) until the store's own T&C text replaces
-// them -- swap the list, nothing else reads it.
+// link. The first three restate how points are awarded (see
+// server/lib/invoicePoints.js). The 6-month expiry is enforced by the
+// server (points_ledger.expires_at); the 5% redemption cap is applied at
+// the counter -- nothing in the app or server enforces it. Swap the list
+// freely, nothing else reads it.
 private val POINTS_TERMS = listOf(
   "Points are earned on purchase invoices dated on or after 11 October 2026.",
   "Every full ₹5,000 of an invoice's total earns 50 points. Invoices under ₹5,000 do not earn points.",
-  "Points are added once the invoice appears in your Store Invoices & Bills."
+  "Points are added once the invoice appears in your Store Invoices & Bills.",
+  "Points can be redeemed on any future purchase for a discount of up to 5% of that invoice's amount.",
+  "Points must be redeemed within 6 months of being added to your account. Points not redeemed by then expire."
 )
 
 @Composable
@@ -298,12 +302,22 @@ private fun PointsHistoryRow(entry: PointsHistoryEntry) {
       Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
         Text(text = keepHyphenatedWordsWhole(entry.reason), color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         Text(text = formatPointsDate(entry.createdAt), color = MaterialTheme.colorScheme.outline, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+        entry.expiresOn?.let { expiresOn ->
+          Text(
+            text = if (entry.expired) "Expired on ${formatPointsDate(expiresOn)}" else "Expires on ${formatPointsDate(expiresOn)}",
+            color = if (entry.expired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
+            fontSize = 11.sp
+          )
+        }
       }
+      // Expired points stay listed but struck through -- they no longer
+      // count towards the balance.
       Text(
         text = if (entry.points >= 0) "+${entry.points}" else entry.points.toString(),
-        color = if (entry.points >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
+        color = if (entry.points >= 0 && !entry.expired) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
         fontSize = 14.sp,
-        fontWeight = FontWeight.Bold
+        fontWeight = FontWeight.Bold,
+        textDecoration = if (entry.expired) TextDecoration.LineThrough else null
       )
     }
   }

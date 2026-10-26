@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Price-list share images (see ui/share/ShareFlow.kt) live in
+     filesDir/shares so the on-device share history can re-share them. -->
+<paths>
+    <files-path name="shares" path="shares/" />
+</paths>

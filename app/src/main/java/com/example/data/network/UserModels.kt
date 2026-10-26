@@ -210,7 +210,11 @@ data class PointsHistoryEntry(
   val id: String,
   val points: Int,
   val reason: String,
-  @Json(name = "created_at") val createdAt: String
+  @Json(name = "created_at") val createdAt: String,
+  // "YYYY-MM-DD"; points expire 6 months after they're credited. Defaults
+  // keep an older server (without expiry) readable.
+  @Json(name = "expires_on") val expiresOn: String? = null,
+  val expired: Boolean = false
 )
 
 @JsonClass(generateAdapter = true)

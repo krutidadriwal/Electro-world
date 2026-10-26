@@ -1,8 +1,15 @@
 package com.electroworld.staff.ui.screens
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.view.WindowManager
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,17 +23,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,6 +51,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -55,6 +71,14 @@ import androidx.compose.ui.graphics.Color
 import coil.compose.AsyncImage
 import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.network.PriceListItem
+import com.electroworld.staff.data.share.QuoteCart
+import com.electroworld.staff.data.share.ShareHistory
+import com.electroworld.staff.ui.share.QuoteBar
+import com.electroworld.staff.ui.share.QuoteScreen
+import com.electroworld.staff.ui.share.ShareFlowHost
+import com.electroworld.staff.ui.share.ShareHistorySheet
+import com.electroworld.staff.ui.share.ShareRequest
+import com.electroworld.staff.ui.share.rememberShareFlowState
 import com.electroworld.staff.ui.theme.AllSwatches
 import com.electroworld.staff.ui.theme.DeepSlate
 import com.electroworld.staff.ui.theme.PaleGold
@@ -70,6 +94,14 @@ private sealed class PriceListNav {
   data class Items(val title: String, val category: String?, val groupName: String?) : PriceListNav()
 }
 
+// What an item row can do: open the customer screen, share its price, or
+// add it to / remove it from the quotation.
+private class ItemActions(
+  val onOpen: (PriceListItem) -> Unit,
+  val onShare: (PriceListItem) -> Unit,
+  val onToggleQuote: (PriceListItem) -> Unit
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PriceListScreen(isAdmin: Boolean, onBack: () -> Unit, modifier: Modifier = Modifier) {
@@ -84,30 +116,33 @@ fun PriceListScreen(isAdmin: Boolean, onBack: () -> Unit, modifier: Modifier = M
   var searchQuery by remember { mutableStateOf("") }
   var hideOutOfStock by remember { mutableStateOf(false) }
   var selectedItem by remember { mutableStateOf<PriceListItem?>(null) }
+  var showQuote by remember { mutableStateOf(false) }
+  var showShareHistory by remember { mutableStateOf(false) }
   val coroutineScope = rememberCoroutineScope()
+  val context = LocalContext.current
+  val shareFlow = rememberShareFlowState()
+  remember {
+    QuoteCart.init(context)
+    ShareHistory.init(context)
+  }
+  BlockScreenshots()
+
+  // One scroll position per list (each root scope, each category/group), held
+  // here -- above the customer-screen early return below, which otherwise
+  // throws the list away -- so opening an item and coming back, or backing
+  // out of a category, lands where you left off.
+  val listStates = remember { mutableMapOf<String, LazyListState>() }
+  fun listStateFor(key: String): LazyListState = listStates.getOrPut(key) { LazyListState() }
 
   val visibleItems = if (hideOutOfStock) allItems.filterNot { isOutOfStock(it) } else allItems
 
-  selectedItem?.let { item ->
-    BackHandler { selectedItem = null }
-    CustomerPriceScreen(
-      item = item,
-      categoryImageUrl = categoryImages[item.category],
-      onBack = { selectedItem = null },
-      modifier = modifier
-    )
-    return
-  }
-
-  val parentNav = navParent(nav)
-  BackHandler(enabled = parentNav != null) {
-    if (parentNav != null) nav = parentNav
-  }
-
+  // Also above the early return: below it, this re-ran -- re-downloading the
+  // whole price list -- every time the customer screen was closed.
   LaunchedEffect(refreshTrigger) {
     isLoading = true
     try {
       allItems = NetworkModule.priceListApi.list().items
+      QuoteCart.refreshPrices(allItems)
       errorMessage = null
     } catch (e: Exception) {
       errorMessage = "Failed to load price list."
@@ -122,6 +157,49 @@ fun PriceListScreen(isAdmin: Boolean, onBack: () -> Unit, modifier: Modifier = M
       // Non-critical -- CustomerPriceScreen just shows no hero image for any
       // category whose lookup fails, same as one with no image assigned yet.
     }
+  }
+
+  // Share logs that failed earlier (e.g. offline) get another go.
+  LaunchedEffect(Unit) { ShareHistory.syncPendingLogs() }
+
+  val itemActions = ItemActions(
+    onOpen = { selectedItem = it },
+    onShare = { shareFlow.start(ShareRequest.Item(it, categoryImages[it.category])) },
+    onToggleQuote = { QuoteCart.toggle(it) }
+  )
+
+  ShareFlowHost(shareFlow)
+  if (showShareHistory) {
+    ShareHistorySheet(onDismiss = { showShareHistory = false })
+  }
+
+  if (showQuote) {
+    BackHandler { showQuote = false }
+    QuoteScreen(
+      categoryImageUrls = categoryImages,
+      onBack = { showQuote = false },
+      onShare = { lines -> shareFlow.start(ShareRequest.Quotation(lines, categoryImages)) },
+      modifier = modifier
+    )
+    return
+  }
+
+  selectedItem?.let { item ->
+    BackHandler { selectedItem = null }
+    CustomerPriceScreen(
+      item = item,
+      categoryImageUrl = categoryImages[item.category],
+      inQuote = QuoteCart.contains(item.itemName),
+      actions = itemActions,
+      onBack = { selectedItem = null },
+      modifier = modifier
+    )
+    return
+  }
+
+  val parentNav = navParent(nav)
+  BackHandler(enabled = parentNav != null) {
+    if (parentNav != null) nav = parentNav
   }
 
   // Drilling into a category/group's items is a dead end with nothing left to
@@ -141,6 +219,9 @@ fun PriceListScreen(isAdmin: Boolean, onBack: () -> Unit, modifier: Modifier = M
         },
         actions = {
           Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { showShareHistory = true }) {
+              Icon(Icons.Default.History, contentDescription = "Recently shared")
+            }
             Text("Hide 0 pcs", style = MaterialTheme.typography.labelSmall)
             Checkbox(checked = hideOutOfStock, onCheckedChange = { hideOutOfStock = it })
 
@@ -173,6 +254,9 @@ fun PriceListScreen(isAdmin: Boolean, onBack: () -> Unit, modifier: Modifier = M
         }
       )
     },
+    bottomBar = {
+      if (QuoteCart.lines.isNotEmpty()) QuoteBar(onClick = { showQuote = true })
+    },
     modifier = modifier
   ) { padding ->
     Column(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -191,7 +275,11 @@ fun PriceListScreen(isAdmin: Boolean, onBack: () -> Unit, modifier: Modifier = M
 
         OutlinedTextField(
           value = searchQuery,
-          onValueChange = { searchQuery = it },
+          onValueChange = {
+            searchQuery = it
+            // New results start at the top, not wherever the old ones were scrolled to.
+            coroutineScope.launch { listStateFor("root-$scope").scrollToItem(0) }
+          },
           label = {
             Text(
               when (scope) {
@@ -228,22 +316,44 @@ fun PriceListScreen(isAdmin: Boolean, onBack: () -> Unit, modifier: Modifier = M
             scope = scope,
             searchQuery = searchQuery,
             isAdmin = isAdmin,
+            listState = listStateFor("root-$scope"),
+            actions = itemActions,
             onScopeChange = { scope = it },
             onCategorySelected = { nav = PriceListNav.Items(title = it, category = it, groupName = null) },
-            onGroupSelected = { nav = PriceListNav.Items(title = it, category = null, groupName = it) },
-            onItemSelected = { selectedItem = it }
+            onGroupSelected = { nav = PriceListNav.Items(title = it, category = null, groupName = it) }
           )
           is PriceListNav.Items -> {
             val itemsInScope = visibleItems.filter {
               (current.category == null || it.category == current.category) &&
                 (current.groupName == null || it.groupName == current.groupName)
             }
-            ItemRows(itemsInScope, isAdmin, onItemSelected = { selectedItem = it })
+            ItemRows(itemsInScope, isAdmin, listStateFor("items-$current"), itemActions)
           }
         }
       }
     }
   }
+}
+
+// Screenshots and screen recording are blocked while the price list is open
+// (FLAG_SECURE), so rates can only leave the app through Share -- which
+// always logs who it went to. Cleared again on leaving the price list so the
+// rest of the app is unaffected. The history sheet is a separate window and
+// sets the same flag itself (see QuoteSheets.kt).
+@Composable
+private fun BlockScreenshots() {
+  val context = LocalContext.current
+  DisposableEffect(Unit) {
+    val window = context.findActivity()?.window
+    window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+    onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
+  }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+  is Activity -> this
+  is ContextWrapper -> baseContext.findActivity()
+  else -> null
 }
 
 private fun navTitle(nav: PriceListNav): String = when (nav) {
@@ -262,10 +372,11 @@ private fun RootLevel(
   scope: SearchScope,
   searchQuery: String,
   isAdmin: Boolean,
+  listState: LazyListState,
+  actions: ItemActions,
   onScopeChange: (SearchScope) -> Unit,
   onCategorySelected: (String) -> Unit,
-  onGroupSelected: (String) -> Unit,
-  onItemSelected: (PriceListItem) -> Unit
+  onGroupSelected: (String) -> Unit
 ) {
   when (scope) {
     SearchScope.CATEGORY -> {
@@ -276,7 +387,7 @@ private fun RootLevel(
         NoMatchesState(query = searchQuery, currentScope = scope, onScopeChange = onScopeChange)
         return
       }
-      LazyColumn(contentPadding = PaddingValues(16.dp)) {
+      LazyColumn(state = listState, contentPadding = PaddingValues(16.dp)) {
         items(categories) { category ->
           val count = allItems.count { it.category == category }
           NavRow(
@@ -295,7 +406,7 @@ private fun RootLevel(
         NoMatchesState(query = searchQuery, currentScope = scope, onScopeChange = onScopeChange)
         return
       }
-      LazyColumn(contentPadding = PaddingValues(16.dp)) {
+      LazyColumn(state = listState, contentPadding = PaddingValues(16.dp)) {
         items(groups.entries.toList()) { (group, itemsInGroup) ->
           NavRow(
             title = group,
@@ -311,7 +422,7 @@ private fun RootLevel(
         NoMatchesState(query = searchQuery, currentScope = scope, onScopeChange = onScopeChange)
         return
       }
-      ItemRows(matches, isAdmin, onItemSelected)
+      ItemRows(matches, isAdmin, listState, actions)
     }
   }
 }
@@ -352,61 +463,116 @@ private fun SearchScope.label(): String = when (this) {
 }
 
 @Composable
-private fun ItemRows(items: List<PriceListItem>, isAdmin: Boolean, onItemSelected: (PriceListItem) -> Unit) {
+private fun ItemRows(items: List<PriceListItem>, isAdmin: Boolean, listState: LazyListState, actions: ItemActions) {
   if (items.isEmpty()) {
     EmptyState("No items match your search.")
     return
   }
-  LazyColumn(contentPadding = PaddingValues(16.dp)) {
-    items(items) { item -> ItemRow(item, isAdmin = isAdmin, onClick = { onItemSelected(item) }) }
+  LazyColumn(state = listState, contentPadding = PaddingValues(16.dp)) {
+    items(items) { item -> ItemRow(item, isAdmin = isAdmin, actions = actions) }
   }
 }
 
+// Tap opens the customer screen; long-press offers Share / quote toggle
+// without opening it. The trailing button adds the item to the quote, and
+// once it's in (shown as a gold tick) removes it again.
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ItemRow(item: PriceListItem, isAdmin: Boolean, onClick: () -> Unit) {
+private fun ItemRow(item: PriceListItem, isAdmin: Boolean, actions: ItemActions) {
+  var menuExpanded by remember { mutableStateOf(false) }
+  val inQuote = QuoteCart.contains(item.itemName)
+
   Card(
     colors = CardDefaults.cardColors(containerColor = DeepSlate),
     modifier = Modifier
       .fillMaxWidth()
       .padding(bottom = 12.dp)
-      .clickable(onClick = onClick)
+      .combinedClickable(onClick = { actions.onOpen(item) }, onLongClick = { menuExpanded = true })
   ) {
-    Column(modifier = Modifier.padding(16.dp)) {
-      Text(item.itemName, style = MaterialTheme.typography.bodyLarge)
-      Text(
-        "${item.category} · ${item.groupName}",
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.outline
-      )
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(top = 4.dp)
-      ) {
-        if (item.mrp > item.finalPrice) {
-          Text(
-            "₹${formatPrice(item.mrp)}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.outline,
-            textDecoration = TextDecoration.LineThrough,
-            modifier = Modifier.padding(end = 8.dp)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      Column(modifier = Modifier.padding(16.dp).weight(1f)) {
+        ItemRowDetails(item, isAdmin)
+      }
+      Box(modifier = Modifier.padding(end = 8.dp)) {
+        if (!inQuote) {
+          IconButton(onClick = { actions.onToggleQuote(item) }) {
+            Icon(Icons.Default.AddShoppingCart, contentDescription = "Add to quote", tint = MaterialTheme.colorScheme.secondary)
+          }
+        } else {
+          Box(
+            modifier = Modifier
+              .padding(6.dp)
+              .size(36.dp)
+              .background(MaterialTheme.colorScheme.secondary, CircleShape)
+              .clickable { actions.onToggleQuote(item) },
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              Icons.Default.Check,
+              contentDescription = "In quote — tap to remove",
+              tint = MaterialTheme.colorScheme.onSecondary,
+              modifier = Modifier.size(20.dp)
+            )
+          }
+        }
+        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+          DropdownMenuItem(
+            text = { Text("Share price") },
+            leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
+            onClick = {
+              menuExpanded = false
+              actions.onShare(item)
+            }
+          )
+          DropdownMenuItem(
+            text = { Text(if (inQuote) "Remove from quote" else "Add to quote") },
+            leadingIcon = { Icon(Icons.Default.AddShoppingCart, contentDescription = null) },
+            onClick = {
+              menuExpanded = false
+              actions.onToggleQuote(item)
+            }
           )
         }
-        Text("₹${formatPrice(item.finalPrice)}", style = MaterialTheme.typography.bodyMedium)
-        Text(
-          "  ·  ${item.stockLabel}",
-          style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.outline
-        )
-      }
-      if (isAdmin && item.costPrice != null) {
-        Text(
-          "Cost ₹${formatPrice(item.costPrice)}",
-          style = MaterialTheme.typography.labelMedium,
-          color = MaterialTheme.colorScheme.tertiary,
-          modifier = Modifier.padding(top = 2.dp)
-        )
       }
     }
+  }
+}
+
+@Composable
+private fun ItemRowDetails(item: PriceListItem, isAdmin: Boolean) {
+  Text(item.itemName, style = MaterialTheme.typography.bodyLarge)
+  Text(
+    "${item.category} · ${item.groupName}",
+    style = MaterialTheme.typography.labelMedium,
+    color = MaterialTheme.colorScheme.outline
+  )
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
+    modifier = Modifier.padding(top = 4.dp)
+  ) {
+    if (item.mrp > item.finalPrice) {
+      Text(
+        "₹${formatPrice(item.mrp)}",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.outline,
+        textDecoration = TextDecoration.LineThrough,
+        modifier = Modifier.padding(end = 8.dp)
+      )
+    }
+    Text("₹${formatPrice(item.finalPrice)}", style = MaterialTheme.typography.bodyMedium)
+    Text(
+      "  ·  ${item.stockLabel}",
+      style = MaterialTheme.typography.bodyMedium,
+      color = MaterialTheme.colorScheme.outline
+    )
+  }
+  if (isAdmin && item.costPrice != null) {
+    Text(
+      "Cost ₹${formatPrice(item.costPrice)}",
+      style = MaterialTheme.typography.labelMedium,
+      color = MaterialTheme.colorScheme.tertiary,
+      modifier = Modifier.padding(top = 2.dp)
+    )
   }
 }
 
@@ -423,6 +589,8 @@ private fun ItemRow(item: PriceListItem, isAdmin: Boolean, onClick: () -> Unit) 
 private fun CustomerPriceScreen(
   item: PriceListItem,
   categoryImageUrl: String?,
+  inQuote: Boolean,
+  actions: ItemActions,
   onBack: () -> Unit,
   modifier: Modifier = Modifier
 ) {
@@ -442,6 +610,34 @@ private fun CustomerPriceScreen(
     ) {
       IconButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart).padding(8.dp)) {
         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = textColor)
+      }
+      // Mirrors the back arrow, using the empty corner instead of crowding
+      // the centred price.
+      IconButton(onClick = { actions.onShare(item) }, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) {
+        Icon(Icons.Default.Share, contentDescription = "Share price", tint = textColor)
+      }
+      // Same toggle as the list's trailing button.
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+          .align(Alignment.BottomCenter)
+          .padding(bottom = 24.dp)
+          .border(1.dp, textColor.copy(alpha = 0.6f), CircleShape)
+          .clickable { actions.onToggleQuote(item) }
+          .padding(horizontal = 20.dp, vertical = 10.dp)
+      ) {
+        Icon(
+          if (inQuote) Icons.Default.Check else Icons.Default.AddShoppingCart,
+          contentDescription = null,
+          tint = textColor,
+          modifier = Modifier.size(18.dp)
+        )
+        Text(
+          if (inQuote) "In quote · tap to remove" else "Add to quote",
+          color = textColor,
+          style = MaterialTheme.typography.labelLarge,
+          modifier = Modifier.padding(start = 8.dp)
+        )
       }
 
       Column(

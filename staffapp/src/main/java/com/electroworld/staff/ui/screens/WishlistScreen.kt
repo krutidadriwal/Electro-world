@@ -481,15 +481,15 @@ private fun WishlistRow(
   if (confirmingPurchase) {
     AlertDialog(
       onDismissRequest = { confirmingPurchase = false },
-      title = { Text("Mark as purchased?") },
-      text = { Text("This will remove ${item.customerName} from the wishlist.") },
+      title = { Text("Mark deal as closed?") },
+      text = { Text("${item.customerName} will stay in this list as Purchased for a week, then drop off.") },
       confirmButton = {
         androidx.compose.material3.TextButton(
           onClick = {
             confirmingPurchase = false
             onStatusSelected("purchased")
           }
-        ) { Text("Remove") }
+        ) { Text("Mark closed") }
       },
       dismissButton = {
         androidx.compose.material3.TextButton(onClick = { confirmingPurchase = false }) { Text("Cancel") }

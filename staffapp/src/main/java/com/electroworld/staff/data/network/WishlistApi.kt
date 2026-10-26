@@ -35,8 +35,7 @@ data class WishlistStatusRequest(
 data class WishlistStatusResponse(
   val id: String,
   val status: String,
-  // Absent when status == "purchased" -- that response deletes the row
-  // instead of updating it, so there's no new status_updated_at to report.
+  // Older servers deleted a purchased row and left this out.
   @Json(name = "status_updated_at") val statusUpdatedAt: String? = null
 )
 

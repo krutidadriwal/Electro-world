@@ -14,6 +14,7 @@ const { requireStaff, requireAdmin, StaffAuthError } = require('../../lib/staffA
 const { sendToTokens } = require('../../lib/fcm');
 const { uploadNotificationImage } = require('../../lib/notificationImages');
 const { routeSegmentsAfter } = require('../../lib/routeSegments');
+const { broadcastDescription, logActivity } = require('../../lib/activityLog');
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // base64 inflates ~33%; Vercel caps request bodies at 4.5MB
 
@@ -138,6 +139,7 @@ async function create(req, res) {
       }
     }
 
+    await logActivity(admin, { workType: 'broadcast', description: broadcastDescription(notification.message) });
     return res.status(201).json(notification);
   } catch (err) {
     if (err instanceof StaffAuthError) {

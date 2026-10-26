@@ -203,12 +203,19 @@ async function points(req, res) {
       }
     }
 
+    // Points expire 6 months after they're credited (see expires_at in
+    // schema.sql), so only unexpired entries count. History still lists
+    // expired ones, marked, so a drop in the balance is explained.
+    // expires_on is the expiry's calendar date in the store's time zone.
     const balanceResult = await pool.query(
-      `select coalesce(sum(points), 0)::int as balance from public.points_ledger where phone = $1`,
+      `select coalesce(sum(points), 0)::int as balance from public.points_ledger where phone = $1 and expires_at > now()`,
       [normalizedPhone]
     );
     const historyResult = await pool.query(
-      `select id, points, reason, created_at from public.points_ledger where phone = $1 order by created_at desc limit 50`,
+      `select id, points, reason, created_at,
+              (expires_at at time zone 'Asia/Kolkata')::date::text as expires_on,
+              expires_at <= now() as expired
+       from public.points_ledger where phone = $1 order by created_at desc limit 50`,
       [normalizedPhone]
     );
     return res.status(200).json({ balance: balanceResult.rows[0].balance, history: historyResult.rows });

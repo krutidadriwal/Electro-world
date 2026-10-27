@@ -9,12 +9,15 @@
 // before req.query.path or req.url parsing ever runs). Giving every route an
 // explicit segment sidesteps that entirely.
 
+const crypto = require('crypto');
 const { getPool } = require('../../lib/db');
 const { requireStaff, requireAdmin, StaffAuthError } = require('../../lib/staffAuth');
 const { sendToTokens } = require('../../lib/fcm');
 const { uploadNotificationImage } = require('../../lib/notificationImages');
 const { routeSegmentsAfter } = require('../../lib/routeSegments');
 const { broadcastDescription, logActivity } = require('../../lib/activityLog');
+const { normalizePhone } = require('../../lib/phone');
+const { sendExpiryReminders } = require('../../lib/points');
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // base64 inflates ~33%; Vercel caps request bodies at 4.5MB
 
@@ -31,6 +34,8 @@ module.exports = async function handler(req, res) {
       return create(req, res);
     case 'image':
       return uploadImage(req, res);
+    case 'points-expiry-reminders':
+      return pointsExpiryReminders(req, res);
     default:
       return res.status(404).json({ error: 'Not found' });
   }
@@ -40,10 +45,21 @@ module.exports = async function handler(req, res) {
 // Unlike list(), this only returns not-yet-expired notifications, and
 // customers have no login of their own to gate this behind (same trust
 // model as the other customer-facing endpoints, e.g. GET /api/invoices).
+//
+// With ?phone=, that customer's own notifications (public.
+// customer_notifications, e.g. points expiry reminders) are listed too, in
+// the same shape -- duration_minutes worked out from their expires_at --
+// so the app treats both alike. Older app versions don't send it and just
+// get the broadcasts.
 async function active(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const phone = req.query.phone === undefined ? null : normalizePhone(req.query.phone, req.query.countryCode);
+  if (req.query.phone !== undefined && !phone) {
+    return res.status(400).json({ error: 'phone must be a 10-digit number' });
   }
 
   try {
@@ -52,7 +68,12 @@ async function active(req, res) {
       `select id, message, image_url, duration_minutes, created_at
        from public.notifications
        where (created_at + (duration_minutes || ' minutes')::interval) >= now()
-       order by created_at desc`
+       union all
+       select id, message, null, ceil(extract(epoch from expires_at - created_at) / 60)::int, created_at
+       from public.customer_notifications
+       where phone = $1 and expires_at >= now()
+       order by created_at desc`,
+      [phone]
     );
     return res.status(200).json({ notifications: result.rows });
   } catch (err) {
@@ -191,6 +212,35 @@ async function uploadImage(req, res) {
       return res.status(err.status).json({ error: err.message });
     }
     console.error('upload notification image error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Called daily at 10:00 IST by the pg_cron job in schema.sql, authenticated
+// with the CRON_SECRET env var (kept in Supabase Vault on the database
+// side). Safe to call again by hand: each reminder is only ever sent once.
+async function pointsExpiryReminders(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    console.error('points expiry reminders: CRON_SECRET is not set');
+    return res.status(503).json({ error: 'Reminders are not configured' });
+  }
+  const expected = Buffer.from(`Bearer ${secret}`);
+  const given = Buffer.from(String(req.headers?.authorization ?? ''));
+  if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const result = await sendExpiryReminders(getPool());
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error('points expiry reminders error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

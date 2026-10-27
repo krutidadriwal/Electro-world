@@ -9,6 +9,7 @@ const { normalizePhone } = require('../lib/phone');
 const { verifySession } = require('../lib/jwt');
 const spin = require('../lib/spin');
 const { syncInvoicePoints } = require('../lib/invoicePoints');
+const { LOT_REMAINING_SQL, availableLots, balanceOf, nextExpiry } = require('../lib/points');
 
 const PHONE_REGEX = /^\d{10}$/;
 
@@ -204,21 +205,28 @@ async function points(req, res) {
     }
 
     // Points expire 6 months after they're credited (see expires_at in
-    // schema.sql), so only unexpired entries count. History still lists
-    // expired ones, marked, so a drop in the balance is explained.
-    // expires_on is the expiry's calendar date in the store's time zone.
-    const balanceResult = await pool.query(
-      `select coalesce(sum(points), 0)::int as balance from public.points_ledger where phone = $1 and expires_at > now()`,
-      [normalizedPhone]
-    );
+    // schema.sql), and redemptions are taken from the soonest-expiring
+    // points first (lib/points.js), so the balance is whatever is left of
+    // the unexpired credits. History still lists expired ones, marked, so a
+    // drop in the balance is explained. expires_on is the expiry's calendar
+    // date in the store's time zone; a redemption row has neither an expiry
+    // nor a remaining amount. next_expiry is the soonest date some of the
+    // balance lapses on.
+    const lots = await availableLots(pool, normalizedPhone);
     const historyResult = await pool.query(
-      `select id, points, reason, created_at,
-              (expires_at at time zone 'Asia/Kolkata')::date::text as expires_on,
-              expires_at <= now() as expired
-       from public.points_ledger where phone = $1 order by created_at desc limit 50`,
+      `select l.id, l.points, l.reason, l.created_at,
+              case when l.points > 0 then (l.expires_at at time zone 'Asia/Kolkata')::date::text end as expires_on,
+              l.points > 0 and l.expires_at <= now() as expired,
+              case when l.points > 0 then (${LOT_REMAINING_SQL})::int end as remaining
+       from public.points_ledger l where l.phone = $1 order by l.created_at desc limit 50`,
       [normalizedPhone]
     );
-    return res.status(200).json({ balance: balanceResult.rows[0].balance, history: historyResult.rows });
+    const upcoming = nextExpiry(lots);
+    return res.status(200).json({
+      balance: balanceOf(lots),
+      history: historyResult.rows,
+      next_expiry: upcoming && { points: upcoming.points, expires_on: upcoming.expiresOn }
+    });
   } catch (err) {
     console.error('get points error', err);
     return res.status(500).json({ error: 'Internal server error' });

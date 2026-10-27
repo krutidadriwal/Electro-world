@@ -366,9 +366,10 @@ do $$ begin
   end if;
 end $$;
 
--- Display name. Nullable and filled in by hand from the Supabase dashboard
--- (existing accounts predate it); the staff app falls back to the email
--- wherever it's null.
+-- Display name. Entered in the staff app's Add staff dialog (Title Case);
+-- nullable because older accounts predate it -- fill those in by hand from
+-- the Supabase dashboard. The staff app falls back to the email wherever
+-- it's null.
 alter table public.staff_profiles add column if not exists name text;
 
 -- One row per push notification an admin sends. Rows are never deleted --
@@ -683,6 +684,12 @@ create table if not exists public.price_share_log (
 
 alter table public.price_share_log enable row level security;
 
+-- Admins share without entering a customer (the staff app skips the
+-- customer dialog for them), so both are null on their rows. Employees'
+-- shares still always carry them -- enforced in api/staff priceShareLog.
+alter table public.price_share_log alter column customer_phone drop not null;
+alter table public.price_share_log alter column customer_name drop not null;
+
 create index if not exists price_share_log_phone_idx on public.price_share_log (customer_phone, shared_at desc);
 
 -- One plain-language row per thing a staff member did, for the staff app's
@@ -711,11 +718,12 @@ create index if not exists staff_activity_log_work_type_idx on public.staff_acti
 
 alter table public.staff_activity_log enable row level security;
 
--- 'catalog' (category images, companies) was added after the table first
--- shipped -- re-created so databases made before then accept it too.
+-- 'catalog' (category images, companies) and 'points' (redemptions) were
+-- added after the table first shipped -- re-created so databases made
+-- before then accept them too.
 alter table public.staff_activity_log drop constraint if exists staff_activity_log_work_type_check;
 alter table public.staff_activity_log add constraint staff_activity_log_work_type_check
-  check (work_type in ('wishlist', 'complaint', 'installation', 'invoice', 'price_share', 'spin', 'broadcast', 'staff', 'price_list', 'catalog'));
+  check (work_type in ('wishlist', 'complaint', 'installation', 'invoice', 'price_share', 'spin', 'broadcast', 'staff', 'price_list', 'catalog', 'points'));
 
 -- Product brands (LG, Samsung...) a complaint or installation request is
 -- for, picked from a dropdown in both apps and required on every new
@@ -739,6 +747,86 @@ alter table public.complaints add column if not exists company_id uuid reference
 alter table public.complaints add column if not exists company_name text;
 alter table public.installations add column if not exists company_id uuid references public.companies(id) on delete set null;
 alter table public.installations add column if not exists company_name text;
+
+-- Points redemption (POST /api/staff/points-redeem, admins only -- see
+-- lib/points.js). A redemption is a negative points_ledger row; which
+-- earned rows ("lots") it was taken from is recorded here, oldest-expiring
+-- lot first (FIFO). A lot's remaining points are its points minus
+-- everything allocated against it, and the balance is the remaining points
+-- of unexpired lots -- so a redemption never eats into points that have
+-- already expired, and expiry only ever removes what's left of a lot.
+-- A redemption row's own expires_at means nothing; it's set to the moment
+-- of redemption.
+alter table public.points_ledger add column if not exists created_by uuid references public.staff_profiles(id) on delete set null;
+
+create table if not exists public.points_redemption_allocations (
+  redemption_ledger_id uuid not null references public.points_ledger(id) on delete cascade,
+  credit_ledger_id uuid not null references public.points_ledger(id) on delete cascade,
+  points integer not null check (points > 0),
+  primary key (redemption_ledger_id, credit_ledger_id)
+);
+
+create index if not exists points_redemption_allocations_credit_idx on public.points_redemption_allocations (credit_ledger_id);
+
+alter table public.points_redemption_allocations enable row level security;
+
+-- Personal (one customer) notifications, listed in the customer app's
+-- notification centre alongside the broadcasts in public.notifications
+-- (GET /api/notifications/active?phone=). Shown until expires_at; rows are
+-- never deleted. Currently only the points expiry reminders write here.
+create table if not exists public.customer_notifications (
+  id uuid primary key default gen_random_uuid(),
+  phone text not null references public.users(phone) on delete cascade,
+  title text not null,
+  message text not null,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists customer_notifications_phone_idx on public.customer_notifications (phone, expires_at);
+
+alter table public.customer_notifications enable row level security;
+
+-- Which expiry reminder (stage 7 = a week before, 3 = three days before)
+-- has gone out for which lot, so each is sent once. Rows are claimed before
+-- the push is sent, so a run that overlaps another can't double-send.
+create table if not exists public.points_expiry_reminders (
+  ledger_id uuid not null references public.points_ledger(id) on delete cascade,
+  stage integer not null check (stage in (7, 3)),
+  sent_at timestamptz not null default now(),
+  primary key (ledger_id, stage)
+);
+
+alter table public.points_expiry_reminders enable row level security;
+
+-- Runs the expiry reminders every day at 10:00 IST (04:30 UTC) by calling
+-- POST /api/notifications/points-expiry-reminders. pg_net is fire-and-
+-- forget; the server does the work. The URL and the shared secret (the
+-- server's CRON_SECRET env var) live in Supabase Vault, never in this
+-- file -- create them once from the SQL editor:
+--   select vault.create_secret('https://<server-host>/api/notifications/points-expiry-reminders', 'points_expiry_reminders_url');
+--   select vault.create_secret('<same value as CRON_SECRET>', 'cron_secret');
+-- cron.schedule replaces an existing job of the same name, so re-running
+-- this file is safe. Runs are logged in cron.job_run_details and
+-- net._http_response.
+create extension if not exists pg_cron;
+create extension if not exists pg_net;
+
+select cron.schedule(
+  'points-expiry-reminders',
+  '30 4 * * *',
+  $job$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'points_expiry_reminders_url'),
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
+    ),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 60000
+  );
+  $job$
+);
 
 -- ===== TASK TRACKER (experimental) — start =====
 -- Backs api/tasks/[...path].js, only reachable when the server's

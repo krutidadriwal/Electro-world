@@ -12,6 +12,7 @@ const { normalizePhone } = require('../../lib/phone');
 const { sendToTokens } = require('../../lib/fcm');
 const { spinOverview, spinPrize, spinPurchaseItem, spinGrant } = require('../../lib/staffSpin');
 const { syncInvoicePoints } = require('../../lib/invoicePoints');
+const { MIN_BALANCE_TO_REDEEM, RedemptionError, availableLots, balanceOf, nextExpiry, redeemPoints } = require('../../lib/points');
 const { visibleInAppSql, wishlistVisibleInAppSql } = require('../../lib/closedRequests');
 const { UUID_REGEX, listCompanies, resolveCompany } = require('../../lib/companies');
 const {
@@ -163,6 +164,10 @@ module.exports = async function handler(req, res) {
       return spinPurchaseItem(req, res);
     case 'spin-grant':
       return spinGrant(req, res);
+    case 'points-customer':
+      return pointsCustomer(req, res);
+    case 'points-redeem':
+      return pointsRedeem(req, res);
     default:
       return res.status(404).json({ error: 'Not found' });
   }
@@ -215,10 +220,13 @@ async function create(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email, password, role: newRole } = req.body ?? {};
+  const { email, password, role: newRole, name } = req.body ?? {};
   if (typeof email !== 'string' || !email.includes('@')) {
     return res.status(400).json({ error: 'A valid email is required' });
   }
+  // Optional so staff app builds from before the Name field still work;
+  // the app sends it already in Title Case.
+  const trimmedName = typeof name === 'string' ? name.trim().replace(/\s+/g, ' ') : '';
   if (typeof password !== 'string' || password.length < 8) {
     return res.status(400).json({ error: 'password must be at least 8 characters' });
   }
@@ -241,12 +249,12 @@ async function create(req, res) {
 
     const pool = getPool();
     const result = await pool.query(
-      `insert into public.staff_profiles (id, email, role, invited_by)
-       values ($1, $2, $3, $4)
+      `insert into public.staff_profiles (id, email, role, invited_by, name)
+       values ($1, $2, $3, $4, $5)
        returning id, email, name, role, created_at`,
-      [data.user.id, email.trim(), newRole, admin.id]
+      [data.user.id, email.trim(), newRole, admin.id, trimmedName || null]
     );
-    await logActivity(admin, { workType: 'staff', description: `added ${email.trim()} as ${newRole}` });
+    await logActivity(admin, { workType: 'staff', description: `added ${trimmedName || email.trim()} as ${newRole}` });
     return res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err instanceof StaffAuthError) {
@@ -1538,6 +1546,8 @@ async function staffDeviceToken(req, res) {
 // image itself is made and shared entirely on the phone; this is the only
 // server call involved. sharedAt comes from the app because a log that
 // failed offline is retried later (see ShareHistory.kt in the staff app).
+// Admins share without entering a customer, so for them customerPhone and
+// customerName may both be left out; employees must always send both.
 const MAX_SHARE_CUSTOMER_NAME_LENGTH = 100;
 
 async function priceShareLog(req, res) {
@@ -1547,15 +1557,20 @@ async function priceShareLog(req, res) {
   }
 
   const { customerPhone, customerName, sharedAt } = req.body ?? {};
-  const normalizedPhone = normalizePhone(customerPhone);
-  if (!normalizedPhone) {
-    return res.status(400).json({ error: 'customerPhone must be a 10-digit number' });
-  }
-  if (typeof customerName !== 'string' || !customerName.trim()) {
-    return res.status(400).json({ error: 'customerName is required' });
-  }
-  if (customerName.trim().length > MAX_SHARE_CUSTOMER_NAME_LENGTH) {
-    return res.status(400).json({ error: `customerName must be at most ${MAX_SHARE_CUSTOMER_NAME_LENGTH} characters` });
+  // Left out or null both mean "no customer" (Moshi drops null fields).
+  const hasCustomer = customerPhone != null || customerName != null;
+  const normalizedPhone = hasCustomer ? normalizePhone(customerPhone) : null;
+  const trimmedName = typeof customerName === 'string' ? customerName.trim() : '';
+  if (hasCustomer) {
+    if (!normalizedPhone) {
+      return res.status(400).json({ error: 'customerPhone must be a 10-digit number' });
+    }
+    if (!trimmedName) {
+      return res.status(400).json({ error: 'customerName is required' });
+    }
+    if (trimmedName.length > MAX_SHARE_CUSTOMER_NAME_LENGTH) {
+      return res.status(400).json({ error: `customerName must be at most ${MAX_SHARE_CUSTOMER_NAME_LENGTH} characters` });
+    }
   }
   const sharedAtDate = sharedAt === undefined ? new Date() : new Date(sharedAt);
   if (Number.isNaN(sharedAtDate.getTime())) {
@@ -1564,18 +1579,21 @@ async function priceShareLog(req, res) {
 
   try {
     const staff = await requireStaff(req);
+    if (!hasCustomer && staff.role !== 'admin') {
+      return res.status(400).json({ error: 'customerPhone and customerName are required' });
+    }
     const pool = getPool();
     const result = await pool.query(
       `insert into public.price_share_log (staff_id, customer_phone, customer_name, shared_at)
        values ($1, $2, $3, $4)
        returning id`,
-      [staff.id, normalizedPhone, customerName.trim(), sharedAtDate.toISOString()]
+      [staff.id, normalizedPhone, hasCustomer ? trimmedName : null, sharedAtDate.toISOString()]
     );
     await logActivity(staff, {
       workType: 'price_share',
-      description: 'shared prices',
+      description: hasCustomer ? 'shared prices' : 'shared prices (no customer entered)',
       customerPhone: normalizedPhone,
-      customerName: customerName.trim(),
+      customerName: hasCustomer ? trimmedName : null,
       at: sharedAtDate.toISOString()
     });
     return res.status(201).json({ id: result.rows[0].id });
@@ -1707,6 +1725,93 @@ async function activityLog(req, res) {
       return res.status(err.status).json({ error: err.message });
     }
     console.error('list activity log error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// The Redeem Points tab (admins only): a customer's valid points, then
+// redeeming some of them on an invoice. Only registered customers have
+// points, so an unknown phone is a 404. Any invoices added to the
+// customer's Drive folder since they last opened the app are credited
+// first (best-effort, as in GET /api/points), so a recent purchase counts.
+async function pointsCustomer(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const normalizedPhone = normalizePhone(req.query.phone, req.query.countryCode);
+  if (!normalizedPhone) {
+    return res.status(400).json({ error: 'phone must be a 10-digit number' });
+  }
+
+  try {
+    await requireAdmin(req);
+
+    const pool = getPool();
+    const user = await pool.query('select name from public.users where phone = $1', [normalizedPhone]);
+    if (user.rowCount === 0) {
+      return res.status(404).json({ error: 'No account for this phone number' });
+    }
+    try {
+      await syncInvoicePoints(pool, normalizedPhone);
+    } catch (syncErr) {
+      console.error('invoice points sync error', syncErr);
+    }
+
+    const lots = await availableLots(pool, normalizedPhone);
+    return res.status(200).json({
+      name: user.rows[0].name,
+      balance: balanceOf(lots),
+      minBalanceToRedeem: MIN_BALANCE_TO_REDEEM,
+      nextExpiry: nextExpiry(lots),
+      lots: lots.map((lot) => ({ points: lot.remaining, expiresOn: lot.expires_on }))
+    });
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('points customer lookup error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+async function pointsRedeem(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { phone, countryCode, points } = req.body ?? {};
+  const normalizedPhone = normalizePhone(phone, countryCode);
+  if (!normalizedPhone) {
+    return res.status(400).json({ error: 'phone must be a 10-digit number' });
+  }
+  if (!Number.isInteger(points) || points <= 0) {
+    return res.status(400).json({ error: 'points must be a positive whole number' });
+  }
+
+  try {
+    const admin = await requireAdmin(req);
+
+    const pool = getPool();
+    const user = await pool.query('select name from public.users where phone = $1', [normalizedPhone]);
+    if (user.rowCount === 0) {
+      return res.status(404).json({ error: 'No account for this phone number' });
+    }
+
+    const { balance } = await redeemPoints(pool, normalizedPhone, points, admin.id);
+    await logActivity(admin, {
+      workType: 'points',
+      description: `redeemed ${points} points (${balance} left)`,
+      customerPhone: normalizedPhone
+    });
+    return res.status(201).json({ redeemed: points, balance });
+  } catch (err) {
+    if (err instanceof StaffAuthError || err instanceof RedemptionError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('redeem points error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

@@ -18,7 +18,8 @@ const WORK_TYPES = [
   'broadcast',
   'staff',
   'price_list',
-  'catalog'
+  'catalog',
+  'points'
 ];
 
 // Same wording the staff app shows in its status dropdowns.

@@ -1,5 +1,7 @@
 package com.electroworld.staff.data.network
 
+import com.electroworld.staff.data.toTitleCase
+import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -32,14 +34,17 @@ data class SpinPurchaseItem(
 data class SpinGrant(
   val id: String,
   val phone: String,
-  val customerName: String? = null,
+  @Json(name = "customerName") val rawCustomerName: String? = null,
   val boughtItem: String,
   val createdAt: String,
   val usedAt: String? = null,
   val prizeName: String? = null,
   val grantedByEmail: String? = null,
   val deliveredAt: String? = null
-)
+) {
+  // Title Case however the name is stored -- see Names.kt.
+  val customerName: String? get() = rawCustomerName?.toTitleCase()
+}
 
 @JsonClass(generateAdapter = true)
 data class SpinOverviewResponse(

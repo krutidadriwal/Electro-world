@@ -45,11 +45,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.electroworld.staff.data.network.CreateStaffRequest
+import com.electroworld.staff.data.titleCaseAsTyped
+import com.electroworld.staff.data.toTitleCase
 import com.electroworld.staff.data.network.DeleteStaffRequest
 import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.network.StaffMember
@@ -283,6 +288,7 @@ private fun DeleteStaffDialog(member: StaffMember, onDismiss: () -> Unit, onDele
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddStaffDialog(onDismiss: () -> Unit, onCreated: () -> Unit) {
+  var name by remember { mutableStateOf("") }
   var email by remember { mutableStateOf("") }
   var password by remember { mutableStateOf("") }
   var role by remember { mutableStateOf("employee") }
@@ -297,10 +303,20 @@ private fun AddStaffDialog(onDismiss: () -> Unit, onCreated: () -> Unit) {
     text = {
       Column {
         OutlinedTextField(
+          value = name,
+          onValueChange = { name = it.titleCaseAsTyped() },
+          label = { Text("Name") },
+          singleLine = true,
+          keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+          modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
           value = email,
           onValueChange = { email = it },
           label = { Text("Email") },
-          modifier = Modifier.fillMaxWidth()
+          singleLine = true,
+          keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+          modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
         )
         OutlinedTextField(
           value = password,
@@ -335,13 +351,13 @@ private fun AddStaffDialog(onDismiss: () -> Unit, onCreated: () -> Unit) {
     },
     confirmButton = {
       Button(
-        enabled = !isSaving && email.isNotBlank() && password.length >= 8,
+        enabled = !isSaving && name.isNotBlank() && email.isNotBlank() && password.length >= 8,
         onClick = {
           errorMessage = null
           isSaving = true
           scope.launch {
             try {
-              NetworkModule.staffApi.create(CreateStaffRequest(email.trim(), password, role))
+              NetworkModule.staffApi.create(CreateStaffRequest(email = email.trim(), password = password, role = role, name = name.toTitleCase()))
               onCreated()
             } catch (e: Exception) {
               errorMessage = "Failed to create staff member."

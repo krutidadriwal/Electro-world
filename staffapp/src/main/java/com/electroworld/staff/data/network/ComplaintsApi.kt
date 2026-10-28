@@ -1,5 +1,6 @@
 package com.electroworld.staff.data.network
 
+import com.electroworld.staff.data.toTitleCase
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import retrofit2.http.Body
@@ -11,7 +12,7 @@ import retrofit2.http.POST
 data class ComplaintItem(
   val id: String,
   @Json(name = "customer_phone") val customerPhone: String,
-  @Json(name = "customer_name") val customerName: String,
+  @Json(name = "customer_name") val rawCustomerName: String,
   @Json(name = "category_name") val categoryName: String,
   @Json(name = "subcategory_name") val subcategoryName: String?,
   // Null on complaints made before companies were added.
@@ -30,7 +31,10 @@ data class ComplaintItem(
   @Json(name = "created_at") val createdAt: String,
   @Json(name = "updated_at") val updatedAt: String,
   @Json(name = "resolved_at") val resolvedAt: String?
-)
+) {
+  // Title Case however the name is stored -- see Names.kt.
+  val customerName: String get() = rawCustomerName.toTitleCase()
+}
 
 @JsonClass(generateAdapter = true)
 data class ComplaintsResponse(

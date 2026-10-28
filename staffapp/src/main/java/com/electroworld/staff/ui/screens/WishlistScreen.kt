@@ -52,6 +52,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.electroworld.staff.data.network.Category
 import com.electroworld.staff.data.network.NetworkModule
+import com.electroworld.staff.data.titleCaseAsTyped
+import com.electroworld.staff.data.toTitleCase
 import com.electroworld.staff.data.network.Subcategory
 import com.electroworld.staff.data.network.lookupCustomerName
 import com.electroworld.staff.data.network.WishlistItem
@@ -68,6 +70,8 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
 
 private val WISHLIST_STATUSES = listOf(
   "not_contacted",
@@ -357,7 +361,8 @@ private fun AddToWishlistDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
         CustomerLookupStatus(phone, isLookingUpCustomer, customerExists)
         OutlinedTextField(
           value = customerName,
-          onValueChange = { customerName = it },
+          onValueChange = { customerName = it.titleCaseAsTyped() },
+          keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
           readOnly = customerExists,
           label = { Text(if (customerExists) "Customer name (existing account)" else "Customer name *") },
           singleLine = true,
@@ -450,7 +455,7 @@ private fun AddToWishlistDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
               NetworkModule.wishlistApi.add(
                 WishlistAddRequest(
                   phone = phone,
-                  customerName = customerName.trim(),
+                  customerName = customerName.toTitleCase(),
                   categoryIconKey = category.iconKey,
                   subcategoryId = selectedSubcategory?.id
                 )

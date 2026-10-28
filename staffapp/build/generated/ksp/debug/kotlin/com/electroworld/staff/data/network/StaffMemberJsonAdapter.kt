@@ -30,7 +30,7 @@ public class StaffMemberJsonAdapter(
       "id")
 
   private val nullableStringAdapter: JsonAdapter<String?> = moshi.adapter(String::class.java,
-      emptySet(), "name")
+      emptySet(), "rawName")
 
   @Volatile
   private var constructorRef: Constructor<StaffMember>? = null
@@ -42,7 +42,7 @@ public class StaffMemberJsonAdapter(
     var id: String? = null
     var email: String? = null
     var role: String? = null
-    var name: String? = null
+    var rawName: String? = null
     var createdAt: String? = null
     var mask0 = -1
     reader.beginObject()
@@ -54,7 +54,7 @@ public class StaffMemberJsonAdapter(
         2 -> role = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("role", "role",
             reader)
         3 -> {
-          name = nullableStringAdapter.fromJson(reader)
+          rawName = nullableStringAdapter.fromJson(reader)
           // $mask = $mask and (1 shl 3).inv()
           mask0 = mask0 and 0xfffffff7.toInt()
         }
@@ -77,7 +77,7 @@ public class StaffMemberJsonAdapter(
           id = id ?: throw Util.missingProperty("id", "id", reader),
           email = email ?: throw Util.missingProperty("email", "email", reader),
           role = role ?: throw Util.missingProperty("role", "role", reader),
-          name = name,
+          rawName = rawName,
           createdAt = createdAt
       )
     } else {
@@ -91,7 +91,7 @@ public class StaffMemberJsonAdapter(
           id ?: throw Util.missingProperty("id", "id", reader),
           email ?: throw Util.missingProperty("email", "email", reader),
           role ?: throw Util.missingProperty("role", "role", reader),
-          name,
+          rawName,
           createdAt,
           mask0,
           /* DefaultConstructorMarker */ null
@@ -111,7 +111,7 @@ public class StaffMemberJsonAdapter(
     writer.name("role")
     stringAdapter.toJson(writer, value_.role)
     writer.name("name")
-    nullableStringAdapter.toJson(writer, value_.name)
+    nullableStringAdapter.toJson(writer, value_.rawName)
     writer.name("created_at")
     nullableStringAdapter.toJson(writer, value_.createdAt)
     writer.endObject()

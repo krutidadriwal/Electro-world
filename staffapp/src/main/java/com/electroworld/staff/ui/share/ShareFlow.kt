@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -43,6 +44,8 @@ import com.electroworld.staff.R
 import com.electroworld.staff.data.SessionManager
 import com.electroworld.staff.data.network.PriceListItem
 import com.electroworld.staff.data.network.lookupCustomerName
+import com.electroworld.staff.data.titleCaseAsTyped
+import com.electroworld.staff.data.toTitleCase
 import com.electroworld.staff.data.share.QuoteLine
 import com.electroworld.staff.data.share.ShareHistory
 import com.electroworld.staff.data.share.ShareKind
@@ -86,7 +89,33 @@ fun ShareFlowHost(state: ShareFlowState) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
 
+  // Admins share straight away -- no customer details asked for, so
+  // nothing about a customer goes on the image or into the share log.
+  val isAdmin = remember { SessionManager(context).isAdmin }
+
+  fun share(request: ShareRequest, customer: ShareCustomer?) {
+    state.isWorking = true
+    scope.launch {
+      try {
+        createAndShare(context, request, customer)
+      } catch (e: Exception) {
+        Toast.makeText(context, "Couldn't create the image. Please try again.", Toast.LENGTH_LONG).show()
+      } finally {
+        state.isWorking = false
+      }
+      // After the share sheet is up, so a slow network never delays it.
+      ShareHistory.syncPendingLogs()
+    }
+  }
+
   state.pending?.let { request ->
+    if (isAdmin) {
+      LaunchedEffect(request) {
+        state.pending = null
+        share(request, customer = null)
+      }
+      return@let
+    }
     CustomerDetailsDialog(
       title = if (request is ShareRequest.Quotation) "Share quotation" else "Share price",
       initial = state.lastCustomer,
@@ -94,18 +123,7 @@ fun ShareFlowHost(state: ShareFlowState) {
       onConfirm = { customer ->
         state.pending = null
         state.lastCustomer = customer
-        state.isWorking = true
-        scope.launch {
-          try {
-            createAndShare(context, request, customer)
-          } catch (e: Exception) {
-            Toast.makeText(context, "Couldn't create the image. Please try again.", Toast.LENGTH_LONG).show()
-          } finally {
-            state.isWorking = false
-          }
-          // After the share sheet is up, so a slow network never delays it.
-          ShareHistory.syncPendingLogs()
-        }
+        share(request, customer)
       }
     )
   }
@@ -179,9 +197,10 @@ private fun CustomerDetailsDialog(
         )
         OutlinedTextField(
           value = name,
-          onValueChange = { name = it.take(100) },
+          onValueChange = { name = it.take(100).titleCaseAsTyped() },
           label = { Text("Customer name") },
           singleLine = true,
+          keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
           enabled = !isExistingCustomer,
           supportingText = {
             Text(
@@ -200,14 +219,14 @@ private fun CustomerDetailsDialog(
     confirmButton = {
       TextButton(
         enabled = phone.length == 10 && name.isNotBlank() && !isLookingUp,
-        onClick = { onConfirm(ShareCustomer(name.trim(), phone)) }
+        onClick = { onConfirm(ShareCustomer(name.toTitleCase(), phone)) }
       ) { Text("Share") }
     },
     dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
   )
 }
 
-private suspend fun createAndShare(context: Context, request: ShareRequest, customer: ShareCustomer) {
+private suspend fun createAndShare(context: Context, request: ShareRequest, customer: ShareCustomer?) {
   val session = SessionManager(context)
   val sharedAt = System.currentTimeMillis()
   val logo = withContext(Dispatchers.IO) { BitmapFactory.decodeResource(context.resources, R.drawable.ew_logo) }
@@ -248,8 +267,8 @@ private suspend fun createAndShare(context: Context, request: ShareRequest, cust
         is ShareRequest.Quotation ->
           if (request.lines.size == 1) "1 item" else "${request.lines.size} items"
       },
-      customerName = customer.name,
-      customerPhone = customer.phone,
+      customerName = customer?.name,
+      customerPhone = customer?.phone,
       sharedAt = sharedAt,
       validTill = details.validTill,
       imagePath = file.absolutePath

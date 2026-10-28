@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteForever
@@ -46,7 +47,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.example.data.network.DeleteUserRequest
+import com.example.data.titleCaseAsTyped
+import com.example.data.toTitleCase
 import com.example.data.network.NetworkModule
 import com.example.data.network.UpdateUserRequest
 import com.example.ui.theme.appCardColors
@@ -94,7 +99,7 @@ fun ProfileScreen(
     errorMessage = null
     coroutineScope.launch {
       try {
-        val response = NetworkModule.userApi.updateUser(UpdateUserRequest(phone = userPhone, name = editedName.trim()))
+        val response = NetworkModule.userApi.updateUser(UpdateUserRequest(phone = userPhone, name = editedName.toTitleCase()))
         isSaving = false
         isEditing = false
         onNameUpdated(response.name)
@@ -157,11 +162,11 @@ fun ProfileScreen(
           .background(MaterialTheme.colorScheme.surface, CircleShape),
         contentAlignment = Alignment.Center
       ) {
-        Text(
-          text = userName.take(2).ifBlank { "EW" }.uppercase(),
-          color = MaterialTheme.colorScheme.secondary,
-          fontWeight = FontWeight.Bold,
-          fontSize = 22.sp
+        Icon(
+          imageVector = Icons.Default.Person,
+          contentDescription = null,
+          tint = MaterialTheme.colorScheme.secondary,
+          modifier = Modifier.size(44.dp)
         )
       }
 
@@ -178,7 +183,8 @@ fun ProfileScreen(
         )
         OutlinedTextField(
           value = editedName,
-          onValueChange = { editedName = it; errorMessage = null },
+          onValueChange = { editedName = it.titleCaseAsTyped(); errorMessage = null },
+          keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
           modifier = Modifier.fillMaxWidth(),
           singleLine = true,
           colors = OutlinedTextFieldDefaults.colors(

@@ -1,5 +1,6 @@
 package com.electroworld.staff.data.network
 
+import com.electroworld.staff.data.toTitleCase
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import retrofit2.Response
@@ -13,10 +14,13 @@ data class StaffMember(
   val id: String,
   val email: String,
   val role: String,
-  // Nullable -- set by hand in Supabase; use displayName for showing it.
-  val name: String? = null,
+  // Nullable -- older accounts predate the Add staff Name field; use
+  // displayName for showing it.
+  @Json(name = "name") val rawName: String? = null,
   @Json(name = "created_at") val createdAt: String? = null
 ) {
+  // Title Case however the name is stored -- see Names.kt.
+  val name: String? get() = rawName?.toTitleCase()
   val displayName: String get() = name?.takeIf { it.isNotBlank() } ?: email
 }
 
@@ -29,7 +33,9 @@ data class StaffListResponse(
 data class CreateStaffRequest(
   val email: String,
   val password: String,
-  val role: String
+  val role: String,
+  // Title Case, from the Add staff dialog (see Names.kt).
+  val name: String
 )
 
 @JsonClass(generateAdapter = true)

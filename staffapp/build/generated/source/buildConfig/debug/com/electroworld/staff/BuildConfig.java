@@ -7,8 +7,8 @@ public final class BuildConfig {
   public static final boolean DEBUG = Boolean.parseBoolean("true");
   public static final String APPLICATION_ID = "com.aistudio.electroworld.staff";
   public static final String BUILD_TYPE = "debug";
-  public static final int VERSION_CODE = 2;
-  public static final String VERSION_NAME = "1.0.2";
+  public static final int VERSION_CODE = 4;
+  public static final String VERSION_NAME = "1.0.4";
   public static final String GEMINI_API_KEY = "MY_GEMINI_API_KEY";
   public static final String JWT_SECRET = "ae09ebf15a1729752e9791a78646191709ceaf141504879123a2ef3a0a83c6cb5d9de8e60bb3e740ee88ebd0f342cde8";
   public static final String MONGO_URI = "mongodb+srv://hulgondia:Angry_Birds33@cluster0.mfj5tls.mongodb.net/textbee?appName=Cluster0";

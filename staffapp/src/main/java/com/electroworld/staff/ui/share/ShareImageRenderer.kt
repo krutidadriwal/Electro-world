@@ -26,8 +26,10 @@ import kotlin.math.roundToInt
 data class ShareCustomer(val name: String, val phone: String)
 
 // Everything printed on a share image besides the item(s) themselves.
+// customer is null when an admin shares (no customer dialog) -- the image
+// then just leaves the customer lines out.
 data class ShareDetails(
-  val customer: ShareCustomer,
+  val customer: ShareCustomer?,
   val sharedBy: String,
   val sharedAt: Long,
   val validTill: Long,
@@ -109,10 +111,15 @@ object ShareImageRenderer {
     val card = Card()
     card.header(details.logo, badge = "QUOTATION")
     card.space(44f)
-    card.text("Quotation for ${details.customer.name}", paint(40f, CREAM, bold = true), maxLines = 2)
+    val customer = details.customer
+    card.text(customer?.let { "Quotation for ${it.name}" } ?: "Quotation", paint(40f, CREAM, bold = true), maxLines = 2)
     card.space(8f)
     card.text(
-      "+91 ${details.customer.phone}  ·  ${formatDate(details.sharedAt)}  ·  Valid till ${formatDate(details.validTill)}",
+      listOfNotNull(
+        customer?.let { "+91 ${it.phone}" },
+        formatDate(details.sharedAt),
+        "Valid till ${formatDate(details.validTill)}"
+      ).joinToString("  ·  "),
       paint(28f, DARK_MUTED),
       maxLines = 2
     )
@@ -239,8 +246,10 @@ object ShareImageRenderer {
   }
 
   private fun Card.detailRows(details: ShareDetails, includeSharedBy: Boolean) {
-    labelValue("Prepared for", details.customer.name)
-    labelValue("Phone", "+91 ${details.customer.phone}")
+    details.customer?.let {
+      labelValue("Prepared for", it.name)
+      labelValue("Phone", "+91 ${it.phone}")
+    }
     labelValue("Date", formatDate(details.sharedAt))
     labelValue("Valid till", formatDate(details.validTill))
     if (includeSharedBy) labelValue("Shared by", details.sharedBy)

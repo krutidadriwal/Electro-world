@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import com.example.data.SessionManager
+import com.example.data.toTitleCase
 import com.example.data.network.NetworkModule
 import com.example.data.notifications.registerFcmToken
 import com.example.update.InAppUpdateChecker
@@ -137,7 +138,7 @@ class MainActivity : ComponentActivity() {
               OnboardingScreen(
                 onLoginSuccess = { name, phone, token ->
                   sessionManager.saveSession(name, phone, token)
-                  userName = name
+                  userName = name.toTitleCase()
                   userPhone = phone
                   currentScreen = Screen.DASHBOARD
                 },
@@ -194,7 +195,7 @@ class MainActivity : ComponentActivity() {
                 onBack = { currentScreen = Screen.DASHBOARD },
                 onNameUpdated = { updatedName ->
                   sessionManager.updateName(updatedName)
-                  userName = updatedName
+                  userName = updatedName.toTitleCase()
                 },
                 onAccountDeleted = {
                   sessionManager.clearSession()

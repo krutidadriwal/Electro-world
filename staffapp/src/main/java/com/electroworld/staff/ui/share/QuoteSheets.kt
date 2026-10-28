@@ -368,7 +368,11 @@ private fun ShareRecordRow(record: ShareRecord, onClick: () -> Unit) {
         tint = MaterialTheme.colorScheme.secondary
       )
       Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
-        Text("${record.customerName} · +91 ${record.customerPhone}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+        Text(
+          if (record.customerPhone != null) "${record.customerName} · +91 ${record.customerPhone}" else "No customer details",
+          style = MaterialTheme.typography.bodyMedium,
+          fontWeight = FontWeight.Bold
+        )
         Text(record.summary, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(
           "Shared ${formatShareTime(record.sharedAt)}" + if (!record.logged) " · log pending" else "",

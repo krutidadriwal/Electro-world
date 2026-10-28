@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Redeem
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.Share
@@ -91,7 +92,8 @@ private val WORK_TYPES = listOf(
   WorkType("broadcast", "Broadcasts", Icons.Default.Campaign),
   WorkType("staff", "Staff accounts", Icons.Default.People),
   WorkType("price_list", "Price list", Icons.Default.Sell),
-  WorkType("catalog", "Catalog setup", Icons.Default.Image)
+  WorkType("catalog", "Catalog setup", Icons.Default.Image),
+  WorkType("points", "Points", Icons.Default.Redeem)
 )
 
 private enum class DatePreset(val label: String) {

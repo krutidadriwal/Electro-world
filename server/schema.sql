@@ -527,7 +527,9 @@ create table if not exists public.staff_device_tokens (
 
 create index if not exists staff_device_tokens_staff_idx on public.staff_device_tokens (staff_id);
 
--- Pre-launch landing page sign-ups (server/public/index.html). Inserted
+-- Pre-launch landing page sign-ups. That page has since been removed (the
+-- site root now redirects to the Play Store, see vercel.json); the table
+-- is kept for the sign-ups already collected. Inserted
 -- directly from the browser via the Supabase REST API with the anon key --
 -- RLS below allows anon insert only, no select/update/delete, so the page
 -- can take sign-ups without exposing the list or needing a new API function

@@ -45,6 +45,8 @@ import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.ui.theme.staffCardColors
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
 
 private enum class CatalogSetupTab(val label: String) {
   CATEGORY_IMAGES("Category Images"),
@@ -179,6 +181,7 @@ private fun CompaniesTab() {
         onValueChange = { newName = it },
         label = { Text("New company (e.g. LG)") },
         singleLine = true,
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
         modifier = Modifier.weight(1f)
       )
       Button(enabled = newName.isNotBlank() && !isAdding, onClick = { add() }) {

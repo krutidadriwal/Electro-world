@@ -36,7 +36,7 @@ public class WishlistItemJsonAdapter(
   public override fun fromJson(reader: JsonReader): WishlistItem {
     var id: String? = null
     var customerPhone: String? = null
-    var customerName: String? = null
+    var rawCustomerName: String? = null
     var categoryName: String? = null
     var subcategoryName: String? = null
     var status: String? = null
@@ -49,8 +49,8 @@ public class WishlistItemJsonAdapter(
         0 -> id = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("id", "id", reader)
         1 -> customerPhone = stringAdapter.fromJson(reader) ?:
             throw Util.unexpectedNull("customerPhone", "customer_phone", reader)
-        2 -> customerName = stringAdapter.fromJson(reader) ?:
-            throw Util.unexpectedNull("customerName", "customer_name", reader)
+        2 -> rawCustomerName = stringAdapter.fromJson(reader) ?:
+            throw Util.unexpectedNull("rawCustomerName", "customer_name", reader)
         3 -> categoryName = stringAdapter.fromJson(reader) ?:
             throw Util.unexpectedNull("categoryName", "category_name", reader)
         4 -> subcategoryName = nullableStringAdapter.fromJson(reader)
@@ -72,8 +72,8 @@ public class WishlistItemJsonAdapter(
         id = id ?: throw Util.missingProperty("id", "id", reader),
         customerPhone = customerPhone ?: throw Util.missingProperty("customerPhone",
             "customer_phone", reader),
-        customerName = customerName ?: throw Util.missingProperty("customerName", "customer_name",
-            reader),
+        rawCustomerName = rawCustomerName ?: throw Util.missingProperty("rawCustomerName",
+            "customer_name", reader),
         categoryName = categoryName ?: throw Util.missingProperty("categoryName", "category_name",
             reader),
         subcategoryName = subcategoryName,
@@ -94,7 +94,7 @@ public class WishlistItemJsonAdapter(
     writer.name("customer_phone")
     stringAdapter.toJson(writer, value_.customerPhone)
     writer.name("customer_name")
-    stringAdapter.toJson(writer, value_.customerName)
+    stringAdapter.toJson(writer, value_.rawCustomerName)
     writer.name("category_name")
     stringAdapter.toJson(writer, value_.categoryName)
     writer.name("subcategory_name")

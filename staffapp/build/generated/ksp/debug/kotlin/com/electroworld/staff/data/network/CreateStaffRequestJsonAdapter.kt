@@ -20,7 +20,8 @@ import kotlin.text.buildString
 public class CreateStaffRequestJsonAdapter(
   moshi: Moshi,
 ) : JsonAdapter<CreateStaffRequest>() {
-  private val options: JsonReader.Options = JsonReader.Options.of("email", "password", "role")
+  private val options: JsonReader.Options = JsonReader.Options.of("email", "password", "role",
+      "name")
 
   private val stringAdapter: JsonAdapter<String> = moshi.adapter(String::class.java, emptySet(),
       "email")
@@ -32,6 +33,7 @@ public class CreateStaffRequestJsonAdapter(
     var email: String? = null
     var password: String? = null
     var role: String? = null
+    var name: String? = null
     reader.beginObject()
     while (reader.hasNext()) {
       when (reader.selectName(options)) {
@@ -40,6 +42,8 @@ public class CreateStaffRequestJsonAdapter(
         1 -> password = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("password",
             "password", reader)
         2 -> role = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("role", "role",
+            reader)
+        3 -> name = stringAdapter.fromJson(reader) ?: throw Util.unexpectedNull("name", "name",
             reader)
         -1 -> {
           // Unknown name, skip it.
@@ -52,7 +56,8 @@ public class CreateStaffRequestJsonAdapter(
     return CreateStaffRequest(
         email = email ?: throw Util.missingProperty("email", "email", reader),
         password = password ?: throw Util.missingProperty("password", "password", reader),
-        role = role ?: throw Util.missingProperty("role", "role", reader)
+        role = role ?: throw Util.missingProperty("role", "role", reader),
+        name = name ?: throw Util.missingProperty("name", "name", reader)
     )
   }
 
@@ -67,6 +72,8 @@ public class CreateStaffRequestJsonAdapter(
     stringAdapter.toJson(writer, value_.password)
     writer.name("role")
     stringAdapter.toJson(writer, value_.role)
+    writer.name("name")
+    stringAdapter.toJson(writer, value_.name)
     writer.endObject()
   }
 }

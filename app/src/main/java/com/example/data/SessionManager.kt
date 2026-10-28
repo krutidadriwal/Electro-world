@@ -8,8 +8,9 @@ class SessionManager(context: Context) {
   val isLoggedIn: Boolean
     get() = prefs.getBoolean(KEY_LOGGED_IN, false)
 
+  // Title Case however it was stored or typed (see Names.kt).
   val userName: String
-    get() = prefs.getString(KEY_NAME, "") ?: ""
+    get() = (prefs.getString(KEY_NAME, "") ?: "").toTitleCase()
 
   val userPhone: String
     get() = prefs.getString(KEY_PHONE, "") ?: ""

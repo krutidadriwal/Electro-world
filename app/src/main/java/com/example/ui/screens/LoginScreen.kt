@@ -36,6 +36,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -79,6 +80,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.network.LoginRequest
+import com.example.data.titleCaseAsTyped
+import com.example.data.toTitleCase
 import com.example.data.network.NetworkModule
 import com.example.data.network.SendOtpRequest
 import com.example.data.network.SetPinRequest
@@ -353,7 +356,7 @@ fun LoginScreen(
           SetPinRequest(
             verificationToken = verificationToken,
             pin = newPin,
-            name = if (mode == AuthMode.SIGNUP) fullName.trim() else null,
+            name = if (mode == AuthMode.SIGNUP) fullName.toTitleCase() else null,
             howHeardAboutUs = if (mode == AuthMode.SIGNUP) howHeard else null
           )
         )
@@ -472,7 +475,7 @@ fun LoginScreen(
                 mode = mode,
                 imeVisible = imeVisible,
                 fullName = fullName,
-                onFullNameChange = { fullName = it; errorMessage = null },
+                onFullNameChange = { fullName = it.titleCaseAsTyped(); errorMessage = null },
                 phoneNumber = phoneNumber,
                 onPhoneNumberChange = { phoneNumber = it; errorMessage = null; showSignupSuggestion = false; showLoginSuggestion = false },
                 howHeard = howHeard,
@@ -769,6 +772,7 @@ private fun EntryStepView(
         value = fullName,
         onValueChange = onFullNameChange,
         placeholder = { Text("Full Name", color = PlatinumMuted) },
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
         leadingIcon = {
           Icon(imageVector = Icons.Default.Person, contentDescription = "Name Icon", tint = VividAmber)
         },

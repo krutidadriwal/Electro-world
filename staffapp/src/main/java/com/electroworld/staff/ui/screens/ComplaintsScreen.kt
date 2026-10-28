@@ -63,6 +63,8 @@ import com.electroworld.staff.data.network.ComplaintAddRequest
 import com.electroworld.staff.data.network.ComplaintItem
 import com.electroworld.staff.data.network.ComplaintStatusRequest
 import com.electroworld.staff.data.network.NetworkModule
+import com.electroworld.staff.data.titleCaseAsTyped
+import com.electroworld.staff.data.toTitleCase
 import com.electroworld.staff.data.network.Subcategory
 import com.electroworld.staff.data.network.lookupCustomerName
 import com.electroworld.staff.ui.share.RequestShareContent
@@ -74,6 +76,8 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -468,7 +472,8 @@ private fun AddComplaintDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
         CustomerLookupStatus(phone, isLookingUpCustomer, customerExists)
         OutlinedTextField(
           value = customerName,
-          onValueChange = { customerName = it },
+          onValueChange = { customerName = it.titleCaseAsTyped() },
+          keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
           readOnly = customerExists,
           label = { Text(if (customerExists) "Customer name (existing account)" else "Customer name *") },
           singleLine = true,
@@ -576,7 +581,7 @@ private fun AddComplaintDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
               NetworkModule.complaintsApi.add(
                 ComplaintAddRequest(
                   phone = phone,
-                  customerName = customerName.trim(),
+                  customerName = customerName.toTitleCase(),
                   categoryIconKey = category.iconKey,
                   subcategoryId = selectedSubcategory?.id,
                   companyId = company.id,

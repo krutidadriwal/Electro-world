@@ -227,17 +227,17 @@ fun HomeScreen(
           ModuleCard(priceListModule, modifier = Modifier.fillMaxWidth())
         }
 
+        item(span = { GridItemSpan(maxLineSpan) }) {
+          SectionLabel("SERVICES")
+        }
+        items(serviceModules) { module -> ModuleCard(module) }
+
         if (isAdmin) {
           item(span = { GridItemSpan(maxLineSpan) }) {
             SectionLabel("ADMIN")
           }
           items(adminModules) { module -> ModuleCard(module) }
         }
-
-        item(span = { GridItemSpan(maxLineSpan) }) {
-          SectionLabel("SERVICES")
-        }
-        items(serviceModules) { module -> ModuleCard(module) }
       }
     }
   }

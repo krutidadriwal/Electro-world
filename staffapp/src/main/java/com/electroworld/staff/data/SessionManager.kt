@@ -22,7 +22,7 @@ class SessionManager(context: Context) {
 
   // Blank until set on the account in Supabase (staff_profiles.name).
   val name: String
-    get() = prefs.getString(KEY_NAME, "") ?: ""
+    get() = (prefs.getString(KEY_NAME, "") ?: "").toTitleCase()
 
   val role: String
     get() = prefs.getString(KEY_ROLE, "") ?: ""

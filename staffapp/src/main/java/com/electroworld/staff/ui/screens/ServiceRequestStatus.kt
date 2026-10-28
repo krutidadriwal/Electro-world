@@ -36,6 +36,10 @@ import com.electroworld.staff.ui.theme.StatusYellow
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import com.electroworld.staff.data.titleCaseAsTyped
+import com.electroworld.staff.data.toTitleCase
 
 // Shared between ComplaintsScreen and InstallationsScreen -- the status
 // workflow and its per-status required fields are identical for both
@@ -185,7 +189,8 @@ private fun ServiceRequestStatusDialog(status: String, referenceLabel: String, o
           "assigned_to_technician" -> {
             OutlinedTextField(
               value = technicianName,
-              onValueChange = { technicianName = it },
+              onValueChange = { technicianName = it.titleCaseAsTyped() },
+              keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
               label = { Text("Technician name") },
               singleLine = true,
               modifier = Modifier.fillMaxWidth()
@@ -228,7 +233,7 @@ private fun ServiceRequestStatusDialog(status: String, referenceLabel: String, o
           onConfirm(
             StatusChangeFields(
               referenceNumber = referenceNumber.takeIf { status == "assigned_to_service_center" },
-              technicianName = technicianName.takeIf { status == "assigned_to_technician" },
+              technicianName = technicianName.toTitleCase().takeIf { status == "assigned_to_technician" },
               technicianMobile = technicianMobile.takeIf { status == "assigned_to_technician" },
               reason = reason.takeIf { status == "blocked" || status == "cancelled_by_staff" || status == "cancelled_by_customer" },
               closedDate = selectedDate.takeIf { status == "closed" }

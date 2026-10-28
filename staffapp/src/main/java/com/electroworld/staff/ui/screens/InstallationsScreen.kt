@@ -64,6 +64,8 @@ import com.electroworld.staff.data.network.InstallationAddRequest
 import com.electroworld.staff.data.network.InstallationItem
 import com.electroworld.staff.data.network.InstallationStatusRequest
 import com.electroworld.staff.data.network.NetworkModule
+import com.electroworld.staff.data.titleCaseAsTyped
+import com.electroworld.staff.data.toTitleCase
 import com.electroworld.staff.data.network.lookupCustomerName
 import com.electroworld.staff.ui.share.RequestShareContent
 import com.electroworld.staff.ui.share.RequestShareHost
@@ -74,6 +76,8 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
 
 private fun requestTypeLabel(item: InstallationItem): String = when {
   item.wantsDemo && item.wantsInstallation -> "Demo + Installation"
@@ -480,7 +484,8 @@ private fun AddInstallationDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
         CustomerLookupStatus(phone, isLookingUpCustomer, customerExists)
         OutlinedTextField(
           value = customerName,
-          onValueChange = { customerName = it },
+          onValueChange = { customerName = it.titleCaseAsTyped() },
+          keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
           readOnly = customerExists,
           label = { Text(if (customerExists) "Customer name (existing account)" else "Customer name *") },
           singleLine = true,
@@ -587,7 +592,7 @@ private fun AddInstallationDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
               NetworkModule.installationsApi.add(
                 InstallationAddRequest(
                   phone = phone,
-                  customerName = customerName.trim(),
+                  customerName = customerName.toTitleCase(),
                   categoryIconKey = category.iconKey,
                   itemName = itemName.trim(),
                   companyId = company.id,

@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
@@ -64,10 +65,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -160,7 +163,7 @@ fun DashboardScreen(
   LaunchedEffect(activeOverlay) {
     if (activeOverlay != ActiveModule.NONE) return@LaunchedEffect
     try {
-      val active = NetworkModule.notificationsApi.getActiveNotifications().notifications
+      val active = NetworkModule.notificationsApi.getActiveNotifications(userPhone).notifications
       unreadNotificationCount = active.count { !notificationReadStore.isRead(it.id) }
     } catch (e: Exception) {
       // Offline -- leave the previous count showing rather than clearing it.
@@ -241,11 +244,11 @@ fun DashboardScreen(
                 .background(MaterialTheme.colorScheme.surface, CircleShape),
               contentAlignment = Alignment.Center
             ) {
-              Text(
-                text = displayName.take(2).ifBlank { "EW" }.uppercase(),
-                color = MaterialTheme.colorScheme.secondary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
+              Icon(
+                imageVector = Icons.Default.Person,
+                contentDescription = "Profile",
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(28.dp)
               )
             }
             Column(modifier = Modifier.padding(start = 12.dp)) {
@@ -553,7 +556,7 @@ fun DashboardScreen(
                 ) {
                   when (activeOverlay) {
                     ActiveModule.VISIT_STORE -> VisitStoreSubScreen()
-                    ActiveModule.NOTIFICATIONS -> NotificationsSubScreen()
+                    ActiveModule.NOTIFICATIONS -> NotificationsSubScreen(userPhone = userPhone)
                     else -> Unit
                   }
                 }
@@ -990,7 +993,7 @@ fun MyInvoicesSubScreen(userPhone: String) {
 // greyed out once opened. Read state is a local "seen" marker -- kept in
 // SharedPreferences via NotificationReadStore, never sent to the server.
 @Composable
-fun NotificationsSubScreen() {
+fun NotificationsSubScreen(userPhone: String) {
   val context = LocalContext.current
   val readStore = remember { NotificationReadStore(context) }
   var notifications by remember { mutableStateOf<List<ActiveNotification>>(emptyList()) }
@@ -1001,7 +1004,7 @@ fun NotificationsSubScreen() {
 
   LaunchedEffect(Unit) {
     try {
-      val fresh = NetworkModule.notificationsApi.getActiveNotifications().notifications
+      val fresh = NetworkModule.notificationsApi.getActiveNotifications(userPhone).notifications
       notifications = fresh
       readIds = fresh.filter { readStore.isRead(it.id) }.map { it.id }.toSet()
       errorMessage = null
@@ -1123,6 +1126,26 @@ fun NotificationsSubScreen() {
   }
 }
 
+// A notification's image, whole -- never cropped, whatever its shape.
+// AsyncImage needs an explicit aspect ratio before the image has loaded (its
+// size is unknown until then): with fillMaxWidth() alone it collapsed to
+// zero height inside the Dialog + scrollable Column and never showed. So it
+// starts at 16:9 and switches to the image's own proportions once loaded.
+@Composable
+private fun FullyVisibleImage(url: String, modifier: Modifier = Modifier) {
+  var aspectRatio by remember(url) { mutableFloatStateOf(16f / 9f) }
+  AsyncImage(
+    model = url,
+    contentDescription = null,
+    onSuccess = { state ->
+      val size = state.painter.intrinsicSize
+      if (size.isSpecified && size.width > 0f && size.height > 0f) aspectRatio = size.width / size.height
+    },
+    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+    modifier = modifier.fillMaxWidth().aspectRatio(aspectRatio)
+  )
+}
+
 @Composable
 private fun NotificationDetailDialog(notification: ActiveNotification, onDismiss: () -> Unit) {
   androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
@@ -1149,21 +1172,7 @@ private fun NotificationDetailDialog(notification: ActiveNotification, onDismiss
         }
         Spacer(modifier = Modifier.height(8.dp))
         notification.imageUrl?.let { url ->
-          // AsyncImage needs an explicit height before the image has loaded
-          // (its intrinsic size is unknown until then) -- fillMaxWidth()
-          // alone, with no height/aspectRatio, was collapsing to zero height
-          // inside this Dialog + scrollable Column and never showing
-          // anything. 16:9 matches the images actually uploaded so far;
-          // Crop keeps it filling the box even if that ever varies slightly.
-          AsyncImage(
-            model = url,
-            contentDescription = null,
-            modifier = Modifier
-              .fillMaxWidth()
-              .aspectRatio(16f / 9f)
-              .clip(RoundedCornerShape(12.dp)),
-            contentScale = androidx.compose.ui.layout.ContentScale.Crop
-          )
+          FullyVisibleImage(url = url, modifier = Modifier.clip(RoundedCornerShape(12.dp)))
           Spacer(modifier = Modifier.height(14.dp))
         }
         Text(text = notification.message, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)

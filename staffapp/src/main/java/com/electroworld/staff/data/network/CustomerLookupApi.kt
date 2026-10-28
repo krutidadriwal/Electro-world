@@ -1,13 +1,18 @@
 package com.electroworld.staff.data.network
 
+import com.electroworld.staff.data.toTitleCase
+import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import retrofit2.http.GET
 import retrofit2.http.Query
 
 @JsonClass(generateAdapter = true)
 data class CustomerLookupResponse(
-  val name: String
-)
+  @Json(name = "name") val rawName: String
+) {
+  // Title Case however the name is stored -- see Names.kt.
+  val name: String get() = rawName.toTitleCase()
+}
 
 // 404s (not a 200 with a null name) when the phone has no account yet --
 // used by the Wishlist/Complaints/Installations "add" dialogs to auto-fill

@@ -232,14 +232,27 @@ data class PointsHistoryEntry(
   @Json(name = "created_at") val createdAt: String,
   // "YYYY-MM-DD"; points expire 6 months after they're credited. Defaults
   // keep an older server (without expiry) readable.
+  // Null on a redemption (a negative entry), which doesn't expire.
   @Json(name = "expires_on") val expiresOn: String? = null,
-  val expired: Boolean = false
+  val expired: Boolean = false,
+  // What's left of earned points after redemptions (taken from the
+  // soonest-expiring points first). Null on a redemption, and from an
+  // older server.
+  val remaining: Int? = null
+)
+
+// The soonest date some of the balance expires on, and how much.
+@JsonClass(generateAdapter = true)
+data class PointsNextExpiry(
+  val points: Int,
+  @Json(name = "expires_on") val expiresOn: String
 )
 
 @JsonClass(generateAdapter = true)
 data class PointsResponse(
   val balance: Int,
-  val history: List<PointsHistoryEntry>
+  val history: List<PointsHistoryEntry>,
+  @Json(name = "next_expiry") val nextExpiry: PointsNextExpiry? = null
 )
 
 @JsonClass(generateAdapter = true)

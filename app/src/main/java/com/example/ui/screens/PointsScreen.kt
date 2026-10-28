@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.network.NetworkModule
 import com.example.data.network.PointsHistoryEntry
+import com.example.data.network.PointsNextExpiry
 import com.example.ui.theme.appCardColors
 
 /**
@@ -65,6 +66,7 @@ fun PointsScreen(
 
   var balance by remember { mutableStateOf<Int?>(null) }
   var history by remember { mutableStateOf<List<PointsHistoryEntry>>(emptyList()) }
+  var nextExpiry by remember { mutableStateOf<PointsNextExpiry?>(null) }
   var isLoading by remember { mutableStateOf(true) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -73,6 +75,7 @@ fun PointsScreen(
       val response = NetworkModule.userApi.getPoints(userPhone, sync = true)
       balance = response.balance
       history = response.history
+      nextExpiry = response.nextExpiry
       errorMessage = null
     } catch (e: Exception) {
       errorMessage = "Unable to load your points. Please check your connection and try again."
@@ -135,7 +138,7 @@ fun PointsScreen(
           contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
           verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-          item { PointsBalanceCard(balance = balance ?: 0) }
+          item { PointsBalanceCard(balance = balance ?: 0, nextExpiry = nextExpiry) }
 
           item {
             Text(
@@ -169,7 +172,7 @@ fun PointsScreen(
 }
 
 @Composable
-private fun PointsBalanceCard(balance: Int) {
+private fun PointsBalanceCard(balance: Int, nextExpiry: PointsNextExpiry?) {
   // primary -> secondary (Vivid Amber into Pale Gold), with onPrimary
   // text -- Obsidian, which is exactly the contrast this gradient needs.
   val onGradient = MaterialTheme.colorScheme.onPrimary
@@ -197,6 +200,17 @@ private fun PointsBalanceCard(balance: Int) {
         fontWeight = FontWeight.Black,
         modifier = Modifier.padding(top = 6.dp)
       )
+      // Redemptions use the soonest-expiring points first, so this is
+      // what lapses next unless it's redeemed.
+      nextExpiry?.let {
+        Text(
+          text = "${it.points} points expire on ${formatPointsDate(it.expiresOn)}",
+          color = onGradient,
+          fontSize = 12.sp,
+          fontWeight = FontWeight.SemiBold,
+          modifier = Modifier.padding(top = 4.dp)
+        )
+      }
       Text(
         text = buildAnnotatedString {
           append("Earn 50 points for every ₹5,000 spent on purchases from 11 Oct 2026. ")
@@ -225,16 +239,26 @@ private fun PointsBalanceCard(balance: Int) {
 
 // The points programme's terms, shown from the balance card's "T&C apply"
 // link. The first three restate how points are awarded (see
-// server/lib/invoicePoints.js). The 6-month expiry is enforced by the
-// server (points_ledger.expires_at); the 5% redemption cap is applied at
-// the counter -- nothing in the app or server enforces it. Swap the list
-// freely, nothing else reads it.
+// server/lib/invoicePoints.js). The server enforces the 6-month expiry
+// (points_ledger.expires_at) and, when an admin redeems from the staff
+// app, the 500-point minimum (server/lib/points.js); the point value, 5%
+// cap, no other schemes, returns, exclusions and misuse are applied at
+// the counter. Swap the list freely, nothing else reads it.
 private val POINTS_TERMS = listOf(
   "Points are earned on purchase invoices dated on or after 11 October 2026.",
   "Every full ₹5,000 of an invoice's total earns 50 points. Invoices under ₹5,000 do not earn points.",
+  "Points are not earned on GST, installation charges, extended warranty, EMI or finance charges, or gift cards.",
   "Points are added once the invoice appears in your Store Invoices & Bills.",
+  "1 point = ₹1.",
+  "A minimum of 500 points is needed to redeem.",
   "Points can be redeemed on any future purchase for a discount of up to 5% of that invoice's amount.",
-  "Points must be redeemed within 6 months of being added to your account. Points not redeemed by then expire."
+  "No other schemes, offers or discounts will be applicable on an invoice where points are redeemed.",
+  "Points must be redeemed within 6 months of being added to your account. Points not redeemed by then expire.",
+  "Points cannot be exchanged for cash, transferred to another account, or combined between accounts.",
+  "Points are tied to the registered mobile number and are not transferable.",
+  "If a purchase is returned, cancelled or exchanged, the points earned on it will be reversed. Points redeemed on it may not be refunded.",
+  "Points obtained through misuse, fraud or error may be cancelled.",
+  "In any dispute, the store's decision is final."
 )
 
 @Composable
@@ -302,22 +326,32 @@ private fun PointsHistoryRow(entry: PointsHistoryEntry) {
       Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
         Text(text = keepHyphenatedWordsWhole(entry.reason), color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         Text(text = formatPointsDate(entry.createdAt), color = MaterialTheme.colorScheme.outline, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
-        entry.expiresOn?.let { expiresOn ->
+        // Earned points that have been fully redeemed have nothing left to
+        // expire; partly redeemed ones say how much is left.
+        val remaining = entry.remaining
+        val fullyRedeemed = remaining == 0
+        entry.expiresOn?.takeIf { !fullyRedeemed }?.let { expiresOn ->
+          val left = if (remaining != null && remaining < entry.points) "$remaining left · " else ""
           Text(
-            text = if (entry.expired) "Expired on ${formatPointsDate(expiresOn)}" else "Expires on ${formatPointsDate(expiresOn)}",
+            text = if (entry.expired) "${left}Expired on ${formatPointsDate(expiresOn)}" else "${left}Expires on ${formatPointsDate(expiresOn)}",
             color = if (entry.expired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
             fontSize = 11.sp
           )
         }
+        if (fullyRedeemed) {
+          Text(text = "Redeemed", color = MaterialTheme.colorScheme.outline, fontSize = 11.sp)
+        }
       }
       // Expired points stay listed but struck through -- they no longer
-      // count towards the balance.
+      // count towards the balance. Points fully redeemed before their
+      // expiry weren't lost, so they aren't struck through.
+      val lapsed = entry.expired && entry.remaining != 0
       Text(
         text = if (entry.points >= 0) "+${entry.points}" else entry.points.toString(),
-        color = if (entry.points >= 0 && !entry.expired) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
+        color = if (entry.points >= 0 && !lapsed) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
         fontSize = 14.sp,
         fontWeight = FontWeight.Bold,
-        textDecoration = if (entry.expired) TextDecoration.LineThrough else null
+        textDecoration = if (lapsed) TextDecoration.LineThrough else null
       )
     }
   }

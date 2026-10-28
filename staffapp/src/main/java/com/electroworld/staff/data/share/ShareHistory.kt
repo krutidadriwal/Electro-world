@@ -29,8 +29,9 @@ data class ShareRecord(
   val kind: ShareKind,
   // e.g. the item name, or "4 items · ₹1,24,500"
   val summary: String,
-  val customerName: String,
-  val customerPhone: String,
+  // Both null when an admin shared it (no customer dialog for admins).
+  val customerName: String? = null,
+  val customerPhone: String? = null,
   val sharedAt: Long,
   val validTill: Long,
   val imagePath: String,

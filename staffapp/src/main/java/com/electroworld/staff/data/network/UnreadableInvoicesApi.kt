@@ -1,5 +1,6 @@
 package com.electroworld.staff.data.network
 
+import com.electroworld.staff.data.toTitleCase
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import retrofit2.http.Body
@@ -11,9 +12,12 @@ data class UnreadableInvoiceItem(
   @Json(name = "file_id") val fileId: String,
   @Json(name = "invoice_name") val invoiceName: String,
   @Json(name = "customer_phone") val customerPhone: String,
-  @Json(name = "customer_name") val customerName: String,
+  @Json(name = "customer_name") val rawCustomerName: String,
   @Json(name = "processed_at") val processedAt: String
-)
+) {
+  // Title Case however the name is stored -- see Names.kt.
+  val customerName: String get() = rawCustomerName.toTitleCase()
+}
 
 @JsonClass(generateAdapter = true)
 data class UnreadableInvoicesResponse(

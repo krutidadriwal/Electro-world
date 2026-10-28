@@ -9,8 +9,9 @@ import retrofit2.http.POST
 // sheet. See ShareHistory.kt for the offline retry.
 @JsonClass(generateAdapter = true)
 data class ShareLogRequest(
-  val customerPhone: String,
-  val customerName: String,
+  // Both null for an admin's share -- admins skip the customer dialog.
+  val customerPhone: String?,
+  val customerName: String?,
   // ISO-8601, so a log retried later still records when the share happened.
   val sharedAt: String
 )

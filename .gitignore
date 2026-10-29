@@ -22,3 +22,5 @@ server/.vercel
 /images
 .vercel
 .env*
+/marketing
+/mht-ent

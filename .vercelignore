@@ -1,0 +1,9 @@
+# Only the server/ folder is deployed (project Root Directory = server).
+# Everything else (Android apps, keystores, builds, marketing) must never be uploaded.
+/*
+!/server
+!/.vercelignore
+/server/.env
+/server/.vercel
+/server/node_modules
+/server/Sample

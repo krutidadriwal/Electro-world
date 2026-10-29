@@ -1,4 +1,5 @@
 {
+  "regions": ["sin1"],
   "redirects": [
     { "source": "/", "destination": "https://play.google.com/store/apps/details?id=com.aistudio.electroworld.zpqxvd", "permanent": false },
     { "source": "/downloads/:path*", "destination": "https://play.google.com/store/apps/details?id=com.aistudio.electroworld.zpqxvd", "permanent": false }

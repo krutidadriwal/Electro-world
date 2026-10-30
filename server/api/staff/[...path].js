@@ -2,6 +2,7 @@
 // staying under Vercel Hobby's 12-Serverless-Function cap. External URLs are
 // unchanged (/api/staff/me, /api/staff/list, etc).
 
+const bcrypt = require('bcryptjs');
 const { getPool } = require('../../lib/db');
 const { getSupabaseAdmin } = require('../../lib/supabaseAdmin');
 const { requireStaff, requireAdmin, StaffAuthError } = require('../../lib/staffAuth');
@@ -152,6 +153,8 @@ module.exports = async function handler(req, res) {
       return staffDeviceToken(req, res);
     case 'customer-lookup':
       return customerLookup(req, res);
+    case 'customer-create':
+      return customerCreate(req, res);
     case 'price-share-log':
       return priceShareLog(req, res);
     case 'activity-log':
@@ -1632,6 +1635,77 @@ async function customerLookup(req, res) {
       return res.status(err.status).json({ error: err.message });
     }
     console.error('customer lookup error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// Admin-only signup on a customer's behalf, for when they can't get through
+// the customer app's OTP step. Creates the same public.users row set-pin
+// (api/auth) would -- PIN hash, welcome bonus -- so the customer just logs
+// in with phone + the PIN the admin gives them, and can change it later
+// through Forgot PIN. Never touches an existing account.
+const CUSTOMER_PIN_REGEX = /^\d{4}$/;
+
+async function customerCreate(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { phone, countryCode, name, pin } = req.body ?? {};
+  const normalizedPhone = normalizePhone(phone, countryCode);
+  if (!normalizedPhone) {
+    return res.status(400).json({ error: 'phone must be a 10-digit number' });
+  }
+  const trimmedName = typeof name === 'string' ? name.trim().replace(/\s+/g, ' ') : '';
+  if (!trimmedName) {
+    return res.status(400).json({ error: 'name is required' });
+  }
+  if (typeof pin !== 'string' || !CUSTOMER_PIN_REGEX.test(pin)) {
+    return res.status(400).json({ error: 'pin must be a 4-digit number' });
+  }
+
+  try {
+    const admin = await requireAdmin(req);
+
+    const salt = await bcrypt.genSalt(10);
+    const pinHash = await bcrypt.hash(pin, salt);
+
+    const pool = getPool();
+    // last_login_at defaults to now() -- there's no "never logged in" value.
+    const result = await pool.query(
+      `insert into public.users (phone, name, how_heard_about_us, pin_hash, pin_salt)
+       values ($1, $2, 'Added by staff', $3, $4)
+       on conflict (phone) do nothing
+       returning phone, name`,
+      [normalizedPhone, trimmedName, pinHash, salt]
+    );
+    if (result.rowCount === 0) {
+      return res.status(409).json({ error: 'An account already exists for this number' });
+    }
+
+    // Same one-time welcome bonus as a self signup; best-effort likewise.
+    try {
+      await pool.query(
+        `insert into public.points_ledger (phone, points, reason) values ($1, 200, 'Welcome bonus')`,
+        [normalizedPhone]
+      );
+    } catch (pointsErr) {
+      console.error('welcome bonus points award error', pointsErr);
+    }
+
+    await logActivity(admin, {
+      workType: 'staff',
+      description: 'created a customer account',
+      customerPhone: normalizedPhone,
+      customerName: trimmedName
+    });
+    return res.status(201).json(result.rows[0]);
+  } catch (err) {
+    if (err instanceof StaffAuthError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('customer create error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

@@ -184,7 +184,7 @@ fun HomeScreen(
   val adminModules = listOf(
     DashboardModule("INVOICE REQUESTS", Icons.Default.Receipt, "Re-send invoice requests", badgeCount = invoiceCount) { selectedTab = HomeTab.INVOICE_REQUESTS },
     DashboardModule("BROADCAST", Icons.Default.Campaign, "notify customers") { selectedTab = HomeTab.BROADCAST },
-    DashboardModule("STAFF", Icons.Default.People, "Manage staff accounts") { selectedTab = HomeTab.STAFF },
+    DashboardModule("ACCOUNTS", Icons.Default.People, "Staff & customer accounts") { selectedTab = HomeTab.STAFF },
     DashboardModule("ACTIVITY LOG", Icons.Default.History, "Who did what, and when") { selectedTab = HomeTab.ACTIVITY_LOG },
     DashboardModule("CATALOG SETUP", Icons.Default.Image, "Category images & companies") { selectedTab = HomeTab.CATALOG_SETUP },
     DashboardModule("SPIN TO WIN", Icons.Default.Casino, "Unlock spins & manage prizes") { selectedTab = HomeTab.SPIN },

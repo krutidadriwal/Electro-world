@@ -50,6 +50,20 @@ data class DeleteStaffRequest(
 )
 
 @JsonClass(generateAdapter = true)
+data class CreateCustomerRequest(
+  val phone: String,
+  // Title Case, from the Add customer tab (see Names.kt).
+  val name: String,
+  val pin: String
+)
+
+@JsonClass(generateAdapter = true)
+data class CreatedCustomer(
+  val phone: String,
+  val name: String
+)
+
+@JsonClass(generateAdapter = true)
 data class RegisterStaffDeviceTokenRequest(
   val fcmToken: String
 )
@@ -70,6 +84,11 @@ interface StaffApi {
   // Removes the staff member and their login entirely (204, no body).
   @POST("api/staff/remove")
   suspend fun delete(@Body request: DeleteStaffRequest): Response<Unit>
+
+  // Admin-only signup on a customer's behalf, skipping the customer app's
+  // OTP. 409 when the number already has an account.
+  @POST("api/staff/customer-create")
+  suspend fun createCustomer(@Body request: CreateCustomerRequest): CreatedCustomer
 
   @POST("api/staff/device-token")
   suspend fun registerDeviceToken(@Body request: RegisterStaffDeviceTokenRequest)

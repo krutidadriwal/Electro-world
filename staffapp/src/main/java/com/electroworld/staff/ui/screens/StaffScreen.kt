@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
@@ -30,6 +32,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -59,8 +63,16 @@ import com.electroworld.staff.data.network.DeleteStaffRequest
 import com.electroworld.staff.data.network.NetworkModule
 import com.electroworld.staff.data.network.StaffMember
 import com.electroworld.staff.data.network.UpdateStaffRoleRequest
+import com.electroworld.staff.data.network.CreateCustomerRequest
 import com.electroworld.staff.ui.theme.staffCardColors
 import kotlinx.coroutines.launch
+import org.json.JSONObject
+import retrofit2.HttpException
+
+private enum class StaffTab(val label: String) {
+  STAFF("Staff"),
+  ADD_CUSTOMER("Add customer")
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,6 +81,7 @@ fun StaffScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
   var isLoading by remember { mutableStateOf(true) }
   var showAddDialog by remember { mutableStateOf(false) }
   var pendingDelete by remember { mutableStateOf<StaffMember?>(null) }
+  var selectedTab by remember { mutableStateOf(StaffTab.STAFF) }
   var refreshTrigger by remember { mutableStateOf(0) }
   var isRefreshing by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
@@ -109,7 +122,7 @@ fun StaffScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
   androidx.compose.material3.Scaffold(
     topBar = {
       TopAppBar(
-        title = { Text("Staff") },
+        title = { Text("Accounts") },
         navigationIcon = {
           IconButton(onClick = onBack) {
             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -118,33 +131,44 @@ fun StaffScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
       )
     },
     floatingActionButton = {
-      FloatingActionButton(onClick = { showAddDialog = true }) {
-        Icon(Icons.Default.Add, contentDescription = "Add staff")
+      if (selectedTab == StaffTab.STAFF) {
+        FloatingActionButton(onClick = { showAddDialog = true }) {
+          Icon(Icons.Default.Add, contentDescription = "Add staff")
+        }
       }
     },
     modifier = modifier
   ) { padding ->
-    Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-      if (isLoading && staff.isEmpty()) {
-        CircularProgressIndicator(modifier = Modifier.padding(24.dp))
-      } else StaffPullToRefresh(isRefreshing = isRefreshing, onRefresh = { isRefreshing = true; refreshTrigger++ }) {
-        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
-          items(staff) { member ->
-            StaffRow(
-              member,
-              onRoleChange = { newRole ->
-                scope.launch {
-                  try {
-                    NetworkModule.staffApi.updateRole(UpdateStaffRoleRequest(member.id, newRole))
-                    refreshTrigger++
-                  } catch (e: Exception) {
-                    // Silently ignore -- the row will just not update; the
-                    // admin can retry.
+    Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+      TabRow(selectedTabIndex = selectedTab.ordinal) {
+        StaffTab.entries.forEach { tab ->
+          Tab(selected = selectedTab == tab, onClick = { selectedTab = tab }, text = { Text(tab.label) })
+        }
+      }
+      if (selectedTab == StaffTab.ADD_CUSTOMER) {
+        AddCustomerTab()
+      } else Box(modifier = Modifier.fillMaxSize()) {
+        if (isLoading && staff.isEmpty()) {
+          CircularProgressIndicator(modifier = Modifier.padding(24.dp))
+        } else StaffPullToRefresh(isRefreshing = isRefreshing, onRefresh = { isRefreshing = true; refreshTrigger++ }) {
+          LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
+            items(staff) { member ->
+              StaffRow(
+                member,
+                onRoleChange = { newRole ->
+                  scope.launch {
+                    try {
+                      NetworkModule.staffApi.updateRole(UpdateStaffRoleRequest(member.id, newRole))
+                      refreshTrigger++
+                    } catch (e: Exception) {
+                      // Silently ignore -- the row will just not update; the
+                      // admin can retry.
+                    }
                   }
-                }
-              },
-              onDelete = { pendingDelete = member }
-            )
+                },
+                onDelete = { pendingDelete = member }
+              )
+            }
           }
         }
       }
@@ -283,6 +307,101 @@ private fun DeleteStaffDialog(member: StaffMember, onDismiss: () -> Unit, onDele
     },
     dismissButton = { TextButton(enabled = !isDeleting, onClick = onDismiss) { Text("Cancel") } }
   )
+}
+
+// The server's own { error } text where it sent one ("An account already
+// exists for this number", ...), which says more than a generic failure.
+private fun serverErrorMessage(e: Exception): String? = try {
+  (e as? HttpException)?.response()?.errorBody()?.string()?.let { JSONObject(it).optString("error") }?.ifBlank { null }
+} catch (parseError: Exception) {
+  null
+}
+
+// Signs a customer up directly, for when they can't get past the customer
+// app's OTP step. The admin sets a 4-digit PIN and tells the customer, who
+// then logs in with phone + PIN (and can change it through Forgot PIN).
+@Composable
+private fun AddCustomerTab() {
+  var phone by remember { mutableStateOf("") }
+  var name by remember { mutableStateOf("") }
+  var pin by remember { mutableStateOf("") }
+  var isSaving by remember { mutableStateOf(false) }
+  var errorMessage by remember { mutableStateOf<String?>(null) }
+  var successMessage by remember { mutableStateOf<String?>(null) }
+  val scope = rememberCoroutineScope()
+
+  fun clearMessages() {
+    errorMessage = null
+    successMessage = null
+  }
+
+  Column(
+    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+    verticalArrangement = Arrangement.spacedBy(12.dp)
+  ) {
+    Text(
+      "Create an account for a customer who can't log in through the OTP in the customer app. " +
+        "Share the PIN with them -- they log in with their phone number and this PIN.",
+      style = MaterialTheme.typography.bodyMedium,
+      color = MaterialTheme.colorScheme.outline
+    )
+    OutlinedTextField(
+      value = phone,
+      onValueChange = { input -> phone = input.filter { it.isDigit() }.take(10); clearMessages() },
+      label = { Text("Customer phone (10 digits)") },
+      singleLine = true,
+      keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+      modifier = Modifier.fillMaxWidth()
+    )
+    OutlinedTextField(
+      value = name,
+      onValueChange = { name = it.titleCaseAsTyped(); clearMessages() },
+      label = { Text("Customer name") },
+      singleLine = true,
+      keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+      modifier = Modifier.fillMaxWidth()
+    )
+    OutlinedTextField(
+      value = pin,
+      onValueChange = { input -> pin = input.filter { it.isDigit() }.take(4); clearMessages() },
+      label = { Text("4-digit PIN") },
+      singleLine = true,
+      keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+      modifier = Modifier.fillMaxWidth()
+    )
+    errorMessage?.let {
+      Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+    }
+    successMessage?.let {
+      Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
+    }
+    Button(
+      enabled = !isSaving && phone.length == 10 && name.isNotBlank() && pin.length == 4,
+      onClick = {
+        clearMessages()
+        isSaving = true
+        scope.launch {
+          try {
+            val created = NetworkModule.staffApi.createCustomer(
+              CreateCustomerRequest(phone = phone, name = name.toTitleCase(), pin = pin)
+            )
+            successMessage = "Account created for ${created.name.toTitleCase()} (${created.phone}). " +
+              "They can now log in with PIN $pin."
+            phone = ""
+            name = ""
+            pin = ""
+          } catch (e: Exception) {
+            errorMessage = serverErrorMessage(e) ?: "Failed to create customer account."
+          } finally {
+            isSaving = false
+          }
+        }
+      },
+      modifier = Modifier.fillMaxWidth()
+    ) {
+      if (isSaving) CircularProgressIndicator(modifier = Modifier.padding(2.dp)) else Text("Create customer account")
+    }
+  }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

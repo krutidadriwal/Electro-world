@@ -145,7 +145,7 @@ fun LoginScreen(
   var errorMessage by remember { mutableStateOf<String?>(null) }
   var showSignupSuggestion by remember { mutableStateOf(false) }
   var showLoginSuggestion by remember { mutableStateOf(false) }
-  var countdownTimer by remember { mutableStateOf(30) }
+  var countdownTimer by remember { mutableStateOf(180) }
 
   val coroutineScope = rememberCoroutineScope()
   val focusManager = LocalFocusManager.current
@@ -214,7 +214,7 @@ fun LoginScreen(
         NetworkModule.authApi.sendOtp(SendOtpRequest(phone = phoneNumber))
         isSubmitting = false
         otpCode = ""
-        countdownTimer = 30
+        countdownTimer = 180
         errorMessage = null
         step = AuthStep.OTP
       } catch (e: HttpException) {
@@ -633,7 +633,7 @@ fun LoginScreen(
               Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                 Text(text = "Didn't receive the SMS? ", color = PlatinumMuted, fontSize = 13.sp)
                 if (countdownTimer > 0) {
-                  Text(text = "Resend in ${countdownTimer}s", color = VividAmber, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                  Text(text = "Resend in ${countdownTimer / 60}:${(countdownTimer % 60).toString().padStart(2, '0')}", color = VividAmber, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 } else {
                   TextButton(onClick = { sendOtp() }) {
                     Text(text = "Resend OTP Code", color = VividAmber, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)

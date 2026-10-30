@@ -338,7 +338,7 @@ async function syncInvoicePoints(pool, normalizedPhone, { notify = true, files: 
     // listed (and it means app builds from before this existed land there too).
     await notifyStaff({
       adminOnly: true,
-      title: 'EW Ops Hub',
+      title: 'Electro World Staff',
       body: `${unreadableCount} invoice${unreadableCount === 1 ? '' : 's'} could not be read for points`,
       target: 'unreadable_invoices'
     });
